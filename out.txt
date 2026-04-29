@@ -1,0 +1,67 @@
+Analyzing tripease...                                           
+
+  error - Target of URI doesn't exist: 'app_colors.dart' - lib\core\theme\app_theme.dart:3:8 - uri_does_not_exist
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:10:20 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:11:18 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:12:20 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:13:19 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:14:18 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:15:16 - undefined_identifier
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\core\theme\app_theme.dart:16:9 - deprecated_member_use
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:16:21 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:18:32 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:20:48 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:21:49 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:22:48 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:23:49 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:24:50 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:25:49 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:26:46 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:27:47 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:28:46 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:29:45 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:30:46 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:31:45 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:32:46 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:35:26 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:35:26 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:38:41 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:38:41 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:40:18 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:40:18 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:47:28 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:62:28 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:67:41 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:67:41 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:76:28 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:85:20 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:97:47 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:97:47 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:101:47 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:101:47 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:103:43 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:103:43 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:106:16 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\theme\app_theme.dart:108:35 - deprecated_member_use
+  error - Invalid constant value - lib\core\theme\app_theme.dart:115:26 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:115:26 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:116:28 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:116:28 - undefined_identifier
+  error - Invalid constant value - lib\core\theme\app_theme.dart:117:30 - invalid_constant
+  error - Undefined name 'AppColors' - lib\core\theme\app_theme.dart:117:30 - undefined_identifier
+  error - The function 'StateProvider' isn't defined - lib\providers\auth_provider.dart:9:22 - undefined_function
+  error - The function 'StateNotifierProvider' isn't defined - lib\providers\auth_provider.dart:11:32 - undefined_function
+  error - Classes can only extend other classes - lib\providers\auth_provider.dart:18:30 - extends_non_class
+  error - Too many positional arguments: 0 expected, but 1 found - lib\providers\auth_provider.dart:25:15 - extra_positional_arguments
+  error - Undefined name 'state' - lib\providers\auth_provider.dart:28:5 - undefined_identifier
+  error - Undefined name 'state' - lib\providers\auth_provider.dart:32:7 - undefined_identifier
+  error - Undefined name 'state' - lib\providers\auth_provider.dart:35:7 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home\dashboard_screen.dart:45:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home\widgets\service_card.dart:27:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home\widgets\service_card.dart:39:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\hotels\hotel_detail_screen.dart:39:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\hotels\hotel_detail_screen.dart:91:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\hotels\hotel_detail_screen.dart:129:32 - deprecated_member_use
+warning - Unused import: '../../core/constants/app_colors.dart' - lib\screens\hotels\hotel_list_screen.dart:3:8 - unused_import
+  error - The name 'MyApp' isn't a class - test\widget_test.dart:16:35 - creation_with_non_type
+
