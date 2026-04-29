@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
+import 'firebase_options.dart';
 
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     debugPrint("Firebase init error: $e");
   }

@@ -5,8 +5,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 class GoogleAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  static const String webClientId =
+      '452364672232-he1uv7fl474l54nde1bfgub8m0sr4fq2.apps.googleusercontent.com'; // TODO: Replace with actual Web Client ID from Firebase Console
+
   static GoogleSignIn _createGoogleSignIn() {
-    return GoogleSignIn(scopes: ['email', 'profile']);
+    return GoogleSignIn(
+      scopes: ['email', 'profile'],
+      clientId: kIsWeb ? webClientId : null,
+    );
   }
 
   static Future<User?> signInWithGoogle() async {

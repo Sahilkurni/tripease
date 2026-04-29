@@ -12,16 +12,7 @@
           "package_name": "com.example.tripease"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "452364672232-s8v6f8h8v8h8v8h8v8h8v8h8v8h8v8h.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.tripease",
-            "certificate_hash": "C009A5D4180334DDE6D0124D9D321C3A5D6119"
-          }
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyAQDvlEJYlKXnr8wqXbzqG5fLJvNULqCKw"
