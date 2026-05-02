@@ -13,8 +13,9 @@ import '../screens/hotels/hotel_list_screen.dart';
 import '../screens/hotels/hotel_detail_screen.dart';
 import '../screens/bus/bus_search_screen.dart';
 import '../screens/bus/bus_list_screen.dart';
-import '../screens/bus/seat_layout_screen.dart';
+import '../screens/bus/bus_seat_selection_screen.dart';
 import '../screens/bus/passenger_details_screen.dart';
+import '../screens/bus_partner/add_edit_bus_screen.dart';
 import '../models/bus_model.dart';
 import '../models/user_model.dart';
 
@@ -77,20 +78,60 @@ final appRouter = GoRouter(
         return BusListScreen(
           source: args?['source'] ?? 'Source',
           destination: args?['destination'] ?? 'Destination',
+          date: args?['date'] ?? DateTime.now().toIso8601String(),
         );
       },
     ),
     GoRoute(
-      path: '/seat_layout',
+      path: '/bus/seats',
       builder: (context, state) {
         final maybeBus = state.extra;
         if (maybeBus is BusModel) {
-          return SeatLayoutScreen(bus: maybeBus);
+          return BusSeatSelectionScreen(bus: maybeBus);
         }
         return Scaffold(
           appBar: AppBar(title: const Text('Seat Layout')),
           body: const Center(child: Text('Bus data not provided.')),
         );
+      },
+    ),
+    // Dummy routes for the dashboard "add" buttons
+    GoRoute(
+      path: '/owner/hotels/add',
+      builder:
+          (context, state) => Scaffold(
+            appBar: AppBar(title: const Text('Add Hotel')),
+            body: const Center(child: Text('Add Hotel Form UI')),
+          ),
+    ),
+    GoRoute(
+      path: '/owner/hotels/:id/rooms',
+      builder:
+          (context, state) => Scaffold(
+            appBar: AppBar(title: const Text('Manage Rooms')),
+            body: const Center(child: Text('Manage Rooms UI')),
+          ),
+    ),
+    GoRoute(
+      path: '/agent/packages/add',
+      builder:
+          (context, state) => Scaffold(
+            appBar: AppBar(title: const Text('Add Package')),
+            body: const Center(child: Text('Add Package Form UI')),
+          ),
+    ),
+    GoRoute(
+      path: '/agent/buses/add',
+      builder: (context, state) {
+        final args = state.extra;
+        if (args is Map<String, dynamic>) {
+          return AddEditBusScreen(
+            bus: args['bus'] is BusModel ? args['bus'] as BusModel : null,
+            partnerid: int.tryParse(args['partnerid'].toString()) ?? 0,
+            userid: int.tryParse(args['userid'].toString()) ?? 0,
+          );
+        }
+        return const AddEditBusScreen(partnerid: 0, userid: 0);
       },
     ),
     GoRoute(

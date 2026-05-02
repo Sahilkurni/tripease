@@ -35,14 +35,31 @@ class _LoginScreenState extends State<LoginScreen> {
     // Debug: log role for diagnostics
     debugPrint('Redirecting by role: original="$role", normalized="$r"');
     if (r == 'CUSTOMER') {
+      debugPrint('Role matched CUSTOMER → navigating /home');
       context.go('/home');
-    } else if (r == 'HOTEL_OWNER') {
+    } else if (r == 'HOTEL_PARTNER' || r == 'HOTEL_OWNER') {
+      debugPrint(
+        'Role matched HOTEL_PARTNER/HOTEL_OWNER → navigating /hotel_dashboard',
+      );
       context.go('/hotel_dashboard');
-    } else if (r == 'TRAVEL_AGENT') {
+    } else if (r == 'AGENT' || r == 'TRAVEL_AGENT') {
+      debugPrint(
+        'Role matched AGENT/TRAVEL_AGENT → navigating /agent_dashboard',
+      );
+      context.go('/agent_dashboard');
+    } else if (r == 'BUS_PARTNER' || r == 'BUS_OWNER') {
+      debugPrint(
+        'Role matched BUS_PARTNER/BUS_OWNER → navigating /agent_dashboard',
+      );
+      // Treat bus partners like agents for now (shared dashboard)
       context.go('/agent_dashboard');
     } else if (r == 'ADMIN') {
+      debugPrint('Role matched ADMIN → navigating /admin_dashboard');
       context.go('/admin_dashboard');
     } else {
+      debugPrint(
+        'Role did not match any known role → navigating /home (fallback)',
+      );
       context.go('/home'); // Fallback
     }
   }

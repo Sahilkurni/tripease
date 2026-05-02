@@ -30,9 +30,12 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       if (r == 'CUSTOMER') {
         context.go('/home');
-      } else if (r == 'HOTEL_OWNER') {
+      } else if (r == 'HOTEL_PARTNER' || r == 'HOTEL_OWNER') {
         context.go('/hotel_dashboard');
-      } else if (r == 'TRAVEL_AGENT') {
+      } else if (r == 'AGENT' || r == 'TRAVEL_AGENT') {
+        context.go('/agent_dashboard');
+      } else if (r == 'BUS_PARTNER' || r == 'BUS_OWNER') {
+        // Map bus partner roles to the agent dashboard for now
         context.go('/agent_dashboard');
       } else if (r == 'ADMIN') {
         context.go('/admin_dashboard');

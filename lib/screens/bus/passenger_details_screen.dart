@@ -23,7 +23,7 @@ class PassengerDetailsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${bus.operatorName} • ${bus.duration}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('${bus.busName} • ${bus.busType}', style: const TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text('Seats: ${seats.join(', ')}'),
               ],
@@ -81,7 +81,7 @@ class PassengerDetailsScreen extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking Confirmed!')));
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
-          child: Text('Pay \$${bus.fare * seats.length}'),
+          child: Text('Pay \$${bus.baseFare * seats.length}'),
         ),
       ),
     );

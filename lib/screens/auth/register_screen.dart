@@ -21,7 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       TextEditingController(); // mobile isn't in API yet but kept for UI
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  String? _selectedRole = '1';
+  String? _selectedRole = '2';
   bool _obscure = true;
   bool _loading = false;
 
@@ -40,9 +40,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     debugPrint('Register redirect role: original="$role", normalized="$r"');
     if (r == 'CUSTOMER') {
       context.go('/home');
-    } else if (r == 'HOTEL_OWNER') {
+    } else if (r == 'HOTEL_PARTNER' || r == 'HOTEL_OWNER') {
       context.go('/hotel_dashboard');
-    } else if (r == 'TRAVEL_AGENT') {
+    } else if (r == 'AGENT' || r == 'TRAVEL_AGENT') {
       context.go('/agent_dashboard');
     } else {
       context.go('/home');
@@ -294,9 +294,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hintText: 'Select Role',
             ),
             items: const [
-              DropdownMenuItem(value: '1', child: Text('Explorer (Customer)')),
-              DropdownMenuItem(value: '2', child: Text('Hotel Property Owner')),
-              DropdownMenuItem(value: '3', child: Text('Travel Agent')),
+              DropdownMenuItem(value: '2', child: Text('Explorer (Customer)')),
+              DropdownMenuItem(value: '3', child: Text('Hotel Property Owner')),
+              DropdownMenuItem(value: '5', child: Text('Travel Agent')),
             ],
             onChanged: (v) => setState(() => _selectedRole = v),
             validator: (v) => v == null ? 'Please select a role' : null,

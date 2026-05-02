@@ -38,12 +38,21 @@ class AuthService {
     currentUser = user;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_session', jsonEncode(user.toJson()));
+    final userid = int.tryParse(user.userid);
+    if (userid != null) {
+      await prefs.setInt('userid', userid);
+    }
+    if (user.partnerid != null) {
+      await prefs.setInt('partnerid', user.partnerid!);
+    }
   }
 
   Future<void> clearSession() async {
     currentUser = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_session');
+    await prefs.remove('userid');
+    await prefs.remove('partnerid');
     try {
       await GoogleAuthService.signOut();
     } catch (e) {

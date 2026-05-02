@@ -33,9 +33,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       final roleName = result['rolename'];
       if (roleName == 'CUSTOMER') {
         context.go('/home');
-      } else if (roleName == 'HOTEL_OWNER') {
+      } else if (roleName == 'HOTEL_PARTNER' || roleName == 'HOTEL_OWNER') {
         context.go('/hotel_dashboard');
-      } else if (roleName == 'TRAVEL_AGENT') {
+      } else if (roleName == 'AGENT' || roleName == 'TRAVEL_AGENT') {
         context.go('/agent_dashboard');
       } else {
         context.go('/home');
@@ -96,7 +96,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   title: 'Explorer',
                   subtitle: 'Book flights, hotels, and buses.',
                   icon: Icons.explore_rounded,
-                  value: '1',
+                  value: '2',
                   groupValue: _selectedRole,
                   onChanged: (v) => setState(() => _selectedRole = v),
                   isDark: isDark,
@@ -107,7 +107,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   title: 'Hotel Property Owner',
                   subtitle: 'List and manage your hotel rooms.',
                   icon: Icons.hotel_rounded,
-                  value: '2',
+                  value: '3',
                   groupValue: _selectedRole,
                   onChanged: (v) => setState(() => _selectedRole = v),
                   isDark: isDark,
@@ -118,7 +118,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   title: 'Travel Agent',
                   subtitle: 'Manage bookings for your clients.',
                   icon: Icons.card_travel_rounded,
-                  value: '3',
+                  value: '5',
                   groupValue: _selectedRole,
                   onChanged: (v) => setState(() => _selectedRole = v),
                   isDark: isDark,

@@ -12,7 +12,7 @@ class BusCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () => context.push('/seat_layout', extra: bus),
+        onTap: () => context.push('/bus/seats', extra: bus),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -23,11 +23,11 @@ class BusCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    bus.operatorName,
+                    bus.busName,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '\$${bus.fare}',
+                    '\$${bus.baseFare}',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
                   ),
                 ],
@@ -36,14 +36,14 @@ class BusCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _TimeLoc(time: bus.departureTime, loc: bus.source),
+                  _TimeLoc(time: bus.departureTime, loc: bus.sourceCityName ?? 'Source'),
                   Column(
                     children: [
                       const Icon(Icons.directions_bus, color: Colors.grey),
-                      Text(bus.duration, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(bus.busType, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
-                  _TimeLoc(time: bus.arrivalTime, loc: bus.destination),
+                  _TimeLoc(time: bus.arrivalTime, loc: bus.destinationCityName ?? 'Dest'),
                 ],
               ),
             ],
