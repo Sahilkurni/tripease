@@ -13,40 +13,38 @@ class CityItem {
   });
 
   factory CityItem.fromJson(Map<String, dynamic> j) => CityItem(
-        cityid: int.parse(j['cityid'].toString()),
-        cityname: j['cityname'],
-        pincode: j['pincode'] ?? '',
-      );
+    cityid: int.parse(j['cityid'].toString()),
+    cityname: j['cityname'],
+    pincode: j['pincode'] ?? '',
+  );
 }
 
 class StateItem {
   final int stateid;
   final String statename;
 
-  StateItem({
-    required this.stateid,
-    required this.statename,
-  });
+  StateItem({required this.stateid, required this.statename});
 
   factory StateItem.fromJson(Map<String, dynamic> j) => StateItem(
-        stateid: int.parse(j['stateid'].toString()),
-        statename: j['statename'],
-      );
+    stateid: int.parse(j['stateid'].toString()),
+    statename: j['statename'],
+  );
 }
 
 class RoomTypeItem {
   final int roomtypeid;
   final String typename;
 
-  RoomTypeItem({
-    required this.roomtypeid,
-    required this.typename,
-  });
+  RoomTypeItem({required this.roomtypeid, required this.typename});
 
   factory RoomTypeItem.fromJson(Map<String, dynamic> j) => RoomTypeItem(
-        roomtypeid: int.parse(j['roomtypeid'].toString()),
-        typename: j['typename'],
-      );
+    roomtypeid: int.parse(
+      (j['roomtypeid'] ?? j['room_type_id'] ?? j['id']).toString(),
+    ),
+    typename:
+        (j['typename'] ?? j['type_name'] ?? j['roomtype'] ?? j['name'] ?? '')
+            .toString(),
+  );
 }
 
 class RoomItem {
@@ -71,15 +69,15 @@ class RoomItem {
   });
 
   factory RoomItem.fromJson(Map<String, dynamic> j) => RoomItem(
-        roomid: int.parse(j['roomid'].toString()),
-        roomname: j['roomname'],
-        roomtype: j['roomtype'],
-        roomtypeid: int.parse(j['roomtypeid'].toString()),
-        capacity: int.parse(j['capacity'].toString()),
-        totalrooms: int.parse(j['totalrooms'].toString()),
-        price: double.parse(j['price'].toString()),
-        extraBedPrice: double.parse(j['extra_bed_price']?.toString() ?? '0'),
-      );
+    roomid: int.parse(j['roomid'].toString()),
+    roomname: j['roomname'],
+    roomtype: j['roomtype'],
+    roomtypeid: int.parse(j['roomtypeid'].toString()),
+    capacity: int.parse(j['capacity'].toString()),
+    totalrooms: int.parse(j['totalrooms'].toString()),
+    price: double.parse(j['price'].toString()),
+    extraBedPrice: double.parse(j['extra_bed_price']?.toString() ?? '0'),
+  );
 }
 
 class HotelPartnerService {
@@ -89,10 +87,19 @@ class HotelPartnerService {
     return 'http://localhost/tripease_api';
   }
 
+  static final List<RoomTypeItem> _defaultRoomTypes = [
+    RoomTypeItem(roomtypeid: 1, typename: 'Standard'),
+    RoomTypeItem(roomtypeid: 2, typename: 'Deluxe'),
+    RoomTypeItem(roomtypeid: 3, typename: 'Suite'),
+    RoomTypeItem(roomtypeid: 4, typename: 'Family Room'),
+  ];
+
   /// Fetches live dashboard statistics for the logged-in hotel partner.
   static Future<Map<String, dynamic>> getDashboardStats(int partnerid) async {
     try {
-      final uri = Uri.parse('$_base/owner/getDashboardStats.php?partnerid=$partnerid');
+      final uri = Uri.parse(
+        '$_base/owner/getDashboardStats.php?partnerid=$partnerid',
+      );
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -108,13 +115,105 @@ class HotelPartnerService {
     }
   }
 
+  static int _asInt(dynamic value, [int fallback = 0]) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  static List<Map<String, dynamic>> _hotelListFromJson(dynamic json) {
+    if (json is List) {
+      return json
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    if (json is Map && json['status'] == 'success') {
+      final data = json['data'];
+      if (data is List) {
+        return data
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+      if (data is Map && data['hotels'] is List) {
+        return (data['hotels'] as List)
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    }
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> getHotels(int partnerid) async {
+    if (partnerid == 0) {
+      return [];
+    }
+
+    final listEndpoints = [
+      '$_base/owner/getHotels.php?partnerid=$partnerid',
+      '$_base/owner/hotels.php?partnerid=$partnerid',
+    ];
+
+    for (final endpoint in listEndpoints) {
+      try {
+        final res = await http
+            .get(Uri.parse(endpoint))
+            .timeout(const Duration(seconds: 10));
+        if (res.statusCode != 200) {
+          continue;
+        }
+        final hotels =
+            _hotelListFromJson(jsonDecode(res.body))
+                .where((h) => _asInt(h['partnerid'], partnerid) == partnerid)
+                .toList();
+        if (hotels.isNotEmpty) {
+          return hotels;
+        }
+      } catch (_) {
+        // Older local APIs may not have a list endpoint yet.
+      }
+    }
+
+    final stats = await getDashboardStats(partnerid);
+    final expectedHotels = _asInt(stats['total_hotels']);
+    if (expectedHotels == 0) {
+      return [];
+    }
+
+    final hotels = <Map<String, dynamic>>[];
+    final seenHotelIds = <int>{};
+    final maxScan =
+        expectedHotels <= 2 ? 100 : (expectedHotels * 50).clamp(100, 500);
+
+    for (var hotelid = 1; hotelid <= maxScan; hotelid++) {
+      try {
+        final hotel = await getHotel(hotelid);
+        final foundPartnerId = _asInt(hotel['partnerid']);
+        final foundHotelId = _asInt(hotel['hotelid']);
+        if (foundPartnerId == partnerid && seenHotelIds.add(foundHotelId)) {
+          hotels.add(hotel);
+          if (hotels.length >= expectedHotels) {
+            break;
+          }
+        }
+      } catch (_) {
+        // Keep scanning; getHotel returns an error for IDs that do not exist.
+      }
+    }
+
+    return hotels;
+  }
+
   static Future<List<StateItem>> getStates() async {
     try {
       final uri = Uri.parse('$_base/owner/getStates.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
-        return (json['data'] as List).map((e) => StateItem.fromJson(e)).toList();
+        return (json['data'] as List)
+            .map((e) => StateItem.fromJson(e))
+            .toList();
       }
       throw Exception(json['message']);
     } catch (e) {
@@ -139,11 +238,13 @@ class HotelPartnerService {
   static Future<int> addHotel(Map<String, dynamic> payload) async {
     try {
       final uri = Uri.parse('$_base/owner/addHotel.php');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 10));
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') return json['data']['hotelid'];
       throw Exception(json['message']);
@@ -157,7 +258,9 @@ class HotelPartnerService {
       final uri = Uri.parse('$_base/owner/getHotel.php?hotelid=$hotelid');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
-      if (json['status'] == 'success') return json['data'] as Map<String, dynamic>;
+      if (json['status'] == 'success') {
+        return json['data'] as Map<String, dynamic>;
+      }
       throw Exception(json['message']);
     } catch (e) {
       throw Exception('getHotel failed: $e');
@@ -167,11 +270,13 @@ class HotelPartnerService {
   static Future<void> editHotel(Map<String, dynamic> payload) async {
     try {
       final uri = Uri.parse('$_base/owner/editHotel.php');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 10));
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] != 'success') throw Exception(json['message']);
     } catch (e) {
@@ -185,17 +290,23 @@ class HotelPartnerService {
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
-        return (json['data'] as List).map((e) => RoomTypeItem.fromJson(e)).toList();
+        final types = (json['data'] as List)
+            .map((e) => RoomTypeItem.fromJson(e))
+            .where((type) => type.typename.trim().isNotEmpty)
+            .toList();
+        return types.isEmpty ? _defaultRoomTypes : types;
       }
       throw Exception(json['message']);
     } catch (e) {
-      throw Exception('getRoomTypes failed: $e');
+      return _defaultRoomTypes;
     }
   }
 
   static Future<List<RoomItem>> getRooms(int hotelid, int partnerid) async {
     try {
-      final uri = Uri.parse('$_base/owner/getRooms.php?hotelid=$hotelid&partnerid=$partnerid');
+      final uri = Uri.parse(
+        '$_base/owner/getRooms.php?hotelid=$hotelid&partnerid=$partnerid',
+      );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
@@ -210,11 +321,13 @@ class HotelPartnerService {
   static Future<void> saveRoom(Map<String, dynamic> payload) async {
     try {
       final uri = Uri.parse('$_base/owner/saveRoom.php');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 10));
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] != 'success') throw Exception(json['message']);
     } catch (e) {
@@ -225,15 +338,17 @@ class HotelPartnerService {
   static Future<void> deleteRoom(int roomid, int partnerid, int uid) async {
     try {
       final uri = Uri.parse('$_base/owner/deleteRoom.php');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'roomid': roomid,
-          'partnerid': partnerid,
-          'uid': uid,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'roomid': roomid,
+              'partnerid': partnerid,
+              'uid': uid,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] != 'success') throw Exception(json['message']);
     } catch (e) {
@@ -241,9 +356,14 @@ class HotelPartnerService {
     }
   }
 
-  static Future<List<dynamic>> getRoomInventory(int partnerid, {int hotelid = 0}) async {
+  static Future<List<dynamic>> getRoomInventory(
+    int partnerid, {
+    int hotelid = 0,
+  }) async {
     try {
-      final uri = Uri.parse('$_base/owner/getRoomInventory.php?partnerid=$partnerid&hotelid=$hotelid');
+      final uri = Uri.parse(
+        '$_base/owner/getRoomInventory.php?partnerid=$partnerid&hotelid=$hotelid',
+      );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
@@ -255,9 +375,14 @@ class HotelPartnerService {
     }
   }
 
-  static Future<Map<String, dynamic>> getEarnings(int partnerid, String period) async {
+  static Future<Map<String, dynamic>> getEarnings(
+    int partnerid,
+    String period,
+  ) async {
     try {
-      final uri = Uri.parse('$_base/owner/getEarnings.php?partnerid=$partnerid&period=$period');
+      final uri = Uri.parse(
+        '$_base/owner/getEarnings.php?partnerid=$partnerid&period=$period',
+      );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {

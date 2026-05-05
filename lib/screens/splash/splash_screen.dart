@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/role_constants.dart';
 import '../../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -23,25 +24,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (authService.currentUser != null) {
-      final role = authService.currentUser!.rolename;
-      final r = role?.toUpperCase().trim();
-      debugPrint(
-        'Splash found session roleid=${authService.currentUser!.roleid} rolename=$role (normalized=$r)',
-      );
-      if (r == 'CUSTOMER') {
-        context.go('/home');
-      } else if (r == 'HOTEL_PARTNER' || r == 'HOTEL_OWNER') {
-        context.go('/hotel_dashboard');
-      } else if (r == 'AGENT' || r == 'TRAVEL_AGENT') {
-        context.go('/agent_dashboard');
-      } else if (r == 'BUS_PARTNER' || r == 'BUS_OWNER') {
-        // Map bus partner roles to the agent dashboard for now
-        context.go('/agent_dashboard');
-      } else if (r == 'ADMIN') {
-        context.go('/admin_dashboard');
-      } else {
-        context.go('/home');
-      }
+      final user = authService.currentUser!;
+      context.go(routeByRole(roleId: user.roleid, roleName: user.rolename));
     } else {
       context.go('/onboarding');
     }

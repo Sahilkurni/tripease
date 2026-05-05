@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/role_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
@@ -30,38 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _redirectByRole(String? role) {
-    final r = role?.toUpperCase().trim();
-    // Debug: log role for diagnostics
-    debugPrint('Redirecting by role: original="$role", normalized="$r"');
-    if (r == 'CUSTOMER') {
-      debugPrint('Role matched CUSTOMER → navigating /home');
-      context.go('/home');
-    } else if (r == 'HOTEL_PARTNER' || r == 'HOTEL_OWNER') {
-      debugPrint(
-        'Role matched HOTEL_PARTNER/HOTEL_OWNER → navigating /hotel_dashboard',
-      );
-      context.go('/hotel_dashboard');
-    } else if (r == 'AGENT' || r == 'TRAVEL_AGENT') {
-      debugPrint(
-        'Role matched AGENT/TRAVEL_AGENT → navigating /agent_dashboard',
-      );
-      context.go('/agent_dashboard');
-    } else if (r == 'BUS_PARTNER' || r == 'BUS_OWNER') {
-      debugPrint(
-        'Role matched BUS_PARTNER/BUS_OWNER → navigating /agent_dashboard',
-      );
-      // Treat bus partners like agents for now (shared dashboard)
-      context.go('/agent_dashboard');
-    } else if (r == 'ADMIN') {
-      debugPrint('Role matched ADMIN → navigating /admin_dashboard');
-      context.go('/admin_dashboard');
-    } else {
-      debugPrint(
-        'Role did not match any known role → navigating /home (fallback)',
-      );
-      context.go('/home'); // Fallback
-    }
+  void _redirectByRole({String? roleId, String? roleName}) {
+    context.go(routeByRole(roleId: roleId, roleName: roleName));
   }
 
   Future<void> _login() async {
@@ -85,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint(
         'Logged in user roleid=${user.roleid} rolename=${user.rolename}',
       );
-      _redirectByRole(user.rolename);
+      _redirectByRole(roleId: user.roleid, roleName: user.rolename);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -122,7 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Google Login successful!')),
         );
-        _redirectByRole(result['user'].rolename);
+        _redirectByRole(
+          roleId: result['user'].roleid,
+          roleName: result['user'].rolename,
+        );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

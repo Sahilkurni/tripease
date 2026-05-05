@@ -7,6 +7,8 @@ import '../../services/bus_service.dart';
 import '../../models/package_model.dart';
 import '../../models/bus_model.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/agent_service.dart';
+import '../agent/add_edit_package_screen.dart';
 
 class AgentDashboard extends StatefulWidget {
   const AgentDashboard({super.key});
@@ -166,9 +168,22 @@ class _AgentDashboardState extends State<AgentDashboard>
       floatingActionButton:
           MediaQuery.of(context).size.width <= 800
               ? FloatingActionButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_tabController.index == 0) {
-                    context.push('/agent/packages/add');
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AddEditPackageScreen(
+                          isEdit: false,
+                          partnerid: _partnerid,
+                          userid: _userid,
+                        ),
+                      ),
+                    );
+                    if (result == true) {
+                      setState(() => _isLoading = true);
+                      await _fetchDashboardData();
+                    }
                   } else {
                     _openBusForm();
                   }
@@ -322,7 +337,22 @@ class _AgentDashboardState extends State<AgentDashboard>
               ),
               if (MediaQuery.of(context).size.width > 800)
                 ElevatedButton.icon(
-                  onPressed: () => context.push('/agent/packages/add'),
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AddEditPackageScreen(
+                          isEdit: false,
+                          partnerid: _partnerid,
+                          userid: _userid,
+                        ),
+                      ),
+                    );
+                    if (result == true) {
+                      setState(() => _isLoading = true);
+                      await _fetchDashboardData();
+                    }
+                  },
                   icon: const Icon(Icons.add),
                   label: const Text('New Package'),
                   style: ElevatedButton.styleFrom(
@@ -452,7 +482,37 @@ class _AgentDashboardState extends State<AgentDashboard>
                   children: [
                     IconButton(
                       icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () {},
+                      onPressed: () async {
+                        try {
+                          final detail = await AgentService.getPackageDetail(
+                              package.packageid, _partnerid);
+                          if (!mounted) return;
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddEditPackageScreen(
+                                isEdit: true,
+                                packageData: detail,
+                                partnerid: _partnerid,
+                                userid: _userid,
+                              ),
+                            ),
+                          );
+                          if (result == true) {
+                            setState(() => _isLoading = true);
+                            await _fetchDashboardData();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to load package: $e'),
+                                backgroundColor: const Color(0xFFEF4444),
+                              ),
+                            );
+                          }
+                        }
+                      },
                     ),
                   ],
                 ),

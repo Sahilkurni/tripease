@@ -277,6 +277,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               )
               : null,
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (isDesktop) _buildSidebar(true),
           Expanded(
@@ -664,15 +665,18 @@ class _AdminDashboardState extends State<AdminDashboard>
         itemCount: hotels.length,
         separatorBuilder: (_, __) => const SizedBox(height: 16),
         itemBuilder:
-            (_, i) => _AnimatedEntry(
-              index: i,
-              child: _HotelCard(
-                hotel: hotels[i],
-                isActive: _isHotelActive(hotels[i]),
-                textOf: _text,
-                intOf: _asInt,
-                onEdit: () => _editHotel(hotels[i]),
-                onManageRooms: () => _manageRooms(hotels[i]),
+            (_, i) => SizedBox(
+              height: 320,
+              child: _AnimatedEntry(
+                index: i,
+                child: _HotelCard(
+                  hotel: hotels[i],
+                  isActive: _isHotelActive(hotels[i]),
+                  textOf: _text,
+                  intOf: _asInt,
+                  onEdit: () => _editHotel(hotels[i]),
+                  onManageRooms: () => _manageRooms(hotels[i]),
+                ),
               ),
             ),
       );
@@ -936,23 +940,26 @@ class _AddHotelButtonState extends State<_AddHotelButton>
       onTapUp: (_) => _controller.reverse(),
       child: ScaleTransition(
         scale: _scale,
-        child: ElevatedButton.icon(
-          onPressed: widget.onPressed,
-          icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: Text(
-            'Add Hotel',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
+        child: Align(
+          alignment: Alignment.center,
+          child: ElevatedButton.icon(
+            onPressed: widget.onPressed,
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: Text(
+              'Add Hotel',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _AdminDashboardState._primary,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _AdminDashboardState._primary,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
             ),
-            elevation: 0,
           ),
         ),
       ),
@@ -1012,7 +1019,7 @@ class _StateShell extends StatelessWidget {
             style: GoogleFonts.poppins(color: _AdminDashboardState._muted),
           ),
           const SizedBox(height: 28),
-          action,
+          Center(child: action),
         ],
       ),
     );

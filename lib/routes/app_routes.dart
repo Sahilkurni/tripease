@@ -6,7 +6,7 @@ import '../screens/auth/role_selection_screen.dart';
 import '../screens/home/dashboard_screen.dart';
 import '../screens/home/hotel_owner_dashboard.dart';
 import '../screens/home/agent_dashboard.dart';
-import '../screens/home/admin_dashboard.dart';
+import '../screens/admin/admin_dashboard.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/hotels/hotel_list_screen.dart';
