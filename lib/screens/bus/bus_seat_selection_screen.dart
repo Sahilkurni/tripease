@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/bus_model.dart';
 import '../../services/bus_service.dart';
 import '../../services/auth_service.dart';
+import 'passenger_details_screen.dart';
 
 class BusSeatSelectionScreen extends StatefulWidget {
   final BusModel bus;
@@ -27,9 +28,6 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
 
   Future<void> _loadSeats() async {
     try {
-      if (widget.bus.busid == 0) {
-        throw Exception("Invalid Trip ID (Demo Mode)");
-      }
       final seatData = await busService.getBusSeats(widget.bus.busid);
       if (seatData.isEmpty) {
         throw Exception("No seats found");
@@ -39,30 +37,15 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print("Seat Load Error (using fallback): $e");
+      print("Error loading seats: $e");
       setState(() {
-        _allSeats = _generateMockSeats();
+        _allSeats = []; // No fallback to mock seats
         _isLoading = false;
       });
     }
   }
 
-  List<BusSeatModel> _generateMockSeats() {
-    List<BusSeatModel> mock = [];
-    for (int r = 1; r <= 10; r++) {
-      for (int c = 1; c <= 4; c++) {
-        mock.add(BusSeatModel(
-          seatid: r * 10 + c,
-          busid: widget.bus.busid,
-          seatNo: '${String.fromCharCode(64 + r)}$c',
-          rowNo: r,
-          colNo: c,
-          isBooked: (r + c) % 5 == 0,
-        ));
-      }
-    }
-    return mock;
-  }
+
 
   void _toggleSeat(BusSeatModel seat) {
     if (seat.isBooked) return;
@@ -362,10 +345,24 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: _selectedSeats.isEmpty ? null : _bookSeats,
+              onPressed: _selectedSeats.isEmpty
+                  ? null
+                  : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => PassengerDetailsScreen(
+                              bus: widget.bus,
+                              selectedSeats: _selectedSeats.toList(),
+                            ),
+                      ),
+                    );
+                  },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
+                minimumSize: const Size(0, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,

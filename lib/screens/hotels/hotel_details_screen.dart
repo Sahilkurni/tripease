@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../../services/hotel_service.dart';
 import '../../models/room_model.dart';
+import 'guest_details_screen.dart';
 
 class HotelDetailsScreen extends StatefulWidget {
   final String hotelId;
@@ -33,12 +34,19 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
 
   Future<void> _loadRooms() async {
     try {
-      final rooms = await _hotelService.getHotelRooms(int.parse(widget.hotelId));
+      final rooms = await _hotelService.getHotelRooms(
+        int.parse(widget.hotelId),
+      );
+
+      if (!mounted) return; // 🔥 FIX
+
       setState(() {
         _rooms = rooms;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return; // 🔥 FIX
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -48,66 +56,24 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
 
   Future<void> _bookRoom(RoomModel room) async {
     final user = _authService.currentUser;
+
     if (user == null || user.userid.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to book')),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please login to book')));
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Booking'),
-        content: Text('Do you want to book ${room.roomtype} for ₹${room.price}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              setState(() => _isLoading = true);
-              try {
-                final success = await _hotelService.createBooking(
-                  userId: int.parse(user.userid),
-                  hotelId: int.parse(widget.hotelId),
-                  roomId: room.roomid,
-                  amount: room.price,
-                );
-
-                if (success) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Success'),
-                      content: const Text('Hotel booking confirmed!'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Great!'),
-                        ),
-                      ],
-                    ),
-                  );
-                  _loadRooms(); // Refresh inventory
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Booking Failed. Please try again.')),
-                  );
-                }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: $e')),
-                );
-              } finally {
-                setState(() => _isLoading = false);
-              }
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => GuestDetailsScreen(
+              hotelId: widget.hotelId,
+              hotelName: widget.hotelName,
+              room: room,
+            ),
       ),
     );
   }
@@ -117,7 +83,8 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor:
+          isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       body: CustomScrollView(
         slivers: [
           _buildAppBar(context, isDark),
@@ -143,7 +110,9 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
                   else if (_error != null)
                     Center(child: Text('Error: $_error'))
                   else if (_rooms.isEmpty)
-                    const Center(child: Text('No rooms available at this moment.'))
+                    const Center(
+                      child: Text('No rooms available at this moment.'),
+                    )
                   else
                     ..._rooms.map((room) => _buildRoomCard(room, isDark)),
                 ],
@@ -245,7 +214,11 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.location_on_rounded, color: Color(0xFF64748B), size: 18),
+            const Icon(
+              Icons.location_on_rounded,
+              color: Color(0xFF64748B),
+              size: 18,
+            ),
             const SizedBox(width: 4),
             Text(
               'Premium Destination',
@@ -302,7 +275,10 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildFeatureIcon(Icons.people_rounded, '${room.capacity} Persons'),
+              _buildFeatureIcon(
+                Icons.people_rounded,
+                '${room.capacity} Persons',
+              ),
               const SizedBox(width: 16),
               _buildFeatureIcon(Icons.king_bed_rounded, 'King Bed'),
               const SizedBox(width: 16),
@@ -322,11 +298,16 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
                 ),
               ),
               ElevatedButton(
-                onPressed: room.availableRooms > 0 ? () => _bookRoom(room) : null,
+                onPressed:
+                    room.availableRooms > 0 ? () => _bookRoom(room) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  minimumSize: const Size(0, 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

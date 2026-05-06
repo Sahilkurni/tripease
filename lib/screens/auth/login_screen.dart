@@ -88,15 +88,17 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _googleLoading = false);
 
     if (result['success']) {
+      final user = result['user'];
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google Login successful!')),
+      );
+      
       if (result['is_new_user'] == true) {
-        context.push('/role_selection', extra: result['user']);
+        context.push('/role_selection', extra: user);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Login successful!')),
-        );
         _redirectByRole(
-          roleId: result['user'].roleid,
-          roleName: result['user'].rolename,
+          roleId: user.roleid,
+          roleName: user.rolename,
         );
       }
     } else {

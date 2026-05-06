@@ -102,6 +102,10 @@ class CustomerService {
   String get baseUrl => ApiConfig.baseUrl;
 
   List<Map<String, dynamic>> _listFromResponse(http.Response response) {
+    if (response.body.isEmpty) {
+      debugPrint("Warning: Empty response body");
+      return [];
+    }
     final decoded = jsonDecode(response.body);
     if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
       final data = decoded['data'];
@@ -116,6 +120,10 @@ class CustomerService {
   }
 
   Map<String, dynamic> _mapFromResponse(http.Response response) {
+    if (response.body.isEmpty) {
+      debugPrint("Warning: Empty response body");
+      return {};
+    }
     final decoded = jsonDecode(response.body);
     if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
       final data = decoded['data'];

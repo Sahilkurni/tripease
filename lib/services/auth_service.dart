@@ -51,13 +51,13 @@ class AuthService {
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = ApiConfig.login;
-    print("API URL: $url");
+    debugPrint("API POST -> $url | Body: {email: $email}");
     try {
       final response = await http.post(
         Uri.parse(url),
         body: {'email': email, 'password': password},
       );
-      print("Response: ${response.body}");
+      debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -78,7 +78,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print("Error: $e");
+      debugPrint("API ERROR -> $e");
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -90,7 +90,7 @@ class AuthService {
     String roleId,
   ) async {
     final url = ApiConfig.register;
-    print("API URL: $url");
+    debugPrint("API POST -> $url | Body: {email: $email, roleid: $roleId}");
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -101,7 +101,7 @@ class AuthService {
           'roleid': roleId,
         },
       );
-      print("Response: ${response.body}");
+      debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -122,7 +122,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print("Error: $e");
+      debugPrint("API ERROR -> $e");
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -134,7 +134,7 @@ class AuthService {
     String firebaseUid,
   ) async {
     final url = '${ApiConfig.baseUrl}google_auth_sync.php';
-    print("API URL: $url");
+    debugPrint("API POST -> $url | Body: {email: $email}");
     try {
       final response = await _dio.post(
         url,
@@ -147,27 +147,25 @@ class AuthService {
       );
 
       final data = response.data is String ? jsonDecode(response.data) : response.data;
-      print("Response: $data");
+      debugPrint("API RESPONSE -> $data");
 
       if (data != null && data['status'] == 'success') {
-        final isNew = data['is_new_user'] == true;
         final user = UserModel.fromJson(data['data'] ?? data);
-        if (!isNew) {
-          await saveSession(user);
-        }
-        return {'success': true, 'is_new_user': isNew, 'user': user};
+        // Important: Always save session for Google Login
+        await saveSession(user);
+        return {'success': true, 'is_new_user': data['is_new_user'] == true, 'user': user};
       } else {
         return {'success': false, 'message': data?['message'] ?? 'Sync failed'};
       }
     } catch (e) {
-      print("Error: $e");
+      debugPrint("API ERROR -> $e");
       return {'success': false, 'message': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> updateRole(String userId, String roleId) async {
     final url = '${ApiConfig.baseUrl}update_role.php';
-    print("API URL: $url");
+    debugPrint("API POST -> $url | Body: {userid: $userId, roleid: $roleId}");
     try {
       final response = await _dio.post(
         url,
@@ -175,7 +173,7 @@ class AuthService {
       );
 
       final data = response.data is String ? jsonDecode(response.data) : response.data;
-      print("Response: $data");
+      debugPrint("API RESPONSE -> $data");
 
       if (data != null && data['status'] == 'success') {
         if (currentUser != null) {
@@ -193,7 +191,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      print("Error: $e");
+      debugPrint("API ERROR -> $e");
       return {'success': false, 'message': e.toString()};
     }
   }

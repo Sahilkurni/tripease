@@ -23,7 +23,7 @@ class HomeService {
   Future<List<RecommendedItem>> getHomeHotels() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/get_home_hotels.php'),
+        Uri.parse('$baseUrl' 'get_home_hotels.php'),
       );
       print("Home Hotels Response: ${response.body}");
       final rows = _dataListFromResponse(response);
@@ -38,7 +38,7 @@ class HomeService {
   Future<List<RecommendedItem>> getHomePackages() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/get_home_packages.php'),
+        Uri.parse('$baseUrl' 'get_home_packages.php'),
       );
       print("Home Packages Response: ${response.body}");
       final rows = _dataListFromResponse(response);
@@ -53,7 +53,7 @@ class HomeService {
   Future<List<RecommendedItem>> getHomeBuses() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/get_bus_trips.php'),
+        Uri.parse('$baseUrl' 'get_bus_trips.php'),
       );
       print("Home Buses Response: ${response.body}");
       final rows = _dataListFromResponse(response);
@@ -77,7 +77,7 @@ class HomeService {
     try {
       final query = (userid == null || userid.isEmpty) ? '' : '?userid=$userid';
       final response = await http.get(
-        Uri.parse('$baseUrl/get_bookings.php$query'),
+        Uri.parse('$baseUrl' 'get_bookings.php$query'),
       );
       print("Recent Bookings Response: ${response.body}");
       final rows = _dataListFromResponse(response);

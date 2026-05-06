@@ -192,12 +192,26 @@ final appRouter = GoRouter(
       path: '/passenger_details',
       builder: (context, state) {
         final args = state.extra;
-        if (args is Map<String, dynamic> &&
-            args['bus'] is BusModel &&
-            args['seats'] is List<String>) {
+        if (args is Map<String, dynamic> && args['bus'] is BusModel) {
           final bus = args['bus'] as BusModel;
-          final seats = args['seats'] as List<String>;
-          return PassengerDetailsScreen(bus: bus, seats: seats);
+          final seats = args['seats'];
+          
+          List<BusSeatModel> selectedSeats = [];
+          if (seats is List<BusSeatModel>) {
+            selectedSeats = seats;
+          } else if (seats is List<String>) {
+            selectedSeats = seats.map((s) => BusSeatModel(
+              seatid: 0,
+              busid: bus.busid,
+              seatNo: s,
+              rowNo: 0,
+              colNo: 0,
+            )).toList();
+          }
+
+          if (selectedSeats.isNotEmpty) {
+            return PassengerDetailsScreen(bus: bus, selectedSeats: selectedSeats);
+          }
         }
         return Scaffold(
           appBar: AppBar(title: const Text('Passenger Details')),

@@ -44,7 +44,8 @@ class RoomModel {
       uid: json['uid'] != null ? int.parse(json['uid'].toString()) : null,
       edatetime: json['edatetime'],
       isactive: int.parse(json['isactive']?.toString() ?? '1'),
-      availableRooms: int.parse(json['available_rooms']?.toString() ?? '0'),
+      availableRooms: int.parse(json['available_rooms']?.toString() ?? 
+                               json['totalrooms']?.toString() ?? '0'),
       roomTypeName: json['room_type_name'],
     );
   }

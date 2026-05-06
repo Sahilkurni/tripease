@@ -113,97 +113,101 @@ class HomeHeaderWidget extends StatelessWidget {
               hPad,
               safeTop + 16,
               hPad,
-              48,
-            ), // Bottom padding for overlap
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Row
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.travel_explore,
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'TripEase',
-                      style: GoogleFonts.poppins(
+              12, // Reduced bottom padding
+            ),
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(), // Prevent manual scroll but allows content to fit
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Top Row
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.travel_explore,
                         color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        size: 26,
                       ),
-                    ),
-                    const Spacer(),
-                    Stack(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.notifications_outlined,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {},
+                      const SizedBox(width: 8),
+                      Text(
+                        'TripEase',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFEF4444),
-                              shape: BoxShape.circle,
+                      ),
+                      const Spacer(),
+                      Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {},
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEF4444),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Hello, $userName 👋',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withAlpha((0.80 * 255).round()),
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  'Where do you want',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: isDesktop ? 28 : 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'to go today?',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: isDesktop ? 28 : 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      color: Colors.white70,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      location,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 12,
+                        ],
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Hello, $userName 👋',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white.withAlpha((0.80 * 255).round()),
+                      fontSize: 14,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  Text(
+                    'Where do you want',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: isDesktop ? 28 : 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'to go today?',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: isDesktop ? 28 : 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        color: Colors.white70,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        location,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

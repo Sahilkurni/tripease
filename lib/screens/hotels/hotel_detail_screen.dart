@@ -103,6 +103,10 @@ class HotelDetailScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
               child: const Text('Book Now'),
             ),
           ],

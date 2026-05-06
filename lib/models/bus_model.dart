@@ -41,22 +41,22 @@ class BusModel {
 
   factory BusModel.fromJson(Map<String, dynamic> json) {
     return BusModel(
-      busid: int.parse(json['busid']?.toString() ?? '0'),
-      partnerid: int.parse(json['partnerid']?.toString() ?? '0'),
-      busName: json['bus_name'] ?? '',
-      busType: json['bus_type'] ?? '',
+      busid: int.parse((json['busid'] ?? json['tripid'] ?? '0').toString()),
+      partnerid: int.parse((json['partnerid'] ?? '0').toString()),
+      busName: json['bus_name'] ?? json['busname'] ?? '',
+      busType: json['bus_type'] ?? json['bustype'] ?? '',
       layoutType: json['layout_type'] ?? '2x2',
-      totalSeats: int.parse(json['total_seats']?.toString() ?? '0'),
-      sourceCityId: int.parse(json['source_city_id']?.toString() ?? '0'),
-      destinationCityId: int.parse(json['destination_city_id']?.toString() ?? '0'),
-      departureTime: json['departure_time'] ?? '',
-      arrivalTime: json['arrival_time'] ?? '',
-      baseFare: double.parse(json['base_fare']?.toString() ?? '0.0'),
+      totalSeats: int.parse((json['total_seats'] ?? '0').toString()),
+      sourceCityId: int.parse((json['source_city_id'] ?? '0').toString()),
+      destinationCityId: int.parse((json['destination_city_id'] ?? '0').toString()),
+      departureTime: json['departure_time'] ?? json['departure'] ?? '',
+      arrivalTime: json['arrival_time'] ?? json['arrival'] ?? '',
+      baseFare: double.parse((json['base_fare'] ?? json['price'] ?? '0.0').toString()),
       uid: json['uid'] != null ? int.parse(json['uid'].toString()) : null,
       edatetime: json['edatetime'],
-      isactive: int.parse(json['isactive']?.toString() ?? '1'),
-      sourceCityName: json['source_city_name'],
-      destinationCityName: json['destination_city_name'],
+      isactive: int.parse((json['isactive'] ?? '1').toString()),
+      sourceCityName: json['source_city_name'] ?? json['source'],
+      destinationCityName: json['destination_city_name'] ?? json['destination'],
       seats: (json['seats'] as List<dynamic>?)
               ?.map((e) => BusSeatModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -110,8 +110,12 @@ class BusSeatModel {
       seatid: int.parse(json['seatid']?.toString() ?? '0'),
       busid: int.parse(json['busid']?.toString() ?? '0'),
       seatNo: json['seat_no'] ?? '',
-      rowNo: int.parse(json['row_no']?.toString() ?? '0'),
-      colNo: int.parse(json['col_no']?.toString() ?? '0'),
+      rowNo: int.parse(json['row_no']?.toString() ?? '0') != 0 
+             ? int.parse(json['row_no'].toString()) 
+             : (int.parse(json['seatid']?.toString() ?? '1') - 1) ~/ 4 + 1,
+      colNo: int.parse(json['col_no']?.toString() ?? '0') != 0 
+             ? int.parse(json['col_no'].toString()) 
+             : (int.parse(json['seatid']?.toString() ?? '1') - 1) % 4 + 1,
       isSleeper: (json['is_sleeper']?.toString() == '1' || json['is_sleeper'] == true),
       isBooked: (json['is_booked']?.toString() == '1' || json['is_booked'] == true),
       extraFare: double.parse(json['extra_fare']?.toString() ?? '0.0'),

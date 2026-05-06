@@ -105,6 +105,7 @@ class BusService {
       print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty) return [];
         final decoded = jsonDecode(response.body);
         final data = decoded['data'];
         if (data is List) {
@@ -129,6 +130,7 @@ class BusService {
       print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty) return [];
         final decoded = jsonDecode(response.body);
         final data = decoded['data'];
         if (data is List) {
@@ -152,6 +154,7 @@ class BusService {
       print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
+        if (response.body.isEmpty) return [];
         final decoded = jsonDecode(response.body);
         final data = decoded['data'];
         if (data is List) {
@@ -172,6 +175,9 @@ class BusService {
     required int tripId,
     required int seatId,
     required double amount,
+    String? passengerName,
+    String? age,
+    String? gender,
   }) async {
     final url = '${ApiConfig.baseUrl}create_bus_booking.php';
     print("API URL: $url");
@@ -183,6 +189,9 @@ class BusService {
           'tripid': tripId.toString(),
           'seatid': seatId.toString(),
           'amount': amount.toString(),
+          'passenger_name': passengerName ?? '',
+          'passenger_age': age ?? '',
+          'passenger_gender': gender ?? '',
         },
       );
       print("Response: ${response.body}");

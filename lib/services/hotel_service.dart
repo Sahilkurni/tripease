@@ -80,6 +80,9 @@ class HotelService {
     required int hotelId,
     required int roomId,
     required double amount,
+    String? guestName,
+    String? age,
+    String? gender,
   }) async {
     final url = '${ApiConfig.baseUrl}create_booking.php';
     print("API URL (Create Hotel Booking): $url");
@@ -92,6 +95,9 @@ class HotelService {
           'roomid': roomId.toString(),
           'amount': amount.toString(),
           'booking_date': DateTime.now().toIso8601String().split('T').first,
+          'guest_name': guestName ?? '',
+          'guest_age': age ?? '',
+          'guest_gender': gender ?? '',
         },
       );
       print("Hotel Booking Response: ${response.body}");
