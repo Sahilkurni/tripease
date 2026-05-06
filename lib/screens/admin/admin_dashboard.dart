@@ -12,6 +12,7 @@ import 'admin_users_screen.dart';
 import 'admin_partners_screen.dart';
 import 'admin_hotels_screen.dart';
 import 'admin_packages_screen.dart';
+import 'admin_buses_screen.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_payments_screen.dart';
 import 'admin_coupons_screen.dart';
@@ -34,7 +35,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
   bool _isLoading = true;
   String? _error;
-  
+
   Map<String, dynamic>? _dashboardData;
   Map<String, dynamic>? _chartData;
 
@@ -44,6 +45,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     {'title': 'Partners', 'icon': Icons.handshake_rounded},
     {'title': 'Hotels', 'icon': Icons.apartment_rounded},
     {'title': 'Packages', 'icon': Icons.card_travel_rounded},
+    {'title': 'Buses', 'icon': Icons.directions_bus_rounded},
     {'title': 'Bookings', 'icon': Icons.confirmation_number_rounded},
     {'title': 'Payments', 'icon': Icons.payment_rounded},
     {'title': 'Coupons', 'icon': Icons.local_offer_rounded},
@@ -87,7 +89,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       });
     } else {
       setState(() {
-        _error = resStats['message'] ?? resCharts['message'] ?? 'Failed to load data';
+        _error =
+            resStats['message'] ??
+            resCharts['message'] ??
+            'Failed to load data';
         _isLoading = false;
       });
     }
@@ -106,18 +111,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         return Scaffold(
           backgroundColor: _bg,
-          appBar: isDesktop
-              ? null
-              : AppBar(
-                  backgroundColor: Colors.white,
-                  elevation: 0,
-                  iconTheme: const IconThemeData(color: _ink),
-                  title: Text(
-                    'Admin Panel',
-                    style: GoogleFonts.poppins(color: _ink, fontWeight: FontWeight.w700),
+          appBar:
+              isDesktop
+                  ? null
+                  : AppBar(
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                    iconTheme: const IconThemeData(color: _ink),
+                    title: Text(
+                      'Admin Panel',
+                      style: GoogleFonts.poppins(
+                        color: _ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-          drawer: isDesktop ? null : Drawer(child: _buildSidebar(isDesktop: false)),
+          drawer:
+              isDesktop ? null : Drawer(child: _buildSidebar(isDesktop: false)),
           body: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -143,7 +153,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       width: isDesktop ? 260 : null,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: isDesktop ? Border(right: BorderSide(color: Colors.grey.shade200)) : null,
+        border:
+            isDesktop
+                ? Border(right: BorderSide(color: Colors.grey.shade200))
+                : null,
       ),
       child: Column(
         children: [
@@ -220,12 +233,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 4:
         return const AdminPackagesScreen();
       case 5:
-        return const AdminBookingsScreen();
+        return const AdminBusesScreen();
       case 6:
-        return const AdminPaymentsScreen();
+        return const AdminBookingsScreen();
       case 7:
-        return const AdminCouponsScreen();
+        return const AdminPaymentsScreen();
       case 8:
+        return const AdminCouponsScreen();
+      case 9:
         return const AdminSupportScreen();
       default:
         return Container();
@@ -252,12 +267,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
               childAspectRatio: 2.2,
             ),
             itemCount: 4,
-            itemBuilder: (_, __) => Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
+            itemBuilder:
+                (_, __) => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
           ),
           const SizedBox(height: 32),
           Container(
@@ -281,17 +297,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
           const SizedBox(height: 16),
           Text(
             _error!,
-            style: GoogleFonts.poppins(color: _ink, fontSize: 18, fontWeight: FontWeight.w600),
+            style: GoogleFonts.poppins(
+              color: _ink,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _loadDashboardData,
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            label: Text('Retry', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+            label: Text(
+              'Retry',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _primary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -306,8 +334,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final users = stats['total_users']?.toString() ?? '0';
     final partners = stats['total_partners']?.toString() ?? '0';
     final bookings = stats['total_bookings']?.toString() ?? '0';
-    
-    final revenueRaw = double.tryParse(stats['total_revenue']?.toString() ?? '0') ?? 0;
+
+    final revenueRaw =
+        double.tryParse(stats['total_revenue']?.toString() ?? '0') ?? 0;
     final formatCurrency = NumberFormat.currency(symbol: '₹', decimalDigits: 0);
     final revenueStr = formatCurrency.format(revenueRaw);
 
@@ -321,7 +350,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           Text(
             'Admin Overview',
-            style: GoogleFonts.poppins(color: _ink, fontSize: 28, fontWeight: FontWeight.w800),
+            style: GoogleFonts.poppins(
+              color: _ink,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -329,17 +362,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
             style: GoogleFonts.poppins(color: _muted, fontSize: 15),
           ),
           const SizedBox(height: 32),
-          
+
           if (isMobile)
             Column(
               children: [
-                _StatCard(title: 'Total Users', value: users, icon: Icons.group_rounded, gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)]),
+                _StatCard(
+                  title: 'Total Users',
+                  value: users,
+                  icon: Icons.group_rounded,
+                  gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                ),
                 const SizedBox(height: 16),
-                _StatCard(title: 'Total Partners', value: partners, icon: Icons.handshake_rounded, gradientColors: const [Color(0xFF14B8A6), Color(0xFF0D9488)]),
+                _StatCard(
+                  title: 'Total Partners',
+                  value: partners,
+                  icon: Icons.handshake_rounded,
+                  gradientColors: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
+                ),
                 const SizedBox(height: 16),
-                _StatCard(title: 'Total Bookings', value: bookings, icon: Icons.airplane_ticket_rounded, gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)]),
+                _StatCard(
+                  title: 'Total Bookings',
+                  value: bookings,
+                  icon: Icons.airplane_ticket_rounded,
+                  gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                ),
                 const SizedBox(height: 16),
-                _StatCard(title: 'Total Revenue', value: revenueStr, icon: Icons.attach_money_rounded, gradientColors: const [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                _StatCard(
+                  title: 'Total Revenue',
+                  value: revenueStr,
+                  icon: Icons.attach_money_rounded,
+                  gradientColors: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                ),
               ],
             )
           else
@@ -351,13 +404,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
               mainAxisSpacing: 24,
               childAspectRatio: screenWidth >= 1400 ? 2.5 : 2.0,
               children: [
-                _StatCard(title: 'Total Users', value: users, icon: Icons.group_rounded, gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)]),
-                _StatCard(title: 'Total Partners', value: partners, icon: Icons.handshake_rounded, gradientColors: const [Color(0xFF14B8A6), Color(0xFF0D9488)]),
-                _StatCard(title: 'Total Bookings', value: bookings, icon: Icons.airplane_ticket_rounded, gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)]),
-                _StatCard(title: 'Total Revenue', value: revenueStr, icon: Icons.attach_money_rounded, gradientColors: const [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                _StatCard(
+                  title: 'Total Users',
+                  value: users,
+                  icon: Icons.group_rounded,
+                  gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                ),
+                _StatCard(
+                  title: 'Total Partners',
+                  value: partners,
+                  icon: Icons.handshake_rounded,
+                  gradientColors: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
+                ),
+                _StatCard(
+                  title: 'Total Bookings',
+                  value: bookings,
+                  icon: Icons.airplane_ticket_rounded,
+                  gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                ),
+                _StatCard(
+                  title: 'Total Revenue',
+                  value: revenueStr,
+                  icon: Icons.attach_money_rounded,
+                  gradientColors: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                ),
               ],
             ),
-            
+
           const SizedBox(height: 32),
           if (isMobile || screenWidth < 1100) ...[
             _buildRevenueChart(charts['monthly_revenue'] as List<dynamic>?),
@@ -369,12 +442,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: _buildRevenueChart(charts['monthly_revenue'] as List<dynamic>?),
+                  child: _buildRevenueChart(
+                    charts['monthly_revenue'] as List<dynamic>?,
+                  ),
                 ),
                 const SizedBox(width: 24),
                 Expanded(
                   flex: 1,
-                  child: _buildBookingTrends(charts['booking_trends'] as List<dynamic>?),
+                  child: _buildBookingTrends(
+                    charts['booking_trends'] as List<dynamic>?,
+                  ),
                 ),
               ],
             ),
@@ -387,13 +464,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildRevenueChart(List<dynamic>? monthlyRevenue) {
     if (monthlyRevenue == null || monthlyRevenue.isEmpty) {
-      return _ChartContainer(title: 'Monthly Revenue', child: const Center(child: Text('No revenue data available')));
+      return _ChartContainer(
+        title: 'Monthly Revenue',
+        child: const Center(child: Text('No revenue data available')),
+      );
     }
 
     final spots = <FlSpot>[];
     double maxRev = 0;
 
-    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
 
     for (int i = 0; i < monthlyRevenue.length; i++) {
       final rev = double.tryParse(monthlyRevenue[i]['revenue'].toString()) ?? 0;
@@ -403,35 +496,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     // fallback for empty chart drawing correctly
     if (spots.isEmpty) {
-       spots.add(const FlSpot(0, 0));
+      spots.add(const FlSpot(0, 0));
     }
 
     return _ChartContainer(
       title: 'Monthly Revenue',
       child: LineChart(
         LineChartData(
-          gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: maxRev > 0 ? maxRev / 4 : 100),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: maxRev > 0 ? maxRev / 4 : 100,
+          ),
           titlesData: FlTitlesData(
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 44)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: true, reservedSize: 44),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < monthlyRevenue.length) {
-                    final mIdx = int.tryParse(monthlyRevenue[index]['month'].toString()) ?? 1;
+                    final mIdx =
+                        int.tryParse(
+                          monthlyRevenue[index]['month'].toString(),
+                        ) ??
+                        1;
                     final mName = monthNames[(mIdx - 1).clamp(0, 11)];
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(mName, style: const TextStyle(fontSize: 12, color: _muted)),
+                      child: Text(
+                        mName,
+                        style: const TextStyle(fontSize: 12, color: _muted),
+                      ),
                     );
                   }
                   return const Text('');
                 },
               ),
             ),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           lineBarsData: [
@@ -455,15 +565,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildBookingTrends(List<dynamic>? bookingTrends) {
     if (bookingTrends == null || bookingTrends.isEmpty) {
-      return _ChartContainer(title: 'Booking Trends', child: const Center(child: Text('No booking trends data')));
+      return _ChartContainer(
+        title: 'Booking Trends',
+        child: const Center(child: Text('No booking trends data')),
+      );
     }
 
     final barGroups = <BarChartGroupData>[];
     double maxBookings = 0;
-    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
 
     for (int i = 0; i < bookingTrends.length; i++) {
-      final count = double.tryParse(bookingTrends[i]['bookings'].toString()) ?? 0;
+      final count =
+          double.tryParse(bookingTrends[i]['bookings'].toString()) ?? 0;
       if (count > maxBookings) maxBookings = count;
       barGroups.add(
         BarChartGroupData(
@@ -488,20 +615,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
           maxY: maxBookings == 0 ? 10 : maxBookings * 1.2,
           barTouchData: BarTouchData(enabled: false),
           titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < bookingTrends.length) {
-                    final mIdx = int.tryParse(bookingTrends[index]['month'].toString()) ?? 1;
+                    final mIdx =
+                        int.tryParse(
+                          bookingTrends[index]['month'].toString(),
+                        ) ??
+                        1;
                     final mName = monthNames[(mIdx - 1).clamp(0, 11)];
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(mName, style: const TextStyle(fontSize: 12, color: _muted)),
+                      child: Text(
+                        mName,
+                        style: const TextStyle(fontSize: 12, color: _muted),
+                      ),
                     );
                   }
                   return const Text('');
@@ -544,7 +684,13 @@ class _ChartContainer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 24),
           Expanded(child: child),
         ],
@@ -591,7 +737,11 @@ class _StatCard extends StatelessWidget {
           Positioned(
             right: -10,
             top: -10,
-            child: Icon(icon, size: 80, color: Colors.white.withValues(alpha: 0.2)),
+            child: Icon(
+              icon,
+              size: 80,
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,15 +796,17 @@ class _SidebarItemState extends State<_SidebarItem> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.isDestructive
-        ? Colors.redAccent
-        : widget.isActive
+    final color =
+        widget.isDestructive
+            ? Colors.redAccent
+            : widget.isActive
             ? const Color(0xFF2563EB)
             : const Color(0xFF64748B);
 
-    final bgColor = widget.isActive
-        ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-        : _isHovered
+    final bgColor =
+        widget.isActive
+            ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+            : _isHovered
             ? Colors.grey.shade100
             : Colors.transparent;
 
@@ -681,7 +833,8 @@ class _SidebarItemState extends State<_SidebarItem> {
                   widget.title,
                   style: GoogleFonts.poppins(
                     color: color,
-                    fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight:
+                        widget.isActive ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 15,
                   ),
                 ),

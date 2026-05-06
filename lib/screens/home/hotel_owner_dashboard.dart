@@ -877,7 +877,7 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
 
   @override
   Widget build(BuildContext context) {
-    // Generate a placeholder gradient based on hotel id to look premium if no image
+    // Generate a stable gradient based on hotel id when no image is available.
     final colors = [
       [const Color(0xFF3B82F6), const Color(0xFF8B5CF6)],
       [const Color(0xFF14B8A6), const Color(0xFF3B82F6)],

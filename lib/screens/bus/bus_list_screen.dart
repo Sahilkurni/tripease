@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../services/bus_service.dart';
 import '../../models/bus_model.dart';
-import 'package:go_router/go_router.dart';
 
 class BusListScreen extends StatefulWidget {
-  final String source;
-  final String destination;
-  final String date;
+  final String? source;
+  final String? destination;
+  final String? date;
 
   const BusListScreen({
     super.key,
-    required this.source,
-    required this.destination,
-    required this.date,
+    this.source,
+    this.destination,
+    this.date,
   });
 
   @override
@@ -20,8 +21,10 @@ class BusListScreen extends StatefulWidget {
 }
 
 class _BusListScreenState extends State<BusListScreen> {
-  bool _isLoading = true;
+  final BusService _busService = busService;
   List<BusModel> _buses = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -31,110 +34,202 @@ class _BusListScreenState extends State<BusListScreen> {
 
   Future<void> _fetchBuses() async {
     try {
-      final buses = await busService.searchBuses(widget.source, widget.destination, widget.date);
-      if (mounted) {
-        setState(() {
-          _buses = buses;
-          _isLoading = false;
-        });
+      List<BusModel> buses;
+      if (widget.source != null && widget.source!.isNotEmpty && 
+          widget.destination != null && widget.destination!.isNotEmpty) {
+        buses = await _busService.searchBuses(
+          widget.source!, 
+          widget.destination!, 
+          widget.date ?? DateTime.now().toIso8601String()
+        );
+      } else {
+        buses = await _busService.getHomeBusTrips();
       }
+      
+      setState(() {
+        _buses = buses;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 900;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${widget.source} ➔ ${widget.destination}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(widget.date.split('T').first, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal)),
-          ],
+        title: Text(
+          (widget.source != null && widget.source!.isNotEmpty) 
+            ? '${widget.source} to ${widget.destination}'
+            : 'Available Bus Trips',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18),
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
         elevation: 0,
+        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buses.isEmpty
-              ? const Center(child: Text('No buses found for this route.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _buses.length,
-                  itemBuilder: (context, index) {
-                    final bus = _buses[index];
-                    return _buildBusCard(bus);
-                  },
-                ),
+          : _error != null
+              ? Center(child: Text('Error: $_error'))
+              : _buses.isEmpty
+                  ? _buildEmptyState(isDark)
+                  : isDesktop
+                      ? _buildGrid(context, isDark)
+                      : _buildList(context, isDark),
     );
   }
 
-  Widget _buildBusCard(BusModel bus) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(bus.busName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('₹${bus.baseFare}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
-              ],
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.directions_bus_rounded, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'No buses found',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
             ),
-            const SizedBox(height: 8),
-            Text('${bus.busType} | ${bus.layoutType}', style: TextStyle(color: Colors.grey[600])),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12.0),
-              child: Divider(),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(bus.departureTime, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text(bus.sourceCityName ?? 'Source', style: TextStyle(color: Colors.grey[600])),
-                  ],
-                ),
-                Icon(Icons.arrow_forward, color: Colors.grey[400]),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(bus.arrivalTime, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text(bus.destinationCityName ?? 'Dest', style: TextStyle(color: Colors.grey[600])),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => context.push('/bus/seats', extra: bus),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Select Seats'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildGrid(BuildContext context, bool isDark) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(24),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 450,
+        mainAxisSpacing: 24,
+        crossAxisSpacing: 24,
+        mainAxisExtent: 220,
+      ),
+      itemCount: _buses.length,
+      itemBuilder: (context, index) => _BusTripCard(bus: _buses[index], isDark: isDark),
+    );
+  }
+
+  Widget _buildList(BuildContext context, bool isDark) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: _buses.length,
+      itemBuilder: (context, index) => Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: _BusTripCard(bus: _buses[index], isDark: isDark),
+      ),
+    );
+  }
+}
+
+class _BusTripCard extends StatelessWidget {
+  final BusModel bus;
+  final bool isDark;
+
+  const _BusTripCard({required this.bus, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                bus.busName,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+              Text(
+                '₹${bus.baseFare.toStringAsFixed(0)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF2563EB),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            bus.busType,
+            style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Divider(height: 1),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildTimeLoc(bus.departureTime, bus.sourceCityName ?? 'Source', false),
+              const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB), size: 20),
+              _buildTimeLoc(bus.arrivalTime, bus.destinationCityName ?? 'Dest', true),
+            ],
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => context.push('/bus/seats', extra: bus),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB).withAlpha(30),
+                foregroundColor: const Color(0xFF2563EB),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Select Seats', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeLoc(String time, String loc, bool alignEnd) {
+    return Column(
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          time,
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
+        Text(
+          loc,
+          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+        ),
+      ],
     );
   }
 }

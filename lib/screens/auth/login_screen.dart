@@ -58,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       _redirectByRole(roleId: user.roleid, roleName: user.rolename);
     } else {
+      print("result $result");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Login failed'),

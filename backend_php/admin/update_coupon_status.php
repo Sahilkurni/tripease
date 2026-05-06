@@ -1,20 +1,80 @@
 <?php
-require_once '../../config/db.php';
-header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Content-Type: application/json");
 
-$couponid = $_POST['couponid'] ?? '';
-$isactive = $_POST['isactive'] ?? '';
+if (<?php
 
-if ($couponid === '' || $isactive === '') {
-    echo json_encode(["status" => "error", "message" => "Missing parameters"]);
-    exit;
+require_once __DIR__ . '/admin_helpers.php';
+
+admin_require_method('POST');
+admin_require_user($conn, $_POST);
+
+$couponId = isset($_POST['couponid']) ? intval($_POST['couponid']) : 0;
+$isActive = isset($_POST['isactive']) ? intval($_POST['isactive']) : -1;
+
+if ($couponId <= 0 || ($isActive !== 0 && $isActive !== 1)) {
+    admin_error('couponid and valid isactive are required');
+}
+if (!admin_table_exists($conn, 'coupons')) {
+    admin_error('Coupons table not found');
 }
 
-try {
-    $stmt = $pdo->prepare("UPDATE coupons SET isactive = ? WHERE couponid = ?");
-    $stmt->execute([$isactive, $couponid]);
-    echo json_encode(["status" => "success", "message" => "Coupon status updated"]);
-} catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+$columns = admin_columns($conn, 'coupons');
+$couponIdCol = admin_col($columns, ['couponid', 'id']);
+$activeCol = admin_col($columns, ['isactive']);
+if ($couponIdCol === null || $activeCol === null) {
+    admin_error('Coupon status columns not found');
 }
+
+$stmt = $conn->prepare("UPDATE coupons SET `$activeCol` = ? WHERE `$couponIdCol` = ?");
+$stmt->bind_param('ii', $isActive, $couponId);
+$ok = $stmt->execute();
+$stmt->close();
+
+if (!$ok) {
+    admin_error('Failed to update coupon');
+}
+
+admin_success(['couponid' => $couponId, 'isactive' => $isActive], 'Coupon status updated');
 ?>
+SERVER["REQUEST_METHOD"] == "OPTIONS") {
+    exit(0);
+}
+
+
+require_once __DIR__ . '/admin_helpers.php';
+
+admin_require_method('POST');
+admin_require_user($conn, $_POST);
+
+$couponId = isset($_POST['couponid']) ? intval($_POST['couponid']) : 0;
+$isActive = isset($_POST['isactive']) ? intval($_POST['isactive']) : -1;
+
+if ($couponId <= 0 || ($isActive !== 0 && $isActive !== 1)) {
+    admin_error('couponid and valid isactive are required');
+}
+if (!admin_table_exists($conn, 'coupons')) {
+    admin_error('Coupons table not found');
+}
+
+$columns = admin_columns($conn, 'coupons');
+$couponIdCol = admin_col($columns, ['couponid', 'id']);
+$activeCol = admin_col($columns, ['isactive']);
+if ($couponIdCol === null || $activeCol === null) {
+    admin_error('Coupon status columns not found');
+}
+
+$stmt = $conn->prepare("UPDATE coupons SET `$activeCol` = ? WHERE `$couponIdCol` = ?");
+$stmt->bind_param('ii', $isActive, $couponId);
+$ok = $stmt->execute();
+$stmt->close();
+
+if (!$ok) {
+    admin_error('Failed to update coupon');
+}
+
+admin_success(['couponid' => $couponId, 'isactive' => $isActive], 'Coupon status updated');
+?>
+

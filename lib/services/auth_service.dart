@@ -1,27 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'google_auth_service.dart';
+import '../core/api_config.dart';
 
 class AuthService {
-  // API endpoint - handles both web and mobile platforms
-  static String get baseUrl {
-    // For web apps, use localhost (XAMPP)
-    // For Android emulator, use 10.0.2.2
-    // For physical devices, use actual IP
-    try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        return 'http://10.0.2.2/tripease_api'; // Android emulator
-      }
-    } catch (e) {
-      // If Platform check fails, we're on web
-    }
-    // Default for web and other platforms - XAMPP on port 80
-    return 'http://localhost/tripease_api';
-  }
+  // Use centralized baseUrl from ApiConfig
+  static String get baseUrl => ApiConfig.baseUrl;
 
   final Dio _dio = Dio();
   UserModel? currentUser;
@@ -62,25 +50,36 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
+    final url = ApiConfig.login;
+    print("API URL: $url");
     try {
-      final response = await _dio.post(
-        '$baseUrl/login.php',
-        data: FormData.fromMap({'email': email, 'password': password}),
+      final response = await http.post(
+        Uri.parse(url),
+        body: {'email': email, 'password': password},
       );
+      print("Response: ${response.body}");
 
-      final data = response.data;
-      if (data != null && data['status'] == 'success') {
-        final user = UserModel.fromJson(data);
-        await saveSession(user);
-        return {'success': true, 'user': user};
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final user = UserModel.fromJson(data);
+          await saveSession(user);
+          return {'success': true, 'user': user};
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Login failed',
+          };
+        }
       } else {
         return {
           'success': false,
-          'message': data?['message'] ?? 'Login failed',
+          'message': 'Server error: ${response.statusCode}',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      print("Error: $e");
+      return {'success': false, 'message': 'Connection error: $e'};
     }
   }
 
@@ -90,30 +89,41 @@ class AuthService {
     String password,
     String roleId,
   ) async {
+    final url = ApiConfig.register;
+    print("API URL: $url");
     try {
-      final response = await _dio.post(
-        '$baseUrl/register.php',
-        data: FormData.fromMap({
+      final response = await http.post(
+        Uri.parse(url),
+        body: {
           'fullname': fullname,
           'email': email,
           'password': password,
           'roleid': roleId,
-        }),
+        },
       );
+      print("Response: ${response.body}");
 
-      final data = response.data;
-      if (data != null && data['status'] == 'success') {
-        final user = UserModel.fromJson(data);
-        await saveSession(user);
-        return {'success': true, 'user': user};
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final user = UserModel.fromJson(data);
+          await saveSession(user);
+          return {'success': true, 'user': user};
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Registration failed',
+          };
+        }
       } else {
         return {
           'success': false,
-          'message': data?['message'] ?? 'Registration failed',
+          'message': 'Server error: ${response.statusCode}',
         };
       }
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      print("Error: $e");
+      return {'success': false, 'message': 'Connection error: $e'};
     }
   }
 
@@ -123,9 +133,11 @@ class AuthService {
     String photo,
     String firebaseUid,
   ) async {
+    final url = '${ApiConfig.baseUrl}google_auth_sync.php';
+    print("API URL: $url");
     try {
       final response = await _dio.post(
-        '$baseUrl/google_auth_sync.php',
+        url,
         data: FormData.fromMap({
           'email': email,
           'name': name,
@@ -134,7 +146,9 @@ class AuthService {
         }),
       );
 
-      final data = response.data;
+      final data = response.data is String ? jsonDecode(response.data) : response.data;
+      print("Response: $data");
+
       if (data != null && data['status'] == 'success') {
         final isNew = data['is_new_user'] == true;
         final user = UserModel.fromJson(data);
@@ -146,18 +160,23 @@ class AuthService {
         return {'success': false, 'message': data?['message'] ?? 'Sync failed'};
       }
     } catch (e) {
+      print("Error: $e");
       return {'success': false, 'message': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> updateRole(String userId, String roleId) async {
+    final url = '${ApiConfig.baseUrl}update_role.php';
+    print("API URL: $url");
     try {
       final response = await _dio.post(
-        '$baseUrl/update_role.php',
+        url,
         data: FormData.fromMap({'userid': userId, 'roleid': roleId}),
       );
 
-      final data = response.data;
+      final data = response.data is String ? jsonDecode(response.data) : response.data;
+      print("Response: $data");
+
       if (data != null && data['status'] == 'success') {
         if (currentUser != null) {
           final updatedData = currentUser!.toJson();
@@ -174,6 +193,7 @@ class AuthService {
         };
       }
     } catch (e) {
+      print("Error: $e");
       return {'success': false, 'message': e.toString()};
     }
   }

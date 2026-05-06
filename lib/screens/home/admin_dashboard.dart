@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +8,7 @@ import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../hotel_partner/add_edit_hotel_screen.dart';
 import '../hotel_partner/manage_rooms_screen.dart';
+import '../../core/api_config.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -55,14 +54,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     {'id': '4', 'name': 'TRAVEL_AGENT'},
   ];
 
-  String get _apiBase {
-    try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        return 'http://10.0.2.2/tripease_api';
-      }
-    } catch (_) {}
-    return 'http://localhost/tripease_api';
-  }
+  String get _apiBase => ApiConfig.baseUrl;
 
   @override
   void initState() {
@@ -801,7 +793,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       return const Center(child: CircularProgressIndicator());
     if (_bookings.isEmpty) {
       return Center(
-        child: Text('No bookings available', style: GoogleFonts.poppins()),
+        child: Text('No data found', style: GoogleFonts.poppins()),
       );
     }
 

@@ -1,13 +1,25 @@
 <?php
-header('Content-Type: application/json');
-$dbPath = __DIR__ . '/tripease.db';
+require_once __DIR__ . '/db.php';
+
 try {
-    $db = new PDO('sqlite:' . $dbPath);
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $stmt = $db->query('SELECT hotelid, name, city, address, rooms, price, isactive, edatetime FROM hotels ORDER BY hotelid DESC');
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($rows);
+    $sql = "SELECT * FROM hotels WHERE isactive = 1 AND status = 'approved' ORDER BY hotelid DESC";
+    $result = $conn->query($sql);
+    
+    $hotels = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $hotels[] = $row;
+        }
+    }
+    
+    echo json_encode([
+        'status' => 'success',
+        'data' => $hotels
+    ]);
 } catch (Exception $e) {
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode([
+        'status' => 'error',
+        'message' => $e->getMessage()
+    ]);
 }
 ?>

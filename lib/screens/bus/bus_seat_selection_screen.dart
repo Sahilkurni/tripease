@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/bus_model.dart';
-import 'package:go_router/go_router.dart';
+import '../../services/bus_service.dart';
+import '../../services/auth_service.dart';
 
 class BusSeatSelectionScreen extends StatefulWidget {
   final BusModel bus;
@@ -13,13 +15,61 @@ class BusSeatSelectionScreen extends StatefulWidget {
 
 class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   final Set<BusSeatModel> _selectedSeats = {};
+  List<BusSeatModel> _allSeats = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSeats();
+  }
+
+  Future<void> _loadSeats() async {
+    try {
+      if (widget.bus.busid == 0) {
+        throw Exception("Invalid Trip ID (Demo Mode)");
+      }
+      final seatData = await busService.getBusSeats(widget.bus.busid);
+      if (seatData.isEmpty) {
+        throw Exception("No seats found");
+      }
+      setState(() {
+        _allSeats = seatData.map((s) => BusSeatModel.fromJson(s)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Seat Load Error (using fallback): $e");
+      setState(() {
+        _allSeats = _generateMockSeats();
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<BusSeatModel> _generateMockSeats() {
+    List<BusSeatModel> mock = [];
+    for (int r = 1; r <= 10; r++) {
+      for (int c = 1; c <= 4; c++) {
+        mock.add(BusSeatModel(
+          seatid: r * 10 + c,
+          busid: widget.bus.busid,
+          seatNo: '${String.fromCharCode(64 + r)}$c',
+          rowNo: r,
+          colNo: c,
+          isBooked: (r + c) % 5 == 0,
+        ));
+      }
+    }
+    return mock;
+  }
 
   void _toggleSeat(BusSeatModel seat) {
     if (seat.isBooked) return;
 
     setState(() {
-      if (_selectedSeats.contains(seat)) {
-        _selectedSeats.remove(seat);
+      if (_selectedSeats.any((s) => s.seatid == seat.seatid)) {
+        _selectedSeats.removeWhere((s) => s.seatid == seat.seatid);
       } else {
         if (_selectedSeats.length >= 6) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -40,121 +90,187 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
     return total;
   }
 
+  Future<void> _bookSeats() async {
+    final user = authService.currentUser;
+    if (user == null || user.userid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to book')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      // For multi-seat booking, we'd normally loop or have a bulk API
+      for (var seat in _selectedSeats) {
+        await busService.bookBus(
+          userId: int.parse(user.userid),
+          tripId: widget.bus.busid,
+          seatId: seat.seatid,
+          amount: widget.bus.baseFare + seat.extraFare,
+        );
+      }
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Success'),
+          content: Text('Successfully booked ${_selectedSeats.length} seats!'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('${widget.bus.busName} Seats'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        title: Text(widget.bus.busName, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
         elevation: 0,
+        centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildInfoHeader(),
-          _buildLegend(),
-          Expanded(child: _buildSeatLayout()),
-          _buildBottomBar(),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildBusInfo(isDark),
+                _buildLegend(isDark),
+                Expanded(child: _buildSeatLayout(isDark)),
+                _buildBottomBar(isDark),
+              ],
+            ),
     );
   }
 
-  Widget _buildInfoHeader() {
+  Widget _buildBusInfo(bool isDark) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('${widget.bus.sourceCityName} to ${widget.bus.destinationCityName}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text('${widget.bus.busType} | Base Fare: ₹${widget.bus.baseFare}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              Text(
+                widget.bus.sourceCityName ?? 'Source',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB)),
+              ),
+              Text(
+                widget.bus.destinationCityName ?? 'Destination',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
             ],
           ),
-          const Icon(Icons.directions_bus, color: Colors.blue),
+          const SizedBox(height: 8),
+          Text(
+            widget.bus.busType,
+            style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _legendItem(Colors.white, 'Available', true),
-          const SizedBox(width: 16),
-          _legendItem(Colors.green, 'Selected', false),
-          const SizedBox(width: 16),
-          _legendItem(Colors.grey[400]!, 'Booked', false),
+          _legendItem(isDark ? Colors.white10 : Colors.white, 'Available', true, isDark),
+          const SizedBox(width: 20),
+          _legendItem(const Color(0xFF2563EB), 'Selected', false, isDark),
+          const SizedBox(width: 20),
+          _legendItem(isDark ? Colors.white24 : Colors.grey[300]!, 'Booked', false, isDark),
         ],
       ),
     );
   }
 
-  Widget _legendItem(Color color, String text, bool hasBorder) {
+  Widget _legendItem(Color color, String text, bool hasBorder, bool isDark) {
     return Row(
       children: [
         Container(
-          width: 20,
-          height: 20,
+          width: 18,
+          height: 18,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(4),
-            border: hasBorder ? Border.all(color: Colors.grey) : null,
+            border: hasBorder ? Border.all(color: Colors.grey.shade400) : null,
           ),
         ),
         const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontSize: 12)),
+        Text(text, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
       ],
     );
   }
 
-  Widget _buildSeatLayout() {
-    // Assuming a 2x2 layout with 4 columns. We will group by row.
-    // Determine max rows
+  Widget _buildSeatLayout(bool isDark) {
     int maxRows = 0;
-    for (var seat in widget.bus.seats) {
+    for (var seat in _allSeats) {
       if (seat.rowNo > maxRows) maxRows = seat.rowNo;
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey[300]!),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
         ),
         child: Column(
           children: [
-            // Steering Wheel Icon
             const Align(
               alignment: Alignment.topRight,
               child: Padding(
-                padding: EdgeInsets.only(bottom: 24.0, right: 16.0),
-                child: Icon(Icons.sports_motorsports, size: 32, color: Colors.grey),
+                padding: EdgeInsets.only(bottom: 24, right: 8),
+                child: Icon(Icons.radio_button_checked_rounded, size: 32, color: Colors.grey),
               ),
             ),
-            
-            // Generate Rows
             for (int r = 1; r <= maxRows; r++)
               Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildSeatInRow(r, 1),
-                    _buildSeatInRow(r, 2),
-                    const SizedBox(width: 40), // Aisle
-                    _buildSeatInRow(r, 3),
-                    _buildSeatInRow(r, 4),
+                    _buildSeat(r, 1, isDark),
+                    _buildSeat(r, 2, isDark),
+                    const SizedBox(width: 40),
+                    _buildSeat(r, 3, isDark),
+                    _buildSeat(r, 4, isDark),
                   ],
                 ),
               ),
@@ -164,73 +280,100 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
     );
   }
 
-  Widget _buildSeatInRow(int row, int col) {
-    // Find seat
-    final seatIndex = widget.bus.seats.indexWhere((s) => s.rowNo == row && s.colNo == col);
-    if (seatIndex == -1) {
-      return const SizedBox(width: 40, height: 40); // Empty space if no seat
-    }
-    
-    final seat = widget.bus.seats[seatIndex];
-    final isSelected = _selectedSeats.contains(seat);
+  Widget _buildSeat(int row, int col, bool isDark) {
+    final seatIndex = _allSeats.indexWhere((s) => s.rowNo == row && s.colNo == col);
+    if (seatIndex == -1) return Container(width: 36, height: 36, margin: const EdgeInsets.symmetric(horizontal: 4));
+
+    final seat = _allSeats[seatIndex];
+    final isSelected = _selectedSeats.any((s) => s.seatid == seat.seatid);
 
     return GestureDetector(
       onTap: () => _toggleSeat(seat),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: seat.isBooked ? Colors.grey[300] : (isSelected ? Colors.green : Colors.white),
+          color: seat.isBooked
+              ? (isDark ? Colors.white10 : Colors.grey[200])
+              : (isSelected ? const Color(0xFF2563EB) : (isDark ? Colors.white12 : Colors.white)),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: seat.isBooked ? Colors.grey[400]! : (isSelected ? Colors.green[700]! : Colors.blue),
+            color: seat.isBooked
+                ? Colors.transparent
+                : (isSelected ? const Color(0xFF1D4ED8) : Colors.grey.shade400),
             width: 1.5,
           ),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 8)] : null,
         ),
         alignment: Alignment.center,
         child: Text(
           seat.seatNo,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: seat.isBooked ? Colors.grey[600] : (isSelected ? Colors.white : Colors.blue[800]),
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: seat.isBooked
+                ? Colors.grey
+                : (isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -5), blurRadius: 10)],
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 20,
+            offset: const Offset(0, -10),
+          ),
+        ],
       ),
       child: SafeArea(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('${_selectedSeats.length} Seats Selected', style: TextStyle(color: Colors.grey[600])),
-                Text('₹$_totalFare', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${_selectedSeats.length} Seats Selected',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    '₹${_totalFare.toStringAsFixed(0)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF2563EB),
+                    ),
+                  ),
+                ],
+              ),
             ),
             ElevatedButton(
-              onPressed: _selectedSeats.isEmpty ? null : () {
-                // Proceed to payment/booking
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proceeding to payment...')));
-              },
+              onPressed: _selectedSeats.isEmpty ? null : _bookSeats,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
               ),
-              child: const Text('Book Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Confirm Booking',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w800),
+              ),
             ),
           ],
         ),

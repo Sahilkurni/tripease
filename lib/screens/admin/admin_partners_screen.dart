@@ -41,12 +41,13 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
     if (response['status'] == 'success') {
       final list = response['data'];
       setState(() {
-        _partners = list is List
-            ? list
-                .whereType<Map>()
-                .map((e) => e.map((key, value) => MapEntry('$key', value)))
-                .toList()
-            : [];
+        _partners =
+            list is List
+                ? list
+                    .whereType<Map>()
+                    .map((e) => e.map((key, value) => MapEntry('$key', value)))
+                    .toList()
+                : [];
         _loading = false;
       });
     } else {
@@ -64,7 +65,8 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
       final owner = (partner['ownername'] ?? '').toString().toLowerCase();
       final status = (partner['status'] ?? '').toString().toUpperCase();
       final searchMatch = q.isEmpty || company.contains(q) || owner.contains(q);
-      final statusMatch = _statusFilter == _allStatus || status == _statusFilter;
+      final statusMatch =
+          _statusFilter == _allStatus || status == _statusFilter;
       return searchMatch && statusMatch;
     }).toList();
   }
@@ -106,11 +108,16 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Set Commission %'),
+          title: Text(
+            'Set Commission %',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
           content: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: 'Enter commission (e.g. 10)'),
+            decoration: const InputDecoration(
+              hintText: 'Enter commission (e.g. 10)',
+            ),
           ),
           actions: [
             TextButton(
@@ -122,7 +129,9 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
                 final parsed = double.tryParse(controller.text.trim());
                 if (parsed == null || parsed < 0 || parsed > 100) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Enter valid commission between 0 and 100')),
+                    const SnackBar(
+                      content: Text('Enter valid commission between 0 and 100'),
+                    ),
                   );
                   return;
                 }
@@ -136,7 +145,11 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
     );
 
     if (value == null) return;
-    await _setStatus(partnerId: partnerId, status: 'APPROVED', commission: value);
+    await _setStatus(
+      partnerId: partnerId,
+      status: 'APPROVED',
+      commission: value,
+    );
   }
 
   void _showMessage(String message, {bool isError = false}) {
@@ -156,7 +169,7 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'Partners Management',
@@ -173,24 +186,24 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
           ),
           const SizedBox(height: 16),
           _buildFilters(isDesktop: isDesktop),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Expanded(
             child: Container(
-              width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: _loading
-                  ? _buildLoading(isDesktop: isDesktop)
-                  : _error != null
+              child:
+                  _loading
+                      ? _buildLoading(isDesktop: isDesktop)
+                      : _error != null
                       ? _buildError()
                       : partners.isEmpty
-                          ? _buildEmpty()
-                          : isDesktop
-                              ? _buildDesktopTable(partners)
-                              : _buildMobileCards(partners),
+                      ? _buildEmpty()
+                      : isDesktop
+                      ? _buildDesktopTable(partners)
+                      : _buildMobileCards(partners),
             ),
           ),
         ],
@@ -252,22 +265,26 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
       );
     }
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         searchField,
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         statusFilter,
-        const SizedBox(height: 10),
-        Align(alignment: Alignment.centerRight, child: refresh),
+        const SizedBox(height: 12),
+        refresh,
       ],
     );
   }
 
   Widget _buildDesktopTable(List<Map<String, dynamic>> partners) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
+          dataRowMinHeight: 64,
+          dataRowMaxHeight: 116,
+          columnSpacing: 24,
           headingTextStyle: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
             color: _ink,
@@ -280,50 +297,60 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
             DataColumn(label: Text('Commission')),
             DataColumn(label: Text('Actions')),
           ],
-          rows: partners.map((p) {
-            final partnerId = int.tryParse((p['partnerid'] ?? '').toString());
-            return DataRow(
-              cells: [
-                DataCell(Text((p['companyname'] ?? '-').toString())),
-                DataCell(Text((p['ownername'] ?? '-').toString())),
-                DataCell(Text((p['city'] ?? '-').toString())),
-                DataCell(_statusChip((p['status'] ?? '').toString())),
-                DataCell(Text('${p['commission'] ?? 0}%')),
-                DataCell(
-                  partnerId == null
-                      ? const Text('-')
-                      : Wrap(
-                          spacing: 8,
-                          children: [
-                            OutlinedButton(
-                              onPressed: _updating
-                                  ? null
-                                  : () => _setStatus(
-                                        partnerId: partnerId,
-                                        status: 'APPROVED',
-                                      ),
-                              child: const Text('Approve'),
-                            ),
-                            OutlinedButton(
-                              onPressed: _updating
-                                  ? null
-                                  : () => _setStatus(
-                                        partnerId: partnerId,
-                                        status: 'REJECTED',
-                                      ),
-                              child: const Text('Reject'),
-                            ),
-                            ElevatedButton(
-                              onPressed:
-                                  _updating ? null : () => _openCommissionDialog(p),
-                              child: const Text('Set Commission %'),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
-            );
-          }).toList(),
+          rows:
+              partners.map((p) {
+                final partnerId = int.tryParse(
+                  (p['partnerid'] ?? '').toString(),
+                );
+                return DataRow(
+                  cells: [
+                    DataCell(Text((p['companyname'] ?? '-').toString())),
+                    DataCell(Text((p['ownername'] ?? '-').toString())),
+                    DataCell(Text((p['city'] ?? '-').toString())),
+                    DataCell(_statusChip((p['status'] ?? '').toString())),
+                    DataCell(Text('${p['commission'] ?? 0}%')),
+                    DataCell(
+                      partnerId == null
+                          ? const Text('-')
+                          : Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _PartnerActionButton(
+                                label: 'Approve',
+                                onPressed:
+                                    _updating
+                                        ? null
+                                        : () => _setStatus(
+                                          partnerId: partnerId,
+                                          status: 'APPROVED',
+                                        ),
+                              ),
+                              _PartnerActionButton(
+                                label: 'Reject',
+                                danger: true,
+                                onPressed:
+                                    _updating
+                                        ? null
+                                        : () => _setStatus(
+                                          partnerId: partnerId,
+                                          status: 'REJECTED',
+                                        ),
+                              ),
+                              _PartnerActionButton(
+                                label: 'Commission',
+                                filled: true,
+                                onPressed:
+                                    _updating
+                                        ? null
+                                        : () => _openCommissionDialog(p),
+                              ),
+                            ],
+                          ),
+                    ),
+                  ],
+                );
+              }).toList(),
         ),
       ),
     );
@@ -331,17 +358,25 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
 
   Widget _buildMobileCards(List<Map<String, dynamic>> partners) {
     return ListView.separated(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemCount: partners.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, i) {
         final p = partners[i];
         final partnerId = int.tryParse((p['partnerid'] ?? '').toString());
         return Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,6 +386,7 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
                   color: _ink,
+                  fontSize: 16,
                 ),
               ),
               const SizedBox(height: 4),
@@ -362,7 +398,7 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
                 'City: ${(p['city'] ?? '-').toString()}',
                 style: GoogleFonts.poppins(fontSize: 13, color: _muted),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -370,40 +406,46 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
                   _statusChip((p['status'] ?? '').toString()),
                   Chip(
                     label: Text(
-                      'Commission: ${p['commission'] ?? 0}%',
+                      'Comm: ${p['commission'] ?? 0}%',
                       style: GoogleFonts.poppins(fontSize: 12),
                     ),
+                    side: BorderSide.none,
                   ),
                 ],
               ),
-              const Divider(height: 22),
+              const Divider(height: 24),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  OutlinedButton(
-                    onPressed: _updating || partnerId == null
-                        ? null
-                        : () => _setStatus(
+                  _PartnerActionButton(
+                    label: 'Approve',
+                    onPressed:
+                        _updating || partnerId == null
+                            ? null
+                            : () => _setStatus(
                               partnerId: partnerId,
                               status: 'APPROVED',
                             ),
-                    child: const Text('Approve'),
                   ),
-                  OutlinedButton(
-                    onPressed: _updating || partnerId == null
-                        ? null
-                        : () => _setStatus(
+                  _PartnerActionButton(
+                    label: 'Reject',
+                    danger: true,
+                    onPressed:
+                        _updating || partnerId == null
+                            ? null
+                            : () => _setStatus(
                               partnerId: partnerId,
                               status: 'REJECTED',
                             ),
-                    child: const Text('Reject'),
                   ),
-                  ElevatedButton(
-                    onPressed: _updating || partnerId == null
-                        ? null
-                        : () => _openCommissionDialog(p),
-                    child: const Text('Set Commission %'),
+                  _PartnerActionButton(
+                    label: 'Commission',
+                    filled: true,
+                    onPressed:
+                        _updating || partnerId == null
+                            ? null
+                            : () => _openCommissionDialog(p),
                   ),
                 ],
               ),
@@ -418,14 +460,16 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
     final normalized = status.toUpperCase();
     final isApproved = normalized == 'APPROVED';
     final isRejected = normalized == 'REJECTED';
-    final fg = isApproved
-        ? Colors.green.shade800
-        : isRejected
+    final fg =
+        isApproved
+            ? Colors.green.shade800
+            : isRejected
             ? Colors.red.shade800
             : Colors.orange.shade800;
-    final bg = isApproved
-        ? Colors.green.shade50
-        : isRejected
+    final bg =
+        isApproved
+            ? Colors.green.shade50
+            : isRejected
             ? Colors.red.shade50
             : Colors.orange.shade50;
     return Chip(
@@ -438,22 +482,23 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
         ),
       ),
       backgroundColor: bg,
+      side: BorderSide.none,
     );
   }
 
   Widget _buildLoading({required bool isDesktop}) {
     if (isDesktop) {
       return Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: List.generate(
             8,
             (_) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              height: 42,
+              margin: const EdgeInsets.only(bottom: 12),
+              height: 58,
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
@@ -461,16 +506,17 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
       );
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemCount: 5,
-      itemBuilder: (_, __) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        height: 160,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
+      itemBuilder:
+          (_, __) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            height: 170,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
     );
   }
 
@@ -492,7 +538,11 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.error_outline_rounded, color: Colors.red.shade400, size: 48),
+          Icon(
+            Icons.error_outline_rounded,
+            color: Colors.red.shade400,
+            size: 48,
+          ),
           const SizedBox(height: 12),
           Text(
             _error ?? 'Something went wrong',
@@ -502,7 +552,7 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
               color: _ink,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _fetchPartners,
             icon: const Icon(Icons.refresh_rounded),
@@ -510,6 +560,64 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PartnerActionButton extends StatelessWidget {
+  final String label;
+  final bool danger;
+  final bool filled;
+  final VoidCallback? onPressed;
+
+  const _PartnerActionButton({
+    required this.label,
+    required this.onPressed,
+    this.danger = false,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? Colors.red.shade700 : const Color(0xFF2563EB);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    );
+    final text = Text(
+      label,
+      overflow: TextOverflow.ellipsis,
+      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700),
+    );
+
+    if (filled) {
+      return ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          shape: shape,
+          elevation: 0,
+        ),
+        child: text,
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(
+          color: danger ? Colors.red.shade200 : Colors.blue.shade100,
+        ),
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        shape: shape,
+      ),
+      child: text,
     );
   }
 }

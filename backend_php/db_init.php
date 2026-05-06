@@ -55,6 +55,7 @@ try {
             rooms INTEGER DEFAULT 0,
             price REAL DEFAULT 0,
             isactive INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'pending',
             edatetime DATETIME DEFAULT CURRENT_TIMESTAMP
         )"
     );
@@ -82,6 +83,7 @@ try {
             seats INTEGER DEFAULT 0,
             fare REAL DEFAULT 0,
             isactive INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'pending',
             edatetime DATETIME DEFAULT CURRENT_TIMESTAMP
         )"
     );

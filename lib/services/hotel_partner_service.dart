@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/api_config.dart';
 
 class CityItem {
   final int cityid;
@@ -81,11 +82,8 @@ class RoomItem {
 }
 
 class HotelPartnerService {
-  // Using localhost to work on emulator or web
-  // If Android emulator, you might need to use 10.0.2.2 instead
-  static String get _base {
-    return 'http://localhost/tripease_api';
-  }
+  // Use centralized baseUrl from ApiConfig
+  static String get _base => ApiConfig.baseUrl;
 
   static final List<RoomTypeItem> _defaultRoomTypes = [
     RoomTypeItem(roomtypeid: 1, typename: 'Standard'),
@@ -237,12 +235,14 @@ class HotelPartnerService {
 
   static Future<int> addHotel(Map<String, dynamic> payload) async {
     try {
+      final safePayload = Map<String, dynamic>.from(payload);
+      safePayload.putIfAbsent('status', () => 'pending');
       final uri = Uri.parse('$_base/owner/addHotel.php');
       final res = await http
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(payload),
+            body: jsonEncode(safePayload),
           )
           .timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
@@ -290,10 +290,11 @@ class HotelPartnerService {
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
-        final types = (json['data'] as List)
-            .map((e) => RoomTypeItem.fromJson(e))
-            .where((type) => type.typename.trim().isNotEmpty)
-            .toList();
+        final types =
+            (json['data'] as List)
+                .map((e) => RoomTypeItem.fromJson(e))
+                .where((type) => type.typename.trim().isNotEmpty)
+                .toList();
         return types.isEmpty ? _defaultRoomTypes : types;
       }
       throw Exception(json['message']);

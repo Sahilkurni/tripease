@@ -53,36 +53,49 @@ class RecommendedCard extends StatelessWidget {
               // Image
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  item.imageUrl,
-                  width: 90,
-                  height: 90,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (_, __, ___) => Container(
-                        width: 90,
-                        height: 90,
-                        color: const Color(0xFF1E3A5F),
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          color: Colors.white38,
-                        ),
-                      ),
-                  loadingBuilder:
-                      (_, child, progress) =>
-                          progress == null
-                              ? child
-                              : Container(
+                child:
+                    item.imageUrl.trim().isEmpty
+                        ? Container(
+                          width: 90,
+                          height: 90,
+                          color: _typeColor(item.type).withAlpha(35),
+                          child: Icon(
+                            item.type == 'package'
+                                ? Icons.card_travel_rounded
+                                : Icons.hotel_rounded,
+                            color: _typeColor(item.type),
+                          ),
+                        )
+                        : Image.network(
+                          item.imageUrl,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => Container(
                                 width: 90,
                                 height: 90,
-                                color: const Color(0xFFE2E8F0),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
+                                color: const Color(0xFF1E3A5F),
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.white38,
                                 ),
                               ),
-                ),
+                          loadingBuilder:
+                              (_, child, progress) =>
+                                  progress == null
+                                      ? child
+                                      : Container(
+                                        width: 90,
+                                        height: 90,
+                                        color: const Color(0xFFE2E8F0),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                        ),
               ),
               const SizedBox(width: 12),
               // Details
@@ -170,12 +183,18 @@ class RecommendedCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          '₹${_formatPrice(item.price)}',
-                          style: GoogleFonts.poppins(
-                            color: AppColors.primary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            item.price > 0
+                                ? '₹${_formatPrice(item.price)}'
+                                : 'View',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              color: AppColors.primary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -185,29 +204,31 @@ class RecommendedCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               // Book button
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: onTap, // TODO: navigate to booking screen
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(56, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+              Flexible(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: onTap,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(56, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Book',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      'Book',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

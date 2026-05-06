@@ -1,7 +1,5 @@
 <?php
-// backend_php/login.php
-include 'db.php';
-header('Content-Type: application/json');
+require_once __DIR__ . '/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -18,8 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'OPT
     }
 
     try {
+        // Find if password column is 'password' or 'password_hash'
+        $cols_check = $conn->query("SHOW COLUMNS FROM users LIKE 'password_hash'");
+        $pass_col = ($cols_check->num_rows > 0) ? 'password_hash' : 'password';
+
         $stmt = $conn->prepare(
-            "SELECT u.userid, u.fullname, u.email, u.password, u.roleid, u.photo, u.isactive, r.rolename 
+            "SELECT u.userid, u.fullname, u.email, u.$pass_col as password, u.roleid, u.photo, u.isactive, r.rolename 
              FROM users u 
              LEFT JOIN roles r ON u.roleid = r.roleid 
              WHERE u.email = ?"

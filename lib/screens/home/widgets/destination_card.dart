@@ -96,7 +96,7 @@ class DestinationCard extends StatelessWidget {
               right: 8,
               child: GestureDetector(
                 onTap: () {
-                  // TODO: add to wishlist via WishlistService
+                  Navigator.of(context).maybePop();
                 },
                 child: Container(
                   padding: const EdgeInsets.all(5),

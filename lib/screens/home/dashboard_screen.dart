@@ -4,16 +4,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/customer_service.dart';
+import '../../services/home_service.dart';
 import 'widgets/home_header.dart';
-import 'widgets/service_card.dart';
-import 'widgets/offer_card.dart';
-import 'widgets/destination_card.dart';
-import 'widgets/recommended_card.dart';
 import 'widgets/custom_bottom_nav.dart';
-
-// ─── MOCK DATA MODELS ───────────────────────────────────────────────────────
-// TODO: Move these to lib/models/ and fetch from PHP API
+import '../hotels/hotel_details_screen.dart';
+import 'package_details_screen.dart';
 
 class ServiceItem {
   final String id;
@@ -38,30 +36,13 @@ class ServiceItem {
       gradient: [const Color(0xFF2563EB), const Color(0xFF1D4ED8)],
     );
   }
-
-  static List<ServiceItem> mock() => const [
-    ServiceItem(
-      id: 'hotel',
-      label: 'Hotels',
-      subtitle: 'Luxury stays',
-      icon: Icons.hotel_rounded,
-      gradient: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-    ),
-    ServiceItem(
-      id: 'bus',
-      label: 'Bus',
-      subtitle: 'Comfortable rides',
-      icon: Icons.directions_bus_rounded,
-      gradient: [Color(0xFF059669), Color(0xFF047857)],
-    ),
-  ];
 }
 
 class OfferItem {
   final String id;
   final String title;
   final String subtitle;
-  final String imageUrl; // TODO: replace with API image URL
+  final String imageUrl;
   const OfferItem({
     required this.id,
     required this.title,
@@ -77,23 +58,13 @@ class OfferItem {
       imageUrl: json['imageUrl'] ?? json['image'] ?? '',
     );
   }
-
-  static List<OfferItem> mock() => const [
-    OfferItem(
-      id: 'o1',
-      title: 'Flat 20% Off',
-      subtitle: 'On Luxury Hotels',
-      imageUrl:
-          'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600',
-    ),
-  ];
 }
 
 class DestinationItem {
   final String id;
   final String name;
   final String country;
-  final String imageUrl; // TODO: replace with API image URL
+  final String imageUrl;
   const DestinationItem({
     required this.id,
     required this.name,
@@ -109,16 +80,6 @@ class DestinationItem {
       imageUrl: json['imageUrl'] ?? json['image'] ?? '',
     );
   }
-
-  static List<DestinationItem> mock() => const [
-    DestinationItem(
-      id: 'd1',
-      name: 'Goa',
-      country: 'India',
-      imageUrl:
-          'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=400',
-    ),
-  ];
 }
 
 class QuickSearchChip {
@@ -134,7 +95,9 @@ class RecommendedItem {
   final double rating;
   final double price;
   final String type; // 'hotel' | 'bus' | 'package'
-  final String imageUrl; // TODO: replace with API image URL
+  final String imageUrl;
+  final int days;
+  final int nights;
   const RecommendedItem({
     required this.id,
     required this.name,
@@ -143,6 +106,8 @@ class RecommendedItem {
     required this.price,
     required this.type,
     required this.imageUrl,
+    this.days = 0,
+    this.nights = 0,
   });
 
   factory RecommendedItem.fromJson(Map<String, dynamic> json) {
@@ -160,24 +125,73 @@ class RecommendedItem {
               : double.tryParse('${json['price']}') ?? 0.0,
       type: json['type'] ?? 'hotel',
       imageUrl: json['imageUrl'] ?? json['image'] ?? '',
+      days: int.tryParse('${json['days'] ?? 0}') ?? 0,
+      nights: int.tryParse('${json['nights'] ?? 0}') ?? 0,
     );
   }
 
-  static List<RecommendedItem> mock() => const [
-    RecommendedItem(
-      id: 'r1',
-      name: 'Taj Mahal Palace',
-      location: 'Mumbai',
-      rating: 4.9,
-      price: 12500,
+  factory RecommendedItem.fromHotelJson(Map<String, dynamic> json) {
+    return RecommendedItem(
+      id: json['hotelid']?.toString() ?? '',
+      name: json['hotelname']?.toString() ?? 'Hotel',
+      location:
+          (json['cityname'] ??
+                  json['city'] ??
+                  'City ID: ${json['cityid'] ?? '-'}')
+              .toString(),
+      rating: double.tryParse(json['star_rating']?.toString() ?? '0') ?? 0,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
       type: 'hotel',
       imageUrl:
-          'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=300',
-    ),
-  ];
+          (json['image'] ?? json['imageUrl'] ?? json['thumbnail'] ?? '')
+              .toString(),
+    );
+  }
 
+  factory RecommendedItem.fromPackageJson(Map<String, dynamic> json) {
+    return RecommendedItem(
+      id: json['packageid']?.toString() ?? '',
+      name: json['packagename']?.toString() ?? 'Package',
+      location: 'Travel package',
+      rating: 0,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
+      type: 'package',
+      imageUrl:
+          (json['thumbnail'] ?? json['image'] ?? json['imageUrl'] ?? '')
+              .toString(),
+      days: int.tryParse(json['days']?.toString() ?? '0') ?? 0,
+      nights: int.tryParse(json['nights']?.toString() ?? '0') ?? 0,
+    );
+  }
   @override
   String toString() => 'RecommendedItem($id, $name)';
+}
+
+class BookingItem {
+  final String id;
+  final String type;
+  final double amount;
+  final String status;
+  final String date;
+
+  const BookingItem({
+    required this.id,
+    required this.type,
+    required this.amount,
+    required this.status,
+    required this.date,
+  });
+
+  factory BookingItem.fromJson(Map<String, dynamic> json) {
+    return BookingItem(
+      id: json['bookingid']?.toString() ?? '',
+      type:
+          json['bookingtype']?.toString() ?? json['service']?.toString() ?? '',
+      amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
+      status: json['status']?.toString() ?? 'PENDING',
+      date: json['bookdate']?.toString() ?? '',
+    );
+  }
 }
 
 class DashboardScreen extends StatefulWidget {
@@ -189,19 +203,19 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _navIndex = 0;
-  // Dynamic data loaded from backend or fallbacks
-  List<ServiceItem> _services = [];
-  List<OfferItem> _offers = [];
-  List<DestinationItem> _destinations = [];
-  List<RecommendedItem> _recommended = [];
+  List<RecommendedItem> _featuredHotels = [];
+  List<RecommendedItem> _featuredPackages = [];
+  List<RecommendedItem> _featuredBuses = [];
+  CustomerProfile? _profile;
+  List<WishlistItem> _wishlist = [];
+  List<CustomerBooking> _recentBookings = [];
   List<QuickSearchChip> _searchChips = [];
 
-  // removed unused _loading/_error fields
-
-  // default quick search chips will be populated in initState
-
-  // TODO: Replace with: final user = await AuthService.getCurrentUser();
-  static const _userName = 'Sahil';
+  bool _homeLoading = true;
+  bool _profileLoading = true;
+  bool _wishlistLoading = true;
+  bool _bookingsLoading = true;
+  String? _homeError;
   static const _userLocation = 'Hubballi, Karnataka';
 
   late String _selectedLocation;
@@ -212,24 +226,192 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late bool isDesktop;
   late double hPad;
 
+  static const List<RecommendedItem> _hotelPreviews = [
+    RecommendedItem(
+      id: 'preview-hotel-1',
+      name: 'Skyline Grand Stay',
+      location: 'Bengaluru',
+      rating: 4.8,
+      price: 4299,
+      type: 'hotel',
+      imageUrl: '',
+    ),
+    RecommendedItem(
+      id: 'preview-hotel-2',
+      name: 'Coastal Palm Resort',
+      location: 'Goa',
+      rating: 4.6,
+      price: 5899,
+      type: 'hotel',
+      imageUrl: '',
+    ),
+    RecommendedItem(
+      id: 'preview-hotel-3',
+      name: 'Hillview Comfort Inn',
+      location: 'Manali',
+      rating: 4.7,
+      price: 3199,
+      type: 'hotel',
+      imageUrl: '',
+    ),
+  ];
+
+  static const List<RecommendedItem> _packagePreviews = [
+    RecommendedItem(
+      id: 'preview-package-1',
+      name: 'Golden Triangle Escape',
+      location: 'Delhi, Agra, Jaipur',
+      rating: 4.9,
+      price: 14999,
+      type: 'package',
+      imageUrl: '',
+      days: 5,
+      nights: 4,
+    ),
+    RecommendedItem(
+      id: 'preview-package-2',
+      name: 'Goa Weekend Drift',
+      location: 'North Goa',
+      rating: 4.7,
+      price: 8999,
+      type: 'package',
+      imageUrl: '',
+      days: 3,
+      nights: 2,
+    ),
+    RecommendedItem(
+      id: 'preview-package-3',
+      name: 'Kerala Backwater Trail',
+      location: 'Alleppey',
+      rating: 4.8,
+      price: 12999,
+      type: 'package',
+      imageUrl: '',
+      days: 4,
+      nights: 3,
+    ),
+  ];
+
+  static const List<RecommendedItem> _busPreviews = [
+    RecommendedItem(
+      id: 'preview-bus-1',
+      name: 'VRL Travels',
+      location: 'Hubballi to Bengaluru',
+      rating: 4.5,
+      price: 1200,
+      type: 'bus',
+      imageUrl: '',
+    ),
+    RecommendedItem(
+      id: 'preview-bus-2',
+      name: 'SRS Travels',
+      location: 'Belagavi to Pune',
+      rating: 4.3,
+      price: 950,
+      type: 'bus',
+      imageUrl: '',
+    ),
+    RecommendedItem(
+      id: 'preview-bus-3',
+      name: 'KSRTC Ambaari',
+      location: 'Dharwad to Hyderabad',
+      rating: 4.6,
+      price: 1850,
+      type: 'bus',
+      imageUrl: '',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _selectedLocation = _userLocation;
-    // populate with mock data initially; will be replaced when connected to API
-    _services = ServiceItem.mock();
-    _offers = OfferItem.mock();
-    _destinations = DestinationItem.mock();
-    _recommended = RecommendedItem.mock();
-    _searchChips = const [
-      QuickSearchChip(id: 'c1', label: 'Goa'),
-      QuickSearchChip(id: 'c2', label: 'Dubai'),
-      QuickSearchChip(id: 'c3', label: 'Manali'),
-      QuickSearchChip(id: 'c4', label: 'Mumbai'),
-      QuickSearchChip(id: 'c5', label: 'Bangalore'),
-      QuickSearchChip(id: 'c6', label: 'Kerala'),
-    ];
-    // initialised data; not loading from network yet
+    _loadHomeData();
+  }
+
+  Future<void> _loadHomeData() async {
+    setState(() {
+      _homeLoading = true;
+      _profileLoading = true;
+      _wishlistLoading = true;
+      _bookingsLoading = true;
+      _homeError = null;
+    });
+
+    try {
+      final userId = authService.currentUser?.userid ?? '';
+      final hotels = await homeService.getHomeHotels();
+      final packages = await homeService.getHomePackages();
+      final buses = await homeService.getHomeBuses();
+      final results = await Future.wait<dynamic>([
+        userId.isEmpty
+            ? Future<CustomerProfile?>.value(null)
+            : customerService.getUserProfile(userId),
+        userId.isEmpty
+            ? Future<List<WishlistItem>>.value([])
+            : customerService.getWishlist(userId),
+        userId.isEmpty
+            ? Future<List<CustomerBooking>>.value([])
+            : customerService.getUserBookings(userId),
+      ]);
+      if (!mounted) return;
+
+      final chipLabels =
+          <String>{
+            ...hotels.map(
+              (item) => item.location.replaceFirst('City ID: ', 'City '),
+            ),
+            ...packages.map((item) => item.name),
+          }.where((item) => item.trim().isNotEmpty).take(8).toList();
+
+      setState(() {
+        _featuredHotels = hotels;
+        _featuredPackages = packages;
+        _featuredBuses = buses;
+        _profile = results[0] as CustomerProfile?;
+        _wishlist = results[1] as List<WishlistItem>;
+        _recentBookings = results[2] as List<CustomerBooking>;
+        _searchChips =
+            chipLabels
+                .map((label) => QuickSearchChip(id: label, label: label))
+                .toList();
+        _homeLoading = false;
+        _profileLoading = false;
+        _wishlistLoading = false;
+        _bookingsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _homeLoading = false;
+        _profileLoading = false;
+        _wishlistLoading = false;
+        _bookingsLoading = false;
+        _homeError = 'Failed to load dashboard data';
+      });
+    }
+  }
+
+  Future<void> _removeWishlistItem(WishlistItem item) async {
+    final userId = authService.currentUser?.userid ?? '';
+    if (userId.isEmpty) return;
+
+    final oldItems = List<WishlistItem>.from(_wishlist);
+    setState(() {
+      _wishlist = _wishlist.where((saved) => saved.id != item.id).toList();
+    });
+
+    final ok = await customerService.removeFromWishlist(
+      userid: userId,
+      id: item.id,
+    );
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _wishlist = oldItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not remove wishlist item')),
+      );
+    }
   }
 
   @override
@@ -271,7 +453,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // 1. Header
             SliverToBoxAdapter(
               child: HomeHeaderWidget(
-                userName: _userName,
+                userName:
+                    _profile?.name.trim().isNotEmpty == true
+                        ? _profile!.name
+                        : authService.currentUser?.name ?? 'Traveler',
                 location: _userLocation,
               ),
             ),
@@ -279,37 +464,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // 2. Search bar + chips (overlaps header by 24px)
             SliverToBoxAdapter(child: _buildSearchSection()),
 
-            // 3. Quick Services
-            SliverToBoxAdapter(
-              child: _sectionHeader(context, 'Quick Services', '/services'),
-            ),
-            SliverToBoxAdapter(child: _buildServicesGrid()),
-
-            // 4. Trending Offers
-            SliverToBoxAdapter(
-              child: _sectionHeader(context, 'Trending Offers', '/offers'),
-            ),
-            SliverToBoxAdapter(child: _buildOffersRow()),
-
-            // 5. Popular Destinations
-            SliverToBoxAdapter(
-              child: _sectionHeader(
-                context,
-                'Popular Destinations',
-                '/destinations',
+            if (_homeLoading)
+              SliverToBoxAdapter(child: _buildHomeLoading())
+            else if (_homeError != null)
+              SliverToBoxAdapter(child: _buildHomeError())
+            else ...[
+              SliverToBoxAdapter(
+                child: _sectionHeader(context, 'Featured Hotels', '/hotels'),
               ),
-            ),
-            SliverToBoxAdapter(child: _buildDestinationsSection()),
-
-            // 6. Recommended For You
-            SliverToBoxAdapter(
-              child: _sectionHeader(
-                context,
-                'Recommended For You',
-                '/recommended',
+              SliverToBoxAdapter(
+                child: _buildFeaturedSection(
+                  items: _featuredHotels,
+                  type: 'hotel',
+                ),
               ),
-            ),
-            SliverToBoxAdapter(child: _buildRecommendedSection()),
+              SliverToBoxAdapter(
+                child: _sectionHeader(
+                  context,
+                  'Featured Packages',
+                  '/packages',
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _buildFeaturedSection(
+                  items: _featuredPackages,
+                  type: 'package',
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _sectionHeader(context, 'Featured Buses', '/bus_list'),
+              ),
+              SliverToBoxAdapter(
+                child: _buildFeaturedSection(
+                  items: _featuredBuses,
+                  type: 'bus',
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _sectionHeader(context, 'Recent Bookings', '/bookings'),
+              ),
+              SliverToBoxAdapter(child: _buildRecentBookingsSection()),
+            ],
 
             // Bottom padding for nav bar
             SliverToBoxAdapter(child: SizedBox(height: safeBot + 90)),
@@ -539,7 +734,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           onSelected: (val) {
-                            // TODO: onSelected → pre-fill search bar with chip label
+                            _selectedLocation = chip.label;
                           },
                         ),
                       ),
@@ -807,19 +1002,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: ListView.separated(
-                itemCount: 0, // TODO: wire to real bookings
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder:
-                    (_, i) => ListTile(
-                      title: Text('Booking #$i'),
-                      subtitle: const Text('No bookings available.'),
-                    ),
-              ),
+              child:
+                  _bookingsLoading
+                      ? _buildBookingSkeletonList()
+                      : _recentBookings.isEmpty
+                      ? _CustomerEmptyState(
+                        icon: Icons.confirmation_number_rounded,
+                        title: 'No bookings yet',
+                        subtitle: 'Start exploring trips',
+                        actionLabel: 'Explore',
+                        onAction: () => setState(() => _navIndex = 0),
+                      )
+                      : _buildBookingsList(),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBookingsList() {
+    final isWide = MediaQuery.of(context).size.width >= 900;
+    if (isWide) {
+      return GridView.builder(
+        physics: const BouncingScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 420,
+          mainAxisExtent: 150,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: _recentBookings.length,
+        itemBuilder:
+            (_, i) => _CustomerBookingCard(booking: _recentBookings[i]),
+      );
+    }
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      itemCount: _recentBookings.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _CustomerBookingCard(booking: _recentBookings[i]),
+    );
+  }
+
+  Widget _buildBookingSkeletonList() {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 5,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => const _ListSkeletonTile(),
     );
   }
 
@@ -840,24 +1072,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 12),
             Expanded(
               child:
-                  _recommended.isEmpty
-                      ? Center(
-                        child: Text(
-                          'Your wishlist is empty',
-                          style: GoogleFonts.poppins(),
-                        ),
+                  _wishlistLoading
+                      ? _buildWishlistSkeletons()
+                      : _wishlist.isEmpty
+                      ? _CustomerEmptyState(
+                        icon: Icons.favorite_rounded,
+                        title: 'Your wishlist is empty',
+                        subtitle: 'Start saving your favorite places',
+                        actionLabel: 'Explore',
+                        onAction: () => setState(() => _navIndex = 0),
                       )
-                      : ListView.builder(
-                        itemCount: _recommended.length,
-                        itemBuilder:
-                            (_, idx) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: RecommendedCard(
-                                item: _recommended[idx],
-                                onTap: () {},
-                              ),
-                            ),
-                      ),
+                      : _buildWishlistCards(),
             ),
           ],
         ),
@@ -865,8 +1090,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildWishlistSkeletons() {
+    if (MediaQuery.of(context).size.width >= 700) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: List.generate(
+            4,
+            (_) => const Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: SizedBox(
+                width: 300,
+                child: _HomeSkeletonCard(isPackage: false),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return ListView.separated(
+      itemCount: 4,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => const _HomeSkeletonCard(isPackage: false),
+    );
+  }
+
+  Widget _buildWishlistCards() {
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 900) {
+      return GridView.builder(
+        physics: const BouncingScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 330,
+          mainAxisExtent: 250,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: _wishlist.length,
+        itemBuilder:
+            (_, i) => _WishlistCard(
+              item: _wishlist[i],
+              onRemove: () => _removeWishlistItem(_wishlist[i]),
+            ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children:
+            _wishlist
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(right: 14),
+                    child: SizedBox(
+                      width: width < 420 ? width - (hPad * 2) : 300,
+                      child: _WishlistCard(
+                        item: item,
+                        onRemove: () => _removeWishlistItem(item),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+      ),
+    );
+  }
+
   Widget _buildProfileView(double safeBot) {
-    final user = authService.currentUser;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(hPad, 16, hPad, safeBot + 24),
@@ -881,33 +1174,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  child: Builder(
-                    builder: (_) {
-                      final displayName = (user?.name ?? _userName).trim();
-                      final initial =
-                          displayName.isNotEmpty
-                              ? displayName[0].toUpperCase()
-                              : 'U';
-                      return Text(initial);
-                    },
-                  ),
-                ),
-                title: Text(user?.name ?? _userName),
-                subtitle: Text(user?.email ?? 'Not signed in'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () async {
-                await authService.clearSession();
-                if (!mounted) return;
-                context.go('/login');
-              },
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Sign Out'),
+            Expanded(
+              child:
+                  _profileLoading
+                      ? const _ProfileSkeletonCard()
+                      : Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 720),
+                          child: _ProfileSummaryCard(
+                            profile: _profile,
+                            fallbackUser: authService.currentUser,
+                            onSignOut: () async {
+                              await authService.clearSession();
+                              if (!mounted) return;
+                              context.go('/login');
+                            },
+                          ),
+                        ),
+                      ),
             ),
           ],
         ),
@@ -938,7 +1223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Spacer(),
           TextButton(
             onPressed: () {
-              // TODO: Navigator.pushNamed(context, seeAllRoute);
+              context.push(seeAllRoute);
             },
             child: Text(
               'See All',
@@ -954,204 +1239,1456 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildServicesGrid() {
-    final padding = EdgeInsets.symmetric(horizontal: hPad);
-    if (isMobile) {
-      return Padding(
-        padding: padding,
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children:
-              _services.map((s) {
-                final cardW =
-                    (MediaQuery.of(context).size.width - hPad * 2 - 12) / 2;
-                return SizedBox(
-                  width: cardW,
-                  child: ServiceCard(
-                    item: s,
-                    onTap: () {
-                      // TODO: navigate based on item.id
-                    },
-                  ),
-                );
-              }).toList(),
-        ),
-      );
-    }
+  Widget _buildHomeLoading() {
     return Padding(
-      padding: padding,
-      child: Row(
-        children:
-            _services
-                .map(
-                  (s) => Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: s == _services.last ? 0 : 12,
-                      ),
-                      child: ServiceCard(
-                        item: s,
-                        onTap: () {
-                          // TODO: navigate based on item.id
-                        },
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(context, 'Featured Hotels', '/hotels'),
+          _buildSkeletonRail(isPackage: false),
+          _sectionHeader(context, 'Featured Packages', '/packages'),
+          _buildSkeletonRail(isPackage: true),
+        ],
       ),
     );
   }
 
-  Widget _buildOffersRow() {
-    final cardW =
-        isMobile
-            ? MediaQuery.of(context).size.width * 0.72
-            : isTablet
-            ? 300.0
-            : 340.0;
-    return SizedBox(
-      height: 160,
-      child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: hPad),
-        scrollDirection: Axis.horizontal,
-        itemCount: _offers.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder:
-            (_, i) => SizedBox(
-              width: cardW,
-              child: OfferCard(
-                item: _offers[i],
-                onTap: () {
-                  // TODO: navigate to offer detail
-                },
-              ),
-            ),
-      ),
-    );
-  }
-
-  Widget _buildDestinationsSection() {
-    final cardSize =
-        isMobile
-            ? 140.0
-            : isTablet
-            ? 155.0
-            : 160.0;
-    if (isDesktop) {
-      return Padding(
-        padding: EdgeInsets.symmetric(horizontal: hPad),
-        child: Row(
-          children: () {
-            final items = _destinations.take(6).toList();
-            return List<Widget>.generate(items.length, (i) {
-              final d = items[i];
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: i == items.length - 1 ? 0 : 12,
-                  ),
-                  child: SizedBox(
-                    height: cardSize,
-                    child: DestinationCard(
-                      item: d,
-                      onTap: () {
-                        // TODO: navigate to destination detail
-                      },
-                    ),
-                  ),
-                ),
-              );
-            });
-          }(),
-        ),
-      );
-    }
-    return SizedBox(
-      height: cardSize,
-      child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: hPad),
-        scrollDirection: Axis.horizontal,
-        itemCount: _destinations.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder:
-            (_, i) => SizedBox(
-              width: cardSize,
-              child: DestinationCard(
-                item: _destinations[i],
-                onTap: () {
-                  // TODO: navigate to destination detail
-                },
-              ),
-            ),
-      ),
-    );
-  }
-
-  Widget _buildRecommendedSection() {
+  Widget _buildSkeletonRail({required bool isPackage}) {
     if (isMobile) {
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: hPad),
         child: Column(
-          children:
-              _recommended
-                  .map(
-                    (r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: RecommendedCard(
-                        item: r,
-                        onTap: () {
-                          // TODO: navigate based on item.type
-                        },
-                      ),
-                    ),
-                  )
-                  .toList(),
+          children: List.generate(
+            3,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _HomeSkeletonCard(isPackage: isPackage),
+            ),
+          ),
         ),
       );
     }
-    // 2-column grid
-    final pairs = <List<RecommendedItem>>[];
-    for (var i = 0; i < _recommended.length; i += 2) {
-      pairs.add(
-        _recommended.sublist(
-          i,
-          i + 2 > _recommended.length ? _recommended.length : i + 2,
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: Row(
+        children: List.generate(
+          4,
+          (_) => Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: SizedBox(
+              width: isDesktop ? 330 : 300,
+              child: _HomeSkeletonCard(isPackage: isPackage),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeError() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 28),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 42, color: Colors.red.shade400),
+            const SizedBox(height: 12),
+            Text(
+              _homeError ?? 'Failed to load data',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: _loadHomeData,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedSection({
+    required List<RecommendedItem> items,
+    required String type,
+  }) {
+    final isPackage = type == 'package';
+    final hasData = items.isNotEmpty;
+    final displayItems = hasData ? items : (isPackage ? _packagePreviews : (type == 'bus' ? _busPreviews : _hotelPreviews));
+
+    // If no data, we still show the section with demo cards (preview items)
+    // We remove the Empty State widget as requested and show the cards directly with a "Demo" label
+    
+    final cards = displayItems.map((item) {
+      return GestureDetector(
+        onTap: () {
+          if (isPackage) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PackageDetailsScreen(
+                  packageId: item.id,
+                  packageName: item.name,
+                  price: item.price,
+                ),
+              ),
+            );
+          } else if (type == 'bus') {
+            // Navigate to seat selection for the selected bus trip
+            context.push('/bus/seats', extra: item);
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HotelDetailsScreen(
+                  hotelId: item.id,
+                  hotelName: item.name,
+                ),
+              ),
+            );
+          }
+        },
+        child: SizedBox(
+          width: isDesktop ? 330 : 300,
+          child: isPackage
+              ? _PremiumPackageCard(item: item, preview: !hasData)
+              : type == 'bus'
+              ? _PremiumBusCard(item: item, preview: !hasData)
+              : _PremiumHotelCard(item: item, preview: !hasData),
+        ),
+      );
+    }).toList();
+
+    if (isDesktop) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: hPad),
+        child: Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: cards,
         ),
       );
     }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: Row(
+        children: cards.map((card) => Padding(
+          padding: const EdgeInsets.only(right: 14),
+          child: card,
+        )).toList(),
+      ),
+    );
+  }
+
+  Widget _buildRecentBookingsSection() {
+    if (_recentBookings.isEmpty) {
+      return _emptyBand('No bookings yet');
+    }
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: hPad),
       child: Column(
         children:
-            pairs
+            _recentBookings
                 .map(
-                  (pair) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children:
-                          pair
-                              .map(
-                                (r) => Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      right: r == pair.last ? 0 : 12,
-                                    ),
-                                    child: RecommendedCard(
-                                      item: r,
-                                      onTap: () {
-                                        // TODO: navigate based on item.type
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                    ),
+                  (booking) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _CustomerBookingCard(booking: booking),
                   ),
                 )
                 .toList(),
+      ),
+    );
+  }
+
+  Widget _emptyBand(String message) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 26),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withAlpha(40)),
+        ),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomerEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _CustomerEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 460),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.grey.shade200,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(14),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Icon(icon, color: Colors.white, size: 36),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                color: isDark ? AppColors.darkSubtext : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.travel_explore_rounded, size: 18),
+              label: Text(actionLabel),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSummaryCard extends StatelessWidget {
+  final CustomerProfile? profile;
+  final UserModel? fallbackUser;
+  final Future<void> Function() onSignOut;
+
+  const _ProfileSummaryCard({
+    required this.profile,
+    required this.fallbackUser,
+    required this.onSignOut,
+  });
+
+  String get _name {
+    final value = profile?.name.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return fallbackUser?.name.trim().isNotEmpty == true
+        ? fallbackUser!.name.trim()
+        : 'Traveler';
+  }
+
+  String get _email {
+    final value = profile?.email.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return fallbackUser?.email.trim() ?? '';
+  }
+
+  String get _role {
+    final value = profile?.role.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return fallbackUser?.rolename?.trim().isNotEmpty == true
+        ? fallbackUser!.rolename!.trim()
+        : 'CUSTOMER';
+  }
+
+  String get _photo {
+    final value = profile?.profilePhoto.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return fallbackUser?.photo?.trim() ?? '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final initial = _name.isNotEmpty ? _name[0].toUpperCase() : 'U';
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(16),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient:
+                      _photo.isEmpty
+                          ? const LinearGradient(
+                            colors: [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                          )
+                          : null,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    _photo.isEmpty
+                        ? Center(
+                          child: Text(
+                            initial,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        )
+                        : Image.network(
+                          _photo,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => Center(
+                                child: Text(
+                                  initial,
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                        ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        color:
+                            isDark ? AppColors.darkText : AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _email.isEmpty ? 'Email not available' : _email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        color:
+                            isDark
+                                ? AppColors.darkSubtext
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _RoleBadge(role: _role),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Edit profile is coming soon.')),
+              );
+            },
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            label: Text(
+              'Edit Profile',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: Color(0xFFBFDBFE)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: onSignOut,
+            icon: const Icon(Icons.logout_rounded, size: 18),
+            label: Text(
+              'Sign Out',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w800),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  final String role;
+
+  const _RoleBadge({required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14B8A6).withAlpha(24),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        role.replaceAll('_', ' ').toUpperCase(),
+        style: GoogleFonts.poppins(
+          color: const Color(0xFF0F766E),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _WishlistCard extends StatelessWidget {
+  final WishlistItem item;
+  final VoidCallback onRemove;
+
+  const _WishlistCard({required this.item, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 250,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(18),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _TravelImagePlaceholder(
+                  imageUrl: item.imageUrl,
+                  icon:
+                      item.itemType == 'package'
+                          ? Icons.flight_takeoff_rounded
+                          : Icons.hotel_rounded,
+                  colors:
+                      item.itemType == 'package'
+                          ? const [Color(0xFFDB2777), Color(0xFFF59E0B)]
+                          : const [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton.filled(
+                    onPressed: onRemove,
+                    icon: const Icon(
+                      Icons.favorite_rounded,
+                      color: Colors.white,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      item.price > 0
+                          ? '₹${item.price.toStringAsFixed(0)}'
+                          : 'View details',
+                      style: GoogleFonts.poppins(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 16,
+                      color: Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      item.rating > 0 ? item.rating.toStringAsFixed(1) : '4.5',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerBookingCard extends StatelessWidget {
+  final CustomerBooking booking;
+
+  const _CustomerBookingCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(14),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF14B8A6)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              booking.itemType.toLowerCase().contains('package')
+                  ? Icons.card_travel_rounded
+                  : Icons.hotel_rounded,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  booking.itemName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  booking.date.isEmpty ? 'Date unavailable' : booking.date,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color:
+                        isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  '₹${booking.amount.toStringAsFixed(0)}',
+                  style: GoogleFonts.poppins(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          _BookingStatusBadge(status: booking.status),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingStatusBadge extends StatelessWidget {
+  final String status;
+
+  const _BookingStatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = status.toUpperCase();
+    final isCancelled = normalized.contains('CANCEL');
+    final isConfirmed =
+        normalized.contains('CONFIRM') ||
+        normalized.contains('COMPLETE') ||
+        normalized.contains('PAID');
+    final color =
+        isCancelled
+            ? const Color(0xFFDC2626)
+            : isConfirmed
+            ? const Color(0xFF059669)
+            : const Color(0xFFD97706);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        normalized.isEmpty ? 'PENDING' : normalized,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.poppins(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSkeletonCard extends StatelessWidget {
+  const _ProfileSkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: const _ListSkeletonTile(height: 210),
+      ),
+    );
+  }
+}
+
+class _ListSkeletonTile extends StatefulWidget {
+  final double height;
+
+  const _ListSkeletonTile({this.height = 132});
+
+  @override
+  State<_ListSkeletonTile> createState() => _ListSkeletonTileState();
+}
+
+class _ListSkeletonTileState extends State<_ListSkeletonTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Color?> _color;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _color = ColorTween(
+      begin: Colors.grey.shade200,
+      end: Colors.grey.shade100,
+    ).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _color,
+      builder:
+          (_, __) => Container(
+            height: widget.height,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: _color.value,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SkeletonBar(width: 180, color: _color.value),
+                      const SizedBox(height: 12),
+                      _SkeletonBar(width: 130, color: _color.value),
+                      const SizedBox(height: 12),
+                      _SkeletonBar(width: 90, color: _color.value),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+}
+
+class _PremiumEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _PremiumEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(12),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF14B8A6)],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: Colors.white, size: 30),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color:
+                        isDark
+                            ? AppColors.darkSubtext
+                            : AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton(
+            onPressed: onAction,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: Text(
+              actionLabel,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumHotelCard extends StatelessWidget {
+  final RecommendedItem item;
+  final bool preview;
+
+  const _PremiumHotelCard({required this.item, required this.preview});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final price = item.price > 0 ? item.price : 3499;
+    return Container(
+      height: 252,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(18),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _TravelImagePlaceholder(
+                  imageUrl: item.imageUrl,
+                  icon: Icons.hotel_rounded,
+                  colors: const [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: _PriceBadge(label: '₹${price.toStringAsFixed(0)}'),
+                ),
+                if (preview)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _SoftBadge(label: 'Preview'),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 15,
+                      color: Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          color:
+                              isDark
+                                  ? AppColors.darkSubtext
+                                  : AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 16,
+                      color: Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      item.rating > 0 ? item.rating.toStringAsFixed(1) : '4.5',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumPackageCard extends StatelessWidget {
+  final RecommendedItem item;
+  final bool preview;
+
+  const _PremiumPackageCard({required this.item, required this.preview});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final days = item.days > 0 ? item.days : 3;
+    final nights = item.nights > 0 ? item.nights : (days - 1).clamp(1, 10);
+    return Container(
+      height: 252,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(18),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _TravelImagePlaceholder(
+                  imageUrl: item.imageUrl,
+                  icon: Icons.flight_takeoff_rounded,
+                  colors: const [Color(0xFFDB2777), Color(0xFFF59E0B)],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: _GradientBadge(label: '$days Days / $nights Nights'),
+                ),
+                if (preview)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _SoftBadge(label: 'Preview'),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          color:
+                              isDark
+                                  ? AppColors.darkSubtext
+                                  : AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '₹${item.price.toStringAsFixed(0)}',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFFDB2777),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TravelImagePlaceholder extends StatelessWidget {
+  final String imageUrl;
+  final IconData icon;
+  final List<Color> colors;
+
+  const _TravelImagePlaceholder({
+    required this.imageUrl,
+    required this.icon,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.trim().isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(icon, color: Colors.white.withAlpha(210), size: 54),
+      ),
+    );
+  }
+}
+
+class _PriceBadge extends StatelessWidget {
+  final String label;
+
+  const _PriceBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SoftBadge(label: label);
+  }
+}
+
+class _SoftBadge extends StatelessWidget {
+  final String label;
+
+  const _SoftBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(235),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          color: AppColors.textPrimary,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _GradientBadge extends StatelessWidget {
+  final String label;
+
+  const _GradientBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFDB2777), Color(0xFFF59E0B)],
+        ),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSkeletonCard extends StatefulWidget {
+  final bool isPackage;
+
+  const _HomeSkeletonCard({required this.isPackage});
+
+  @override
+  State<_HomeSkeletonCard> createState() => _HomeSkeletonCardState();
+}
+
+class _HomeSkeletonCardState extends State<_HomeSkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Color?> _color;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _color = ColorTween(
+      begin: Colors.grey.shade200,
+      end: Colors.grey.shade100,
+    ).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _color,
+      builder:
+          (_, __) => Container(
+            height: 252,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _color.value,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _SkeletonBar(width: 180, color: _color.value),
+                const SizedBox(height: 10),
+                _SkeletonBar(width: 120, color: _color.value),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _SkeletonBar(width: 80, color: _color.value),
+                    const Spacer(),
+                    _SkeletonBar(
+                      width: widget.isPackage ? 90 : 58,
+                      color: _color.value,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+}
+
+class _SkeletonBar extends StatelessWidget {
+  final double width;
+  final Color? color;
+
+  const _SkeletonBar({required this.width, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: 14,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+  }
+}
+
+class _PremiumBusCard extends StatelessWidget {
+  final RecommendedItem item;
+  final bool preview;
+
+  const _PremiumBusCard({required this.item, required this.preview});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 252,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(18),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _TravelImagePlaceholder(
+                  imageUrl: item.imageUrl,
+                  icon: Icons.directions_bus_rounded,
+                  colors: const [Color(0xFF0F172A), Color(0xFF334155)],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: _GradientBadge(label: '₹${item.price.toStringAsFixed(0)}'),
+                ),
+                if (preview)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _SoftBadge(label: 'Demo'),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.route_rounded,
+                      size: 15,
+                      color: Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          color:
+                              isDark
+                                  ? AppColors.darkSubtext
+                                  : AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 16,
+                      color: Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '4.5',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

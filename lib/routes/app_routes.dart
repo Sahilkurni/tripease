@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/role_selection_screen.dart';
-import '../screens/home/dashboard_screen.dart';
 import '../screens/home/hotel_owner_dashboard.dart';
 import '../screens/home/agent_dashboard.dart';
 import '../screens/admin/admin_dashboard.dart';
+import '../screens/agent/add_edit_package_screen.dart';
+import '../screens/hotel_partner/add_edit_hotel_screen.dart';
+import '../screens/hotel_partner/manage_rooms_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/hotels/hotel_list_screen.dart';
@@ -18,6 +20,9 @@ import '../screens/bus/passenger_details_screen.dart';
 import '../screens/bus_partner/add_edit_bus_screen.dart';
 import '../models/bus_model.dart';
 import '../models/user_model.dart';
+import '../screens/home/dashboard_screen.dart';
+import '../screens/home/package_list_screen.dart';
+import '../screens/hotels/hotel_details_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -64,6 +69,10 @@ final appRouter = GoRouter(
       builder: (context, state) => const HotelListScreen(),
     ),
     GoRoute(
+      path: '/packages',
+      builder: (context, state) => const PackageListScreen(),
+    ),
+    GoRoute(
       path: '/hotel_detail',
       builder: (context, state) => const HotelDetailScreen(),
     ),
@@ -85,9 +94,28 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/bus/seats',
       builder: (context, state) {
-        final maybeBus = state.extra;
-        if (maybeBus is BusModel) {
-          return BusSeatSelectionScreen(bus: maybeBus);
+        final extra = state.extra;
+        if (extra is BusModel) {
+          return BusSeatSelectionScreen(bus: extra);
+        } else if (extra is RecommendedItem) {
+          // Map RecommendedItem to a BusModel shell
+          final bus = BusModel(
+            busid: int.tryParse(extra.id) ?? 0,
+            partnerid: 0,
+            busName: extra.name,
+            busType: 'Standard',
+            layoutType: '2x2',
+            totalSeats: 40,
+            sourceCityId: 0,
+            destinationCityId: 0,
+            departureTime: '00:00',
+            arrivalTime: '00:00',
+            sourceCityName: extra.location.contains(' to ') ? extra.location.split(' to ').first : 'Source',
+            destinationCityName: extra.location.contains(' to ') ? extra.location.split(' to ').last : 'Destination',
+            baseFare: extra.price,
+            seats: [], // Will be loaded by the screen
+          );
+          return BusSeatSelectionScreen(bus: bus);
         }
         return Scaffold(
           appBar: AppBar(title: const Text('Seat Layout')),
@@ -95,30 +123,56 @@ final appRouter = GoRouter(
         );
       },
     ),
-    // Dummy routes for the dashboard "add" buttons
     GoRoute(
       path: '/owner/hotels/add',
-      builder:
-          (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Add Hotel')),
-            body: const Center(child: Text('Add Hotel Form UI')),
-          ),
+      builder: (context, state) {
+        final args = state.extra;
+        if (args is Map<String, dynamic>) {
+          return AddEditHotelScreen(
+            isEdit: false,
+            partnerid: int.tryParse(args['partnerid'].toString()) ?? 0,
+            userid: int.tryParse(args['userid'].toString()) ?? 0,
+          );
+        }
+        return const AddEditHotelScreen(isEdit: false, partnerid: 0, userid: 0);
+      },
     ),
     GoRoute(
       path: '/owner/hotels/:id/rooms',
-      builder:
-          (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Manage Rooms')),
-            body: const Center(child: Text('Manage Rooms UI')),
-          ),
+      builder: (context, state) {
+        final args = state.extra;
+        if (args is Map<String, dynamic>) {
+          return ManageRoomsScreen(
+            hotelid:
+                int.tryParse(
+                  (args['hotelid'] ?? state.pathParameters['id']).toString(),
+                ) ??
+                0,
+            hotelname: (args['hotelname'] ?? 'Hotel').toString(),
+            partnerid: int.tryParse(args['partnerid'].toString()) ?? 0,
+            userid: int.tryParse(args['userid'].toString()) ?? 0,
+          );
+        }
+        return ManageRoomsScreen(
+          hotelid: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+          hotelname: 'Hotel',
+          partnerid: 0,
+          userid: 0,
+        );
+      },
     ),
     GoRoute(
       path: '/agent/packages/add',
-      builder:
-          (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Add Package')),
-            body: const Center(child: Text('Add Package Form UI')),
-          ),
+      builder: (context, state) {
+        final args = state.extra;
+        if (args is Map<String, dynamic>) {
+          return AddEditPackageScreen(
+            partnerid: int.tryParse(args['partnerid'].toString()) ?? 0,
+            userid: int.tryParse(args['userid'].toString()) ?? 0,
+          );
+        }
+        return const AddEditPackageScreen(partnerid: 0, userid: 0);
+      },
     ),
     GoRoute(
       path: '/agent/buses/add',

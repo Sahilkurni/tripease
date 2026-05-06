@@ -1,18 +1,74 @@
 <?php
-require_once '../../config/db.php';
-header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Content-Type: application/json");
 
-try {
-    $stmt = $pdo->query("
-        SELECT p.paymentid, p.bookingid, p.amount, p.paymentstatus, p.paiddate,
-               b.bookingno
-        FROM payments p 
-        LEFT JOIN bookings b ON p.bookingid = b.bookingid 
-        ORDER BY p.paymentid DESC
-    ");
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode(["status" => "success", "data" => $data]);
-} catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+if (<?php
+
+require_once __DIR__ . '/admin_helpers.php';
+
+admin_require_method('GET');
+admin_require_user($conn, $_GET);
+
+if (!admin_table_exists($conn, 'payments')) {
+    admin_success([]);
 }
+
+$paymentColumns = admin_columns($conn, 'payments');
+$paymentIdCol = admin_col($paymentColumns, ['paymentid', 'id']);
+
+$select = [
+    admin_int_select_expr('paymentid', $paymentColumns, ['paymentid', 'id'], '0', 'p.'),
+    admin_int_select_expr('bookingid', $paymentColumns, ['bookingid'], '0', 'p.'),
+    admin_int_select_expr('amount', $paymentColumns, ['amount', 'paidamount'], '0', 'p.'),
+    admin_select_expr('paymentstatus', $paymentColumns, ['paymentstatus', 'status'], "'PENDING'", 'p.'),
+    admin_select_expr('edatetime', $paymentColumns, ['paiddate', 'paymentdate', 'edatetime', 'created_at'], "''", 'p.')
+];
+
+$order = $paymentIdCol !== null ? "p.`$paymentIdCol` DESC" : '1 DESC';
+$sql = 'SELECT ' . implode(', ', $select) . " FROM payments p ORDER BY $order";
+$result = $conn->query($sql);
+
+if (!$result) {
+    admin_error('Failed to fetch payments');
+}
+
+admin_success(admin_rows($result));
 ?>
+SERVER["REQUEST_METHOD"] == "OPTIONS") {
+    exit(0);
+}
+
+
+require_once __DIR__ . '/admin_helpers.php';
+
+admin_require_method('GET');
+admin_require_user($conn, $_GET);
+
+if (!admin_table_exists($conn, 'payments')) {
+    admin_success([]);
+}
+
+$paymentColumns = admin_columns($conn, 'payments');
+$paymentIdCol = admin_col($paymentColumns, ['paymentid', 'id']);
+
+$select = [
+    admin_int_select_expr('paymentid', $paymentColumns, ['paymentid', 'id'], '0', 'p.'),
+    admin_int_select_expr('bookingid', $paymentColumns, ['bookingid'], '0', 'p.'),
+    admin_int_select_expr('amount', $paymentColumns, ['amount', 'paidamount'], '0', 'p.'),
+    admin_select_expr('paymentstatus', $paymentColumns, ['paymentstatus', 'status'], "'PENDING'", 'p.'),
+    admin_select_expr('edatetime', $paymentColumns, ['paiddate', 'paymentdate', 'edatetime', 'created_at'], "''", 'p.')
+];
+
+$order = $paymentIdCol !== null ? "p.`$paymentIdCol` DESC" : '1 DESC';
+$sql = 'SELECT ' . implode(', ', $select) . " FROM payments p ORDER BY $order";
+$result = $conn->query($sql);
+
+if (!$result) {
+    admin_error('Failed to fetch payments');
+}
+
+admin_success(admin_rows($result));
+?>
+

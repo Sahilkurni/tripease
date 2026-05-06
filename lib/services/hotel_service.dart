@@ -7,80 +7,103 @@ import '../core/api_config.dart';
 class HotelService {
   // Fetch hotels for a specific partner (Owner)
   Future<List<HotelModel>> getPartnerHotels(int partnerId) async {
+    final url = '${ApiConfig.hotels}?partnerid=$partnerId';
+    print("API URL: $url");
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.hotels}?partnerid=$partnerId'));
-      
+      final response = await http.get(Uri.parse(url));
+      print("Response: ${response.body}");
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          return (data['data'] as List).map((e) => HotelModel.fromJson(e)).toList();
+        final data = jsonDecode(response.body)['data'];
+        if (data is List) {
+          return data.map((e) => HotelModel.fromJson(e)).toList();
         }
       }
-      throw Exception('Failed to load hotels');
+      return [];
     } catch (e) {
-      // Fallback to mock data for UI testing if API fails/not ready
-      print('API Error (getPartnerHotels): $e. Using mock data.');
-      return [
-        HotelModel(
-          hotelid: 1,
-          partnerid: partnerId,
-          hotelname: 'Grand Taj',
-          cityid: 1,
-          starRating: 5.0,
-          isactive: 1,
-          imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80',
-          startingPrice: 4500.0,
-        ),
-        HotelModel(
-          hotelid: 2,
-          partnerid: partnerId,
-          hotelname: 'Sea View Resort',
-          cityid: 2,
-          starRating: 4.5,
-          isactive: 1,
-          imageUrl: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80',
-          startingPrice: 3200.0,
-        ),
-      ];
+      print("Error: $e");
+      return [];
+    }
+  }
+
+  // Fetch all approved hotels for home
+  Future<List<HotelModel>> getHomeHotels() async {
+    final url = ApiConfig.searchHotels;
+    print("API URL: $url");
+    try {
+      final response = await http.get(Uri.parse(url));
+      print("Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final data = decoded['data'];
+        if (data is List) {
+          return data.map((e) => HotelModel.fromJson(e)).toList();
+        }
+        return [];
+      } else {
+        throw Exception("API failed with status: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error: $e");
+      rethrow;
     }
   }
 
   // Fetch rooms for a specific hotel
   Future<List<RoomModel>> getHotelRooms(int hotelId) async {
+    final url = '${ApiConfig.rooms}?hotelid=$hotelId';
+    print("API URL (Rooms): $url");
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.rooms}?hotelid=$hotelId'));
-      
+      final response = await http.get(Uri.parse(url));
+      print("Hotel Rooms Response: ${response.body}");
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          return (data['data'] as List).map((e) => RoomModel.fromJson(e)).toList();
+        final decoded = jsonDecode(response.body);
+        if (decoded['status'] == 'success') {
+          final data = decoded['data'];
+          if (data is List) {
+            return data.map((e) => RoomModel.fromJson(e)).toList();
+          }
         }
+        return [];
+      } else {
+        throw Exception("API failed with status: ${response.statusCode}");
       }
-      throw Exception('Failed to load rooms');
     } catch (e) {
-      print('API Error (getHotelRooms): $e. Using mock data.');
-      return [
-        RoomModel(
-          roomid: 1,
-          hotelid: hotelId,
-          roomtypeid: 1,
-          roomname: 'Deluxe Sea View',
-          capacity: 2,
-          totalrooms: 10,
-          price: 3200.0,
-          roomTypeName: 'Deluxe',
-        ),
-        RoomModel(
-          roomid: 2,
-          hotelid: hotelId,
-          roomtypeid: 2,
-          roomname: 'Presidential Suite',
-          capacity: 4,
-          totalrooms: 2,
-          price: 8500.0,
-          roomTypeName: 'Suite',
-        ),
-      ];
+      print("Error fetching rooms: $e");
+      rethrow;
+    }
+  }
+  Future<bool> createBooking({
+    required int userId,
+    required int hotelId,
+    required int roomId,
+    required double amount,
+  }) async {
+    final url = '${ApiConfig.baseUrl}create_booking.php';
+    print("API URL (Create Hotel Booking): $url");
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        body: {
+          'userid': userId.toString(),
+          'hotelid': hotelId.toString(),
+          'roomid': roomId.toString(),
+          'amount': amount.toString(),
+          'booking_date': DateTime.now().toIso8601String().split('T').first,
+        },
+      );
+      print("Hotel Booking Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print("Error creating hotel booking: $e");
+      return false;
     }
   }
 }

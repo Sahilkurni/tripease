@@ -1,84 +1,92 @@
-import 'dart:io' show Platform;
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
+import '../core/api_config.dart';
 import '../screens/home/dashboard_screen.dart';
 
 class HomeService {
-  String get baseUrl {
-    try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        return 'http://10.0.2.2/tripease_api';
-      }
-    } catch (e) {
-      debugPrint('baseUrl detection error: $e');
+  String get baseUrl => ApiConfig.baseUrl;
+
+  List<Map<String, dynamic>> _dataListFromResponse(http.Response response) {
+    print(response.body);
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
+      final List data = decoded['data'] is List ? decoded['data'] as List : [];
+      return data
+          .whereType<Map>()
+          .map((item) => item.map((key, value) => MapEntry('$key', value)))
+          .toList();
     }
-    return 'http://localhost/tripease_api';
+    return [];
   }
 
-  final Dio _dio = Dio();
-
-  Future<List<ServiceItem>> getServices() async {
+  Future<List<RecommendedItem>> getHomeHotels() async {
     try {
-      final res = await _dio.get('$baseUrl/get_services.php');
-      final data = res.data;
-      if (data is List) {
-        return data
-            .map((e) => ServiceItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-      }
+      final response = await http.get(
+        Uri.parse('$baseUrl/get_home_hotels.php'),
+      );
+      print("Home Hotels Response: ${response.body}");
+      final rows = _dataListFromResponse(response);
+      return rows.map(RecommendedItem.fromHotelJson).toList();
     } catch (e, st) {
-      debugPrint('getServices error: $e');
+      debugPrint('getHomeHotels error: $e');
       debugPrint('$st');
+      return [];
     }
-    return ServiceItem.mock();
   }
 
-  Future<List<OfferItem>> getOffers() async {
+  Future<List<RecommendedItem>> getHomePackages() async {
     try {
-      final res = await _dio.get('$baseUrl/get_offers.php');
-      final data = res.data;
-      if (data is List) {
-        return data
-            .map((e) => OfferItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-      }
+      final response = await http.get(
+        Uri.parse('$baseUrl/get_home_packages.php'),
+      );
+      print("Home Packages Response: ${response.body}");
+      final rows = _dataListFromResponse(response);
+      return rows.map(RecommendedItem.fromPackageJson).toList();
     } catch (e, st) {
-      debugPrint('getOffers error: $e');
+      debugPrint('getHomePackages error: $e');
       debugPrint('$st');
+      return [];
     }
-    return OfferItem.mock();
   }
 
-  Future<List<DestinationItem>> getDestinations() async {
+  Future<List<RecommendedItem>> getHomeBuses() async {
     try {
-      final res = await _dio.get('$baseUrl/get_destinations.php');
-      final data = res.data;
-      if (data is List) {
-        return data
-            .map((e) => DestinationItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-      }
+      final response = await http.get(
+        Uri.parse('$baseUrl/get_bus_trips.php'),
+      );
+      print("Home Buses Response: ${response.body}");
+      final rows = _dataListFromResponse(response);
+      return rows.map((row) => RecommendedItem(
+        id: row['tripid']?.toString() ?? '',
+        name: row['busname']?.toString() ?? 'Bus',
+        location: '${row['source']} to ${row['destination']}',
+        rating: 4.5, // Placeholder rating for buses
+        price: double.tryParse(row['price']?.toString() ?? '0') ?? 0,
+        type: 'bus',
+        imageUrl: '', // Placeholder image
+      )).toList();
     } catch (e, st) {
-      debugPrint('getDestinations error: $e');
+      debugPrint('getHomeBuses error: $e');
       debugPrint('$st');
+      return [];
     }
-    return DestinationItem.mock();
   }
 
-  Future<List<RecommendedItem>> getRecommended() async {
+  Future<List<BookingItem>> getRecentBookings({String? userid}) async {
     try {
-      final res = await _dio.get('$baseUrl/get_recommended.php');
-      final data = res.data;
-      if (data is List) {
-        return data
-            .map((e) => RecommendedItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-      }
+      final query = (userid == null || userid.isEmpty) ? '' : '?userid=$userid';
+      final response = await http.get(
+        Uri.parse('$baseUrl/get_bookings.php$query'),
+      );
+      print("Recent Bookings Response: ${response.body}");
+      final rows = _dataListFromResponse(response);
+      return rows.map(BookingItem.fromJson).toList();
     } catch (e, st) {
-      debugPrint('getRecommended error: $e');
+      debugPrint('getRecentBookings error: $e');
       debugPrint('$st');
+      return [];
     }
-    return RecommendedItem.mock();
   }
 }
 

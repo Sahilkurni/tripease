@@ -38,9 +38,9 @@ class HomeHeaderWidget extends StatelessWidget {
       height: headerHeight,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF1E3A5F), Color(0xFF2563EB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F766E), Color(0xFF2563EB), Color(0xFFDB2777)],
         ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(32),
@@ -49,15 +49,35 @@ class HomeHeaderWidget extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Subtle bokeh effect circles
           Positioned(
-            top: -20,
-            right: -20,
+            top: safeTop + 68,
+            right: isDesktop ? 170 : 36,
+            child: Transform.rotate(
+              angle: -0.42,
+              child: Icon(
+                Icons.flight_takeoff_rounded,
+                color: Colors.white.withAlpha(42),
+                size: isDesktop ? 92 : 58,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 38,
+            right: isDesktop ? 310 : 110,
+            child: Icon(
+              Icons.location_on_rounded,
+              color: Colors.white.withAlpha(38),
+              size: isDesktop ? 52 : 36,
+            ),
+          ),
+          Positioned(
+            top: safeTop + 38,
+            right: -18,
             child: Container(
-              width: 120,
-              height: 120,
+              width: 112,
+              height: 112,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(26),
                 color: Colors.white.withAlpha((0.05 * 255).round()),
               ),
             ),
@@ -66,10 +86,10 @@ class HomeHeaderWidget extends StatelessWidget {
             bottom: -30,
             left: -10,
             child: Container(
-              width: 80,
-              height: 80,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(28),
                 color: Colors.white.withAlpha((0.07 * 255).round()),
               ),
             ),
@@ -78,11 +98,11 @@ class HomeHeaderWidget extends StatelessWidget {
             top: 20,
             right: screenW * 0.4,
             child: Container(
-              width: 60,
-              height: 60,
+              width: 72,
+              height: 42,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF7C3AED).withAlpha((0.12 * 255).round()),
+                borderRadius: BorderRadius.circular(24),
+                color: Colors.white.withAlpha((0.09 * 255).round()),
               ),
             ),
           ),
@@ -123,9 +143,7 @@ class HomeHeaderWidget extends StatelessWidget {
                             Icons.notifications_outlined,
                             color: Colors.white,
                           ),
-                          onPressed: () {
-                            // TODO: Open notifications screen
-                          },
+                          onPressed: () {},
                         ),
                         Positioned(
                           top: 8,

@@ -1,7 +1,5 @@
 <?php
-// backend_php/google_auth_sync.php
-include 'db.php';
-header('Content-Type: application/json');
+require_once __DIR__ . '/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
@@ -16,11 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Check if user exists
     $stmt = $conn->prepare(
-        "SELECT u.userid, u.fullname, u.email, u.profilephoto, u.roleid, r.rolename
+        "SELECT u.userid, u.fullname, u.email, u.photo, u.roleid, r.rolename
          FROM users u
          LEFT JOIN roles r ON u.roleid = r.roleid
          WHERE u.email = ?"
     );
+    
+    if (!$stmt) {
+        echo json_encode(["status" => "error", "message" => "SQL Prepare Error: " . $conn->error]);
+        exit;
+    }
+    
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -41,18 +45,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "email" => $user['email'],
             "roleid" => $user['roleid'] ? (string)$user['roleid'] : '1',
             "rolename" => $user['rolename'] ?? 'CUSTOMER',
-            "photo" => $user['profilephoto'] ?? ''
+            "photo" => $user['photo'] ?? ''
         ]);
     } else {
         // Create new user
-        $uid = '0';
         $roleid = 1; // Default to CUSTOMER role
+        
+        // Find if password column exists
+        $cols_check = $conn->query("SHOW COLUMNS FROM users LIKE 'password_hash'");
+        $pass_col = ($cols_check->num_rows > 0) ? 'password_hash' : 'password';
 
         $insertStmt = $conn->prepare(
-            "INSERT INTO users (uid, firebase_uid, fullname, email, profilephoto, password, roleid, isactive)
-             VALUES (?, ?, ?, ?, ?, '', ?, 1)"
+            "INSERT INTO users (firebase_uid, fullname, email, photo, $pass_col, roleid, isactive)
+             VALUES (?, ?, ?, ?, '', ?, 1)"
         );
-        $insertStmt->bind_param("sssssi", $uid, $firebase_uid, $fullname, $email, $photo, $roleid);
+        
+        if (!$insertStmt) {
+            echo json_encode(["status" => "error", "message" => "SQL Insert Prepare Error: " . $conn->error]);
+            exit;
+        }
+        
+        $insertStmt->bind_param("ssssi", $firebase_uid, $fullname, $email, $photo, $roleid);
 
         if ($insertStmt->execute()) {
             $newUserId = $conn->insert_id;
@@ -69,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "photo" => $photo
             ]);
         } else {
-            echo json_encode(["status" => "error", "message" => "Failed to create user."]);
+            echo json_encode(["status" => "error", "message" => "Failed to create user: " . $conn->error]);
         }
     }
 } else {

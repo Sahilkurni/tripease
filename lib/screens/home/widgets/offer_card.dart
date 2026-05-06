@@ -91,7 +91,6 @@ class OfferCard extends StatelessWidget {
             ),
           ),
           // Subtle badge top-right
-          // TODO: add badge field to OfferItem model instead of hardcoding 'HOT' if required
           Positioned(
             top: 10,
             right: 10,

@@ -42,12 +42,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     if (response['status'] == 'success') {
       final list = response['data'];
       setState(() {
-        _users = list is List
-            ? list
-                .whereType<Map>()
-                .map((e) => e.map((key, value) => MapEntry('$key', value)))
-                .toList()
-            : [];
+        _users =
+            list is List
+                ? list
+                    .whereType<Map>()
+                    .map((e) => e.map((key, value) => MapEntry('$key', value)))
+                    .toList()
+                : [];
         _loading = false;
       });
     } else {
@@ -60,9 +61,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   List<Map<String, dynamic>> get _filteredUsers {
     return _users.where((user) {
-      final fullName = (user['fullname'] ?? user['name'] ?? '')
-          .toString()
-          .toLowerCase();
+      final fullName =
+          (user['fullname'] ?? user['name'] ?? '').toString().toLowerCase();
       final email = (user['email'] ?? '').toString().toLowerCase();
       final roleId = (user['roleid'] ?? '').toString();
       final query = _searchQuery.toLowerCase().trim();
@@ -124,7 +124,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'Users Management',
@@ -144,21 +144,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           const SizedBox(height: 12),
           Expanded(
             child: Container(
-              width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: _loading
-                  ? _buildShimmer(isDesktop: isDesktop)
-                  : _error != null
+              child:
+                  _loading
+                      ? _buildShimmer(isDesktop: isDesktop)
+                      : _error != null
                       ? _buildError()
                       : users.isEmpty
-                          ? _buildEmpty()
-                          : isDesktop
-                              ? _buildDesktopTable(users)
-                              : _buildMobileCards(users),
+                      ? _buildEmpty()
+                      : isDesktop
+                      ? _buildDesktopTable(users)
+                      : _buildMobileCards(users),
             ),
           ),
         ],
@@ -169,10 +169,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Widget _buildFilters({required bool isDesktop}) {
     final roleOptions = const [
       DropdownMenuItem(value: _allRoles, child: Text('All Roles')),
-      DropdownMenuItem(
-        value: '${RoleConstants.admin}',
-        child: Text('Admin'),
-      ),
+      DropdownMenuItem(value: '${RoleConstants.admin}', child: Text('Admin')),
       DropdownMenuItem(
         value: '${RoleConstants.customer}',
         child: Text('Customer'),
@@ -264,24 +261,28 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Action')),
           ],
-          rows: users.map((u) {
-            final isActive = (u['isactive'] ?? '0').toString() == '1';
-            return DataRow(
-              cells: [
-                DataCell(Text('${u['userid'] ?? '-'}')),
-                DataCell(Text((u['fullname'] ?? u['name'] ?? '-').toString())),
-                DataCell(Text((u['email'] ?? '-').toString())),
-                DataCell(Text(_roleLabel((u['roleid'] ?? '').toString()))),
-                DataCell(_statusChip(isActive)),
-                DataCell(
-                  Switch(
-                    value: isActive,
-                    onChanged: _updatingStatus ? null : (_) => _toggleStatus(u),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+          rows:
+              users.map((u) {
+                final isActive = (u['isactive'] ?? '0').toString() == '1';
+                return DataRow(
+                  cells: [
+                    DataCell(Text('${u['userid'] ?? '-'}')),
+                    DataCell(
+                      Text((u['fullname'] ?? u['name'] ?? '-').toString()),
+                    ),
+                    DataCell(Text((u['email'] ?? '-').toString())),
+                    DataCell(Text(_roleLabel((u['roleid'] ?? '').toString()))),
+                    DataCell(_statusChip(isActive)),
+                    DataCell(
+                      Switch(
+                        value: isActive,
+                        onChanged:
+                            _updatingStatus ? null : (_) => _toggleStatus(u),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
         ),
       ),
     );
@@ -299,7 +300,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,10 +392,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             8,
             (_) => Container(
               margin: const EdgeInsets.only(bottom: 10),
-              height: 40,
+              height: 58,
               decoration: BoxDecoration(
                 color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
           ),
@@ -396,14 +405,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: 5,
-      itemBuilder: (_, __) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        height: 110,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
+      itemBuilder:
+          (_, __) => Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            height: 140,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
     );
   }
 
@@ -425,7 +435,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.error_outline_rounded, color: Colors.red.shade400, size: 48),
+          Icon(
+            Icons.error_outline_rounded,
+            color: Colors.red.shade400,
+            size: 48,
+          ),
           const SizedBox(height: 12),
           Text(
             _error ?? 'Something went wrong',
