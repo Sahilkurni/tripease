@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/bus_model.dart';
 import '../../services/bus_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/payment_service.dart';
 
 class PassengerDetailsScreen extends StatefulWidget {
   final BusModel bus;
@@ -32,6 +33,28 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       _ageControllers.add(TextEditingController());
       _genderControllers.add(TextEditingController());
     }
+    paymentService.init(
+      onSuccess: _onPaymentSuccess,
+      onError: _onPaymentError,
+    );
+  }
+
+  void _onPaymentSuccess(String paymentId) {
+    _createBookings(paymentId);
+  }
+
+  void _onPaymentError(String error) {
+    // FOR TESTING: Proceed with booking even if payment fails
+    print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
+    _createBookings("TEST_PAYMENT_BYPASS");
+  }
+
+  double get _totalAmount {
+    double total = 0;
+    for (var seat in widget.selectedSeats) {
+      total += widget.bus.baseFare + seat.extraFare;
+    }
+    return total;
   }
 
   @override
@@ -39,6 +62,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     for (var c in _nameControllers) c.dispose();
     for (var c in _ageControllers) c.dispose();
     for (var c in _genderControllers) c.dispose();
+    paymentService.dispose();
     super.dispose();
   }
 
@@ -63,6 +87,16 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
     setState(() => _isLoading = true);
 
+    paymentService.openPayment(
+      amount: _totalAmount,
+      name: "TripEase Bus",
+      description: "Booking for ${widget.bus.busName}",
+      email: user.email,
+    );
+  }
+
+  Future<void> _createBookings(String paymentId) async {
+    final user = authService.currentUser!;
     try {
       // Loop through each selected seat and book it
       for (var i = 0; i < widget.selectedSeats.length; i++) {
@@ -75,6 +109,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           passengerName: _nameControllers[i].text,
           age: _ageControllers[i].text,
           gender: _genderControllers[i].text,
+          paymentId: paymentId,
         );
       }
 

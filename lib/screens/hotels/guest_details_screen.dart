@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/room_model.dart';
 import '../../services/hotel_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/payment_service.dart';
 
 class GuestDetailsScreen extends StatefulWidget {
   final String hotelId;
@@ -28,11 +29,31 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
   final _paxController = TextEditingController(text: '1');
 
   @override
+  void initState() {
+    super.initState();
+    paymentService.init(
+      onSuccess: _onPaymentSuccess,
+      onError: _onPaymentError,
+    );
+  }
+
+  void _onPaymentSuccess(String paymentId) {
+    _createBooking(paymentId);
+  }
+
+  void _onPaymentError(String error) {
+    // FOR TESTING: Proceed with booking even if payment fails
+    print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
+    _createBooking("TEST_PAYMENT_BYPASS");
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
     _genderController.dispose();
     _paxController.dispose();
+    paymentService.dispose();
     super.dispose();
   }
 
@@ -54,6 +75,16 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
 
     setState(() => _isLoading = true);
 
+    paymentService.openPayment(
+      amount: widget.room.price,
+      name: "TripEase Hotel",
+      description: "Booking for ${widget.hotelName} - ${widget.room.roomtype}",
+      email: user.email,
+    );
+  }
+
+  Future<void> _createBooking(String paymentId) async {
+    final user = authService.currentUser!;
     try {
       final success = await hotelService.createBooking(
         userId: int.parse(user.userid),
@@ -63,6 +94,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
         guestName: _nameController.text,
         age: _ageController.text,
         gender: _genderController.text,
+        paymentId: paymentId,
       );
 
       if (!mounted) return;

@@ -2,15 +2,17 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
-  // Use 10.0.2.2 for Android Emulator to access localhost
-  // Use localhost for Web and Windows
+  // IMPORTANT: For Physical Device testing, change this to your PC's Local IP Address (e.g. 192.168.1.5)
+  // For Android Emulator, keep it as 10.0.2.2
+  static const String hostIp = '192.168.1.8';
+
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost/tripease_api/';
     }
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2/tripease_api/';
+        return 'http://$hostIp/tripease_api/';
       }
     } catch (_) {}
     return 'http://localhost/tripease_api/';

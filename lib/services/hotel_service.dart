@@ -83,6 +83,7 @@ class HotelService {
     String? guestName,
     String? age,
     String? gender,
+    String? paymentId,
   }) async {
     final url = '${ApiConfig.baseUrl}create_booking.php';
     print("API URL (Create Hotel Booking): $url");
@@ -98,6 +99,7 @@ class HotelService {
           'guest_name': guestName ?? '',
           'guest_age': age ?? '',
           'guest_gender': gender ?? '',
+          'payment_id': paymentId ?? '',
         },
       );
       print("Hotel Booking Response: ${response.body}");

@@ -178,6 +178,7 @@ class BusService {
     String? passengerName,
     String? age,
     String? gender,
+    String? paymentId,
   }) async {
     final url = '${ApiConfig.baseUrl}create_bus_booking.php';
     print("API URL: $url");
@@ -192,6 +193,7 @@ class BusService {
           'passenger_name': passengerName ?? '',
           'passenger_age': age ?? '',
           'passenger_gender': gender ?? '',
+          'payment_id': paymentId ?? '',
         },
       );
       print("Response: ${response.body}");

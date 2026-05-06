@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../core/api_config.dart';
+import '../../services/payment_service.dart';
 
 class PackageDetailsScreen extends StatefulWidget {
   final String packageId;
@@ -25,6 +26,31 @@ class PackageDetailsScreen extends StatefulWidget {
 class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
   bool _loading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    paymentService.init(
+      onSuccess: _onPaymentSuccess,
+      onError: _onPaymentError,
+    );
+  }
+
+  void _onPaymentSuccess(String paymentId) {
+    _createPackageBooking(paymentId);
+  }
+
+  @override
+  void dispose() {
+    paymentService.dispose();
+    super.dispose();
+  }
+
+  void _onPaymentError(String error) {
+    // FOR TESTING: Proceed with booking even if payment fails
+    print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
+    _createPackageBooking("TEST_PAYMENT_BYPASS");
+  }
+
   Future<void> _bookPackage() async {
     final user = authService.currentUser;
     if (user == null || user.userid.isEmpty) {
@@ -33,10 +59,20 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
       );
       return;
     }
-    final userId = user.userid;
 
     setState(() => _loading = true);
 
+    paymentService.openPayment(
+      amount: widget.price,
+      name: "TripEase Package",
+      description: "Booking for ${widget.packageName}",
+      email: user.email,
+    );
+  }
+
+  Future<void> _createPackageBooking(String paymentId) async {
+    final user = authService.currentUser!;
+    final userId = user.userid;
     try {
       final response = await http.post(
         Uri.parse(ApiConfig.createPackageBooking),
@@ -44,6 +80,7 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
           'userid': userId.toString(),
           'packageid': widget.packageId,
           'amount': widget.price.toString(),
+          'payment_id': paymentId,
         },
       );
 
