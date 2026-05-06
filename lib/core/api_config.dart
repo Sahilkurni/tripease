@@ -31,10 +31,10 @@ class ApiConfig {
 
   // Travel Agent endpoints
   static String get packages => '${baseUrl}get_home_packages.php';
-  static String get buses => '${baseUrl}get_buses.php';
+  static String get buses => '${baseUrl}agent/buses.php';
 
   // Public endpoints
-  static String get searchBuses => '${baseUrl}get_buses.php';
+  static String get searchBuses => '${baseUrl}agent/buses.php';
   static String get searchHotels => '${baseUrl}get_home_hotels.php';
   static String get searchPackages => '${baseUrl}get_home_packages.php';
 }
