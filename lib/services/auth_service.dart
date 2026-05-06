@@ -62,7 +62,7 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
-          final user = UserModel.fromJson(data);
+          final user = UserModel.fromJson(data['data'] ?? data);
           await saveSession(user);
           return {'success': true, 'user': user};
         } else {
@@ -106,7 +106,7 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
-          final user = UserModel.fromJson(data);
+          final user = UserModel.fromJson(data['data'] ?? data);
           await saveSession(user);
           return {'success': true, 'user': user};
         } else {
@@ -151,7 +151,7 @@ class AuthService {
 
       if (data != null && data['status'] == 'success') {
         final isNew = data['is_new_user'] == true;
-        final user = UserModel.fromJson(data);
+        final user = UserModel.fromJson(data['data'] ?? data);
         if (!isNew) {
           await saveSession(user);
         }
