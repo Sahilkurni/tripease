@@ -1,4 +1,5 @@
 import 'dart:js' as js;
+import 'package:js/js.dart';
 
 class PaymentImplementation {
   late Function(String paymentId) _onSuccess;
@@ -14,7 +15,7 @@ class PaymentImplementation {
 
   void openPayment(Map<String, dynamic> options) {
     // Add success/error callbacks for Web
-    options['handler'] = js.allowInterop((dynamic response) {
+    options['handler'] = allowInterop((dynamic response) {
       if (response != null && response['razorpay_payment_id'] != null) {
         _onSuccess(response['razorpay_payment_id']);
       } else {
@@ -23,7 +24,7 @@ class PaymentImplementation {
     });
 
     options['modal'] = {
-      'ondismiss': js.allowInterop(([dynamic _]) {
+      'ondismiss': allowInterop(([dynamic _]) {
         _onError("Payment cancelled by user");
       }),
     };

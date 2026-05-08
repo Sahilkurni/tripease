@@ -17,6 +17,7 @@ import 'admin_bookings_screen.dart';
 import 'admin_payments_screen.dart';
 import 'admin_coupons_screen.dart';
 import 'admin_support_screen.dart';
+import 'admin_flights_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -50,6 +51,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     {'title': 'Payments', 'icon': Icons.payment_rounded},
     {'title': 'Coupons', 'icon': Icons.local_offer_rounded},
     {'title': 'Support', 'icon': Icons.support_agent_rounded},
+    {'title': 'Flights', 'icon': Icons.flight_takeoff_rounded},
   ];
 
   @override
@@ -242,6 +244,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return const AdminCouponsScreen();
       case 9:
         return const AdminSupportScreen();
+      case 10:
+        return const AdminFlightsScreen();
       default:
         return Container();
     }
@@ -388,6 +392,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
                 const SizedBox(height: 16),
                 _StatCard(
+                  title: 'Total Flights',
+                  value: stats['total_flights']?.toString() ?? '0',
+                  icon: Icons.flight_takeoff_rounded,
+                  gradientColors: const [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                ),
+                const SizedBox(height: 16),
+                _StatCard(
+                  title: 'Pending Flights',
+                  value: stats['pending_flights']?.toString() ?? '0',
+                  icon: Icons.pending_actions_rounded,
+                  gradientColors: const [Color(0xFFF43F5E), Color(0xFFE11D48)],
+                ),
+                const SizedBox(height: 16),
+                _StatCard(
                   title: 'Total Revenue',
                   value: revenueStr,
                   icon: Icons.attach_money_rounded,
@@ -397,12 +415,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             )
           else
             GridView.count(
-              crossAxisCount: screenWidth >= 1200 ? 4 : 2,
+              crossAxisCount: screenWidth >= 1200 ? 3 : 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
-              childAspectRatio: screenWidth >= 1400 ? 2.5 : 2.0,
+              childAspectRatio: screenWidth >= 1400 ? 2.8 : 2.2,
               children: [
                 _StatCard(
                   title: 'Total Users',
@@ -421,6 +439,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   value: bookings,
                   icon: Icons.airplane_ticket_rounded,
                   gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                ),
+                _StatCard(
+                  title: 'Total Flights',
+                  value: stats['total_flights']?.toString() ?? '0',
+                  icon: Icons.flight_takeoff_rounded,
+                  gradientColors: const [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                ),
+                _StatCard(
+                  title: 'Pending Flights',
+                  value: stats['pending_flights']?.toString() ?? '0',
+                  icon: Icons.pending_actions_rounded,
+                  gradientColors: const [Color(0xFFF43F5E), Color(0xFFE11D48)],
                 ),
                 _StatCard(
                   title: 'Total Revenue',

@@ -12,6 +12,10 @@ import 'widgets/home_header.dart';
 import 'widgets/custom_bottom_nav.dart';
 import '../hotels/hotel_details_screen.dart';
 import 'package_details_screen.dart';
+import '../../models/flight_model.dart';
+import '../../services/flight_service.dart';
+import '../flights/flight_list_screen.dart';
+import '../flights/flight_details_screen.dart';
 
 class ServiceItem {
   final String id;
@@ -98,6 +102,7 @@ class RecommendedItem {
   final String imageUrl;
   final int days;
   final int nights;
+  final String? subType; // For Bus Type (AC, Sleeper) or Room Type (Deluxe, etc.)
   const RecommendedItem({
     required this.id,
     required this.name,
@@ -108,6 +113,7 @@ class RecommendedItem {
     required this.imageUrl,
     this.days = 0,
     this.nights = 0,
+    this.subType,
   });
 
   factory RecommendedItem.fromJson(Map<String, dynamic> json) {
@@ -127,6 +133,7 @@ class RecommendedItem {
       imageUrl: json['imageUrl'] ?? json['image'] ?? '',
       days: int.tryParse('${json['days'] ?? 0}') ?? 0,
       nights: int.tryParse('${json['nights'] ?? 0}') ?? 0,
+      subType: json['subType'] ?? json['bus_type'] ?? json['room_type'] ?? json['bustype'] ?? 'Standard',
     );
   }
 
@@ -145,6 +152,7 @@ class RecommendedItem {
       imageUrl:
           (json['image'] ?? json['imageUrl'] ?? json['thumbnail'] ?? '')
               .toString(),
+      subType: json['room_type'] ?? json['roomtype'] ?? json['category'] ?? 'Standard',
     );
   }
 
@@ -161,6 +169,7 @@ class RecommendedItem {
               .toString(),
       days: int.tryParse(json['days']?.toString() ?? '0') ?? 0,
       nights: int.tryParse(json['nights']?.toString() ?? '0') ?? 0,
+      subType: json['package_type'] ?? json['category'],
     );
   }
   @override
@@ -206,10 +215,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<RecommendedItem> _featuredHotels = [];
   List<RecommendedItem> _featuredPackages = [];
   List<RecommendedItem> _featuredBuses = [];
+  List<FlightModel> _featuredFlights = [];
   CustomerProfile? _profile;
   List<WishlistItem> _wishlist = [];
   List<CustomerBooking> _recentBookings = [];
   List<QuickSearchChip> _searchChips = [];
+  List<FlightModel> _filteredFlights = [];
 
   bool _homeLoading = true;
   bool _profileLoading = true;
@@ -220,6 +231,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   late String _selectedLocation;
   Position? _currentPosition;
+
+  // Search & Filter State
+  final TextEditingController _searchController = TextEditingController();
+  List<RecommendedItem> _filteredHotels = [];
+  List<RecommendedItem> _filteredPackages = [];
+  List<RecommendedItem> _filteredBuses = [];
+  
+  double _minPrice = 0;
+  double _maxPrice = 100000;
+  double _minRating = 0;
+  String _sortBy = 'Recommended';
+  Set<String> _selectedCategories = {'Hotels', 'Packages', 'Buses', 'Flights'};
+  int _maxDuration = 30; // for packages
+  Set<String> _selectedBusTypes = {};
+  Set<String> _selectedRoomTypes = {};
+  String _searchQuery = '';
 
   late bool isMobile;
   late bool isTablet;
@@ -322,11 +349,449 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
   ];
 
+  static final List<FlightModel> _flightPreviews = [
+    FlightModel(
+      flightId: 0,
+      airline: 'IndiGo',
+      flightNumber: '6E-201',
+      fromCity: 1,
+      toCity: 2,
+      departureTime: '2026-06-01 10:00:00',
+      arrivalTime: '2026-06-01 12:30:00',
+      duration: '2h 30m',
+      price: 4500.00,
+      totalSeats: 180,
+      availableSeats: 180,
+      status: 'approved',
+      isActive: 1,
+      fromCityName: 'Mumbai',
+      toCityName: 'Pune',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _selectedLocation = _userLocation;
     _loadHomeData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Filter Options',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                const SizedBox(height: 24),
+                Text(
+                  'Price Range',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                RangeSlider(
+                  values: RangeValues(_minPrice, _maxPrice),
+                  min: 0,
+                  max: 100000,
+                  divisions: 100,
+                  activeColor: AppColors.primary,
+                  labels: RangeLabels(
+                    '₹${_minPrice.round()}',
+                    '₹${_maxPrice.round()}',
+                  ),
+                  onChanged: (values) {
+                    setModalState(() {
+                      _minPrice = values.start;
+                      _maxPrice = values.end;
+                    });
+                  },
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('₹${_minPrice.round()}', style: GoogleFonts.poppins()),
+                    Text('₹${_maxPrice.round()}', style: GoogleFonts.poppins()),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Minimum Rating',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(5, (index) {
+                    final rating = index + 1.0;
+                    final isSelected = _minRating == rating;
+                    return GestureDetector(
+                      onTap: () => setModalState(() => _minRating = rating),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : (isDark ? Colors.white10 : Colors.grey.shade100),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${index + 1}',
+                              style: GoogleFonts.poppins(
+                                color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: isSelected ? Colors.white : Colors.amber,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Sort By',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ['Recommended', 'Price: Low to High', 'Price: High to Low', 'Rating: High to Low'].map((option) {
+                      final isSelected = _sortBy == option;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(option),
+                          selected: isSelected,
+                          onSelected: (v) => setModalState(() => _sortBy = option),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Service Type',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: ['Hotels', 'Packages', 'Buses', 'Flights'].map((cat) {
+                    final isSelected = _selectedCategories.contains(cat);
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(cat),
+                        selected: isSelected,
+                        onSelected: (v) {
+                          setModalState(() {
+                            if (v) {
+                              _selectedCategories.add(cat);
+                            } else {
+                              if (_selectedCategories.length > 1) {
+                                _selectedCategories.remove(cat);
+                              }
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Package Duration (Max Days)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Slider(
+                  value: _maxDuration.toDouble(),
+                  min: 1,
+                  max: 30,
+                  divisions: 29,
+                  activeColor: AppColors.primary,
+                  label: '$_maxDuration days',
+                  onChanged: (v) => setModalState(() => _maxDuration = v.round()),
+                ),
+                if (_selectedCategories.contains('Buses')) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Bus Type',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['A/C', 'Non-A/C', 'Sleeper', 'Seater'].map((type) {
+                        final isSelected = _selectedBusTypes.contains(type);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(type),
+                            selected: isSelected,
+                            onSelected: (v) {
+                              setModalState(() {
+                                if (v) {
+                                  _selectedBusTypes.add(type);
+                                } else {
+                                  _selectedBusTypes.remove(type);
+                                }
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+                if (_selectedCategories.contains('Hotels')) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Room Type',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['Standard', 'Deluxe', 'Suite', 'Luxury'].map((type) {
+                        final isSelected = _selectedRoomTypes.contains(type);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(type),
+                            selected: isSelected,
+                            onSelected: (v) {
+                              setModalState(() {
+                                if (v) {
+                                  _selectedRoomTypes.add(type);
+                                } else {
+                                  _selectedRoomTypes.remove(type);
+                                }
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkCard : Colors.white,
+                    boxShadow: [
+                      if (!isDark)
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          onPressed: () {
+                            setModalState(() {
+                              _minPrice = 0;
+                              _maxPrice = 100000;
+                              _minRating = 0;
+                              _sortBy = 'Recommended';
+                              _selectedCategories = {'Hotels', 'Packages', 'Buses'};
+                              _maxDuration = 30;
+                              _selectedBusTypes = {};
+                              _selectedRoomTypes = {};
+                            });
+                          },
+                          child: Text('Reset', style: GoogleFonts.poppins()),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          onPressed: () {
+                            _applyFilters();
+                            Navigator.pop(context);
+                          },
+                          child: Text('Apply', style: GoogleFonts.poppins(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+  void _applyFilters() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      _searchQuery = query;
+      
+      _filteredHotels = _featuredHotels.where((item) {
+        final matchesQuery = query.isEmpty || 
+                             item.name.toLowerCase().contains(query) || 
+                             item.location.toLowerCase().contains(query);
+        final matchesPrice = item.price >= _minPrice && item.price <= _maxPrice;
+        final matchesRating = item.rating >= _minRating;
+        return matchesQuery && matchesPrice && matchesRating;
+      }).toList();
+
+      _filteredPackages = _featuredPackages.where((item) {
+        final matchesQuery = query.isEmpty || 
+                             item.name.toLowerCase().contains(query) || 
+                             item.location.toLowerCase().contains(query);
+        final matchesPrice = item.price >= _minPrice && item.price <= _maxPrice;
+        final matchesRating = item.rating >= _minRating;
+        return matchesQuery && matchesPrice && matchesRating;
+      }).toList();
+
+      _filteredBuses = _featuredBuses.where((item) {
+        final matchesQuery = query.isEmpty || 
+                             item.name.toLowerCase().contains(query) || 
+                             item.location.toLowerCase().contains(query);
+        final matchesPrice = item.price >= _minPrice && item.price <= _maxPrice;
+        final matchesRating = item.rating >= _minRating;
+        return matchesQuery && matchesPrice && matchesRating;
+      }).toList();
+
+      _filteredFlights = _featuredFlights.where((item) {
+        final matchesQuery = query.isEmpty || 
+                             item.airline.toLowerCase().contains(query) || 
+                             (item.fromCityName?.toLowerCase().contains(query) ?? false) ||
+                             (item.toCityName?.toLowerCase().contains(query) ?? false);
+        final matchesPrice = item.price >= _minPrice && item.price <= _maxPrice;
+        return matchesQuery && matchesPrice;
+      }).toList();
+
+      // Apply Category Filter
+      if (!_selectedCategories.contains('Hotels')) _filteredHotels = [];
+      if (!_selectedCategories.contains('Packages')) _filteredPackages = [];
+      if (!_selectedCategories.contains('Buses')) _filteredBuses = [];
+
+      // Apply Duration Filter for Packages
+      _filteredPackages = _filteredPackages.where((p) => p.days <= _maxDuration).toList();
+
+      // Apply Sorting
+      void sortItems(List<RecommendedItem> list) {
+        if (_sortBy == 'Price: Low to High') {
+          list.sort((a, b) => a.price.compareTo(b.price));
+        } else if (_sortBy == 'Price: High to Low') {
+          list.sort((a, b) => b.price.compareTo(a.price));
+        } else if (_sortBy == 'Rating: High to Low') {
+          list.sort((a, b) => b.rating.compareTo(a.rating));
+        }
+      }
+
+      // Apply Bus Type Filter
+      if (_selectedBusTypes.isNotEmpty) {
+        _filteredBuses = _filteredBuses.where((bus) {
+          if (bus.subType == null) return false;
+          return _selectedBusTypes.any((type) => bus.subType!.toLowerCase().contains(type.toLowerCase()));
+        }).toList();
+      }
+
+      // Apply Room Type Filter
+      if (_selectedRoomTypes.isNotEmpty) {
+        _filteredHotels = _filteredHotels.where((hotel) {
+          if (hotel.subType == null) return false;
+          return _selectedRoomTypes.any((type) => hotel.subType!.toLowerCase().contains(type.toLowerCase()));
+        }).toList();
+      }
+
+      sortItems(_filteredHotels);
+      sortItems(_filteredPackages);
+      sortItems(_filteredBuses);
+    });
   }
 
   Future<void> _loadHomeData() async {
@@ -343,6 +808,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final hotels = await homeService.getHomeHotels();
       final packages = await homeService.getHomePackages();
       final buses = await homeService.getHomeBuses();
+      
+      // Import flight service if not already imported
+      final flights = await flightService.getHomeFlights();
+
       final results = await Future.wait<dynamic>([
         userId.isEmpty
             ? Future<CustomerProfile?>.value(null)
@@ -368,6 +837,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _featuredHotels = hotels;
         _featuredPackages = packages;
         _featuredBuses = buses;
+        _filteredHotels = hotels;
+        _filteredPackages = packages;
+        _filteredBuses = buses;
+        _featuredFlights = flights;
+        _filteredFlights = flights;
         _profile = results[0] as CustomerProfile?;
         _wishlist = results[1] as List<WishlistItem>;
         _recentBookings = results[2] as List<CustomerBooking>;
@@ -468,42 +942,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SliverToBoxAdapter(child: _buildHomeLoading())
             else if (_homeError != null)
               SliverToBoxAdapter(child: _buildHomeError())
+            else if (_filteredHotels.isEmpty && _filteredPackages.isEmpty && _filteredBuses.isEmpty && _filteredFlights.isEmpty && _searchQuery.isNotEmpty)
+              SliverToBoxAdapter(child: _buildNoResultsFound())
             else ...[
-              SliverToBoxAdapter(
-                child: _sectionHeader(context, 'Featured Hotels', '/hotels'),
-              ),
-              SliverToBoxAdapter(
-                child: _buildFeaturedSection(
-                  items: _featuredHotels,
-                  type: 'hotel',
+              if (_filteredFlights.isNotEmpty || _searchQuery.isEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _sectionHeader(context, 'Featured Flights', '/flights'),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: _sectionHeader(
-                  context,
-                  'Featured Packages',
-                  '/packages',
+                SliverToBoxAdapter(
+                  child: _buildFlightSection(
+                    items: _filteredFlights,
+                  ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: _buildFeaturedSection(
-                  items: _featuredPackages,
-                  type: 'package',
+              ],
+              if (_filteredHotels.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _sectionHeader(context, 'Featured Hotels', '/hotels'),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: _sectionHeader(context, 'Featured Buses', '/bus_list'),
-              ),
-              SliverToBoxAdapter(
-                child: _buildFeaturedSection(
-                  items: _featuredBuses,
-                  type: 'bus',
+                SliverToBoxAdapter(
+                  child: _buildFeaturedSection(
+                    items: _filteredHotels,
+                    type: 'hotel',
+                  ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: _sectionHeader(context, 'Recent Bookings', '/bookings'),
-              ),
-              SliverToBoxAdapter(child: _buildRecentBookingsSection()),
+              ],
+              if (_filteredPackages.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _sectionHeader(
+                    context,
+                    'Featured Packages',
+                    '/packages',
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildFeaturedSection(
+                    items: _filteredPackages,
+                    type: 'package',
+                  ),
+                ),
+              ],
+              if (_filteredBuses.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _sectionHeader(context, 'Featured Buses', '/bus_list'),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildFeaturedSection(
+                    items: _filteredBuses,
+                    type: 'bus',
+                  ),
+                ),
+              ],
+              if (_recentBookings.isNotEmpty && _searchQuery.isEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _sectionHeader(context, 'Recent Bookings', '/bookings'),
+                ),
+                SliverToBoxAdapter(child: _buildRecentBookingsSection()),
+              ],
             ],
 
             // Bottom padding for nav bar
@@ -665,6 +1159,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     Expanded(
                       child: TextField(
+                        controller: _searchController,
+                        onChanged: (_) => _applyFilters(),
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText:
@@ -677,6 +1173,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             horizontal: 16,
                             vertical: 16,
                           ),
+                          suffixIcon: _searchController.text.isNotEmpty 
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _applyFilters();
+                                },
+                              )
+                            : null,
                         ),
                         style: GoogleFonts.poppins(
                           color:
@@ -686,17 +1191,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     ),
-                    Container(
-                      margin: const EdgeInsets.all(8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.tune_rounded,
-                        color: Colors.white,
-                        size: 18,
+                    GestureDetector(
+                      onTap: () => _showFilterBottomSheet(),
+                      child: Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.tune_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
@@ -734,7 +1242,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           onSelected: (val) {
-                            _selectedLocation = chip.label;
+                            setState(() {
+                              _selectedLocation = chip.label;
+                              _searchController.text = chip.label;
+                              _applyFilters();
+                            });
                           },
                         ),
                       ),
@@ -794,8 +1306,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             label: Text(c.label),
                             selected: selected,
                             onSelected: (v) {
-                              setState2(() {
+                              setState(() {
                                 _selectedLocation = c.label;
+                                _searchController.text = c.label;
+                                _applyFilters();
                               });
                               Navigator.of(ctx).pop();
                             },
@@ -821,7 +1335,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onChanged: (v) => manual = v,
                     onSubmitted: (v) {
                       if (v.trim().isNotEmpty) {
-                        setState2(() => _selectedLocation = v.trim());
+                        setState(() {
+                          _selectedLocation = v.trim();
+                          _searchController.text = v.trim();
+                          _applyFilters();
+                        });
                         Navigator.of(ctx).pop();
                       }
                     },
@@ -833,9 +1351,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (manual.trim().isNotEmpty) {
-                              setState2(
-                                () => _selectedLocation = manual.trim(),
-                              );
+                              setState(() {
+                                _selectedLocation = manual.trim();
+                                _searchController.text = manual.trim();
+                                _applyFilters();
+                              });
                               Navigator.of(ctx).pop();
                             }
                           },
@@ -937,6 +1457,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _currentPosition = pos;
         _selectedLocation =
             '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}';
+        _applyFilters();
       });
     } catch (e) {
       if (!mounted) return;
@@ -1239,6 +1760,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildNoResultsFound() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No results found',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'We couldn\'t find anything matching "$_searchQuery".\nTry adjusting your search or filters.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _searchController.clear();
+                _minPrice = 0;
+                _maxPrice = 100000;
+                _minRating = 0;
+                _applyFilters();
+              });
+            },
+            child: Text(
+              'Clear all filters',
+              style: GoogleFonts.poppins(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHomeLoading() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1366,6 +1946,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
               : type == 'bus'
               ? _PremiumBusCard(item: item, preview: !hasData)
               : _PremiumHotelCard(item: item, preview: !hasData),
+        ),
+      );
+    }).toList();
+
+    if (isDesktop) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: hPad),
+        child: Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: cards,
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: Row(
+        children: cards.map((card) => Padding(
+          padding: const EdgeInsets.only(right: 14),
+          child: card,
+        )).toList(),
+      ),
+    );
+  }
+
+  Widget _buildFlightSection({
+    required List<FlightModel> items,
+  }) {
+    final hasData = items.isNotEmpty;
+    final displayItems = hasData ? items : _flightPreviews;
+
+    final cards = displayItems.map((item) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FlightDetailsScreen(flight: item),
+            ),
+          );
+        },
+        child: SizedBox(
+          width: isDesktop ? 330 : 300,
+          child: _PremiumFlightCard(item: item, preview: !hasData),
         ),
       );
     }).toList();
@@ -1777,7 +2403,7 @@ class _WishlistCard extends StatelessWidget {
                   icon:
                       item.itemType == 'package'
                           ? Icons.flight_takeoff_rounded
-                          : Icons.hotel_rounded,
+                          : item.itemType.toLowerCase().contains('flight') ? Icons.flight_takeoff_rounded : Icons.hotel_rounded,
                   colors:
                       item.itemType == 'package'
                           ? const [Color(0xFFDB2777), Color(0xFFF59E0B)]
@@ -1857,7 +2483,13 @@ class _CustomerBookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        if (booking.itemType.toLowerCase().contains('flight')) {
+          context.push('/flight_bookings');
+        }
+      },
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
@@ -1887,7 +2519,11 @@ class _CustomerBookingCard extends StatelessWidget {
             child: Icon(
               booking.itemType.toLowerCase().contains('package')
                   ? Icons.card_travel_rounded
-                  : Icons.hotel_rounded,
+                  : booking.itemType.toLowerCase().contains('flight')
+                      ? Icons.flight_takeoff_rounded
+                      : booking.itemType.toLowerCase().contains('bus')
+                          ? Icons.directions_bus_rounded
+                          : Icons.hotel_rounded,
               color: Colors.white,
             ),
           ),
@@ -1934,8 +2570,9 @@ class _CustomerBookingCard extends StatelessWidget {
           _BookingStatusBadge(status: booking.status),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _BookingStatusBadge extends StatelessWidget {
@@ -2681,6 +3318,125 @@ class _PremiumBusCard extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumFlightCard extends StatelessWidget {
+  final FlightModel item;
+  final bool preview;
+
+  const _PremiumFlightCard({required this.item, required this.preview});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 252,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(18),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _TravelImagePlaceholder(
+                  imageUrl: '',
+                  icon: Icons.flight_rounded,
+                  colors: const [Color(0xFF6366F1), Color(0xFFA855F7)],
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: _SoftBadge(label: '₹${item.price.toStringAsFixed(0)}'),
+                ),
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      item.airline,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                if (preview)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _SoftBadge(label: 'Preview'),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${item.fromCityName ?? 'From'} → ${item.toCityName ?? 'To'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: isDark ? AppColors.darkText : AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 15,
+                      color: Color(0xFF64748B),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.departureTime.split(' ').last.substring(0, 5),
+                      style: GoogleFonts.poppins(
+                        color: isDark ? AppColors.darkSubtext : AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      item.duration,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
                       ),
                     ),
                   ],

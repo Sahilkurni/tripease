@@ -65,6 +65,7 @@ class HomeService {
         price: double.tryParse(row['price']?.toString() ?? '0') ?? 0,
         type: 'bus',
         imageUrl: '', // Placeholder image
+        subType: row['bus_type'] ?? row['bustype'] ?? 'Non-A/C',
       )).toList();
     } catch (e, st) {
       debugPrint('getHomeBuses error: $e');

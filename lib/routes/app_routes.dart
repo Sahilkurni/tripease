@@ -23,6 +23,10 @@ import '../models/user_model.dart';
 import '../screens/home/dashboard_screen.dart';
 import '../screens/home/package_list_screen.dart';
 import '../screens/hotels/hotel_details_screen.dart';
+import '../screens/flights/flight_list_screen.dart';
+import '../screens/flights/flight_bookings_screen.dart';
+import '../screens/admin/admin_flights_screen.dart';
+import '../screens/agent/agent_add_flight_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -71,6 +75,22 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/packages',
       builder: (context, state) => const PackageListScreen(),
+    ),
+    GoRoute(
+      path: '/flights',
+      builder: (context, state) => const FlightListScreen(),
+    ),
+    GoRoute(
+      path: '/flight_bookings',
+      builder: (context, state) => const FlightBookingsScreen(),
+    ),
+    GoRoute(
+      path: '/admin_flights',
+      builder: (context, state) => const AdminFlightsScreen(),
+    ),
+    GoRoute(
+      path: '/agent_add_flight',
+      builder: (context, state) => const AgentAddFlightScreen(),
     ),
     GoRoute(
       path: '/hotel_detail',

@@ -39,4 +39,13 @@ class ApiConfig {
   static String get searchBuses => '${baseUrl}agent/buses.php';
   static String get searchHotels => '${baseUrl}get_home_hotels.php';
   static String get searchPackages => '${baseUrl}get_home_packages.php';
+
+  // Flight endpoints
+  static String get flightHome => '${baseUrl}get_home_flights.php';
+  static String get flightSeats => '${baseUrl}get_flight_seats.php';
+  static String get flightBooking => '${baseUrl}create_flight_booking.php';
+  static String get userFlightBookings => '${baseUrl}get_user_flight_bookings.php';
+  static String get adminFlights => '${baseUrl}admin/get_all_flights.php';
+  static String get updateFlightStatus => '${baseUrl}admin/update_flight_status.php';
+  static String get createFlight => '${baseUrl}create_flight.php';
 }

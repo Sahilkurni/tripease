@@ -4,11 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 import '../../services/package_service.dart';
 import '../../services/bus_service.dart';
+import '../../services/flight_service.dart';
 import '../../models/package_model.dart';
 import '../../models/bus_model.dart';
+import '../../models/flight_model.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/agent_service.dart';
 import '../agent/add_edit_package_screen.dart';
+import '../agent/agent_add_flight_screen.dart';
 
 class AgentDashboard extends StatefulWidget {
   const AgentDashboard({super.key});
@@ -26,11 +29,12 @@ class _AgentDashboardState extends State<AgentDashboard>
   int _userid = 0;
   List<PackageModel> _packages = [];
   List<BusModel> _buses = [];
+  List<FlightModel> _flights = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _fetchDashboardData();
   }
 
@@ -59,11 +63,13 @@ class _AgentDashboardState extends State<AgentDashboard>
 
       final packages = await packageService.getAgentPackages(_partnerid);
       final buses = await busService.getAgentBuses(_partnerid);
+      final flights = await flightService.getAgentFlights(_userid);
 
       if (mounted) {
         setState(() {
           _packages = packages;
           _buses = buses;
+          _flights = flights;
           _isLoading = false;
           _errorMessage = null;
         });
@@ -159,7 +165,11 @@ class _AgentDashboardState extends State<AgentDashboard>
                       ? _buildErrorState()
                       : TabBarView(
                         controller: _tabController,
-                        children: [_buildPackagesTab(), _buildBusesTab()],
+                        children: [
+                          _buildPackagesTab(),
+                          _buildBusesTab(),
+                          _buildFlightsTab()
+                        ],
                       ),
             ),
           ),
@@ -184,8 +194,17 @@ class _AgentDashboardState extends State<AgentDashboard>
                       setState(() => _isLoading = true);
                       await _fetchDashboardData();
                     }
-                  } else {
+                  } else if (_tabController.index == 1) {
                     _openBusForm();
+                  } else {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AgentAddFlightScreen()),
+                    );
+                    if (result == true) {
+                      setState(() => _isLoading = true);
+                      await _fetchDashboardData();
+                    }
                   }
                 },
                 backgroundColor: Theme.of(context).primaryColor,
@@ -262,6 +281,11 @@ class _AgentDashboardState extends State<AgentDashboard>
             onTap: () => _tabController.animateTo(1),
           ),
           ListTile(
+            leading: const Icon(Icons.flight_takeoff),
+            title: const Text('Flight Inventory'),
+            onTap: () => _tabController.animateTo(2),
+          ),
+          ListTile(
             leading: const Icon(Icons.monetization_on),
             title: const Text('Earnings & Taxes'),
             onTap: () {},
@@ -307,6 +331,7 @@ class _AgentDashboardState extends State<AgentDashboard>
         tabs: const [
           Tab(icon: Icon(Icons.map), text: 'Packages'),
           Tab(icon: Icon(Icons.directions_bus), text: 'Buses'),
+          Tab(icon: Icon(Icons.flight_takeoff), text: 'Flights'),
         ],
       ),
       actions: [
@@ -645,6 +670,103 @@ class _AgentDashboardState extends State<AgentDashboard>
                       ],
                     ),
                     onTap: () => _openBusForm(bus),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFlightsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'My Flight Listings',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              if (MediaQuery.of(context).size.width > 800)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AgentAddFlightScreen()),
+                    );
+                    if (result == true) {
+                      setState(() => _isLoading = true);
+                      await _fetchDashboardData();
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Flight'),
+                  style: ElevatedButton.styleFrom(minimumSize: const Size(0, 44)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_flights.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(40.0),
+                child: Text('No flights listed yet.'),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _flights.length,
+              itemBuilder: (context, index) {
+                final flight = _flights[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.flight_takeoff, color: Colors.indigo),
+                    ),
+                    title: Text(
+                      '${flight.airline} - ${flight.flightNumber}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text('${flight.fromCityName} -> ${flight.toCityName}'),
+                        const SizedBox(height: 4),
+                        Text('Status: ${flight.status.toUpperCase()}', 
+                          style: TextStyle(
+                            color: flight.status == 'approved' ? Colors.green : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '₹${flight.price}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+                        ),
+                        Text('${flight.availableSeats}/${flight.totalSeats} seats'),
+                      ],
+                    ),
                   ),
                 );
               },
