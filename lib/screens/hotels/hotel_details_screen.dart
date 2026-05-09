@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
@@ -36,6 +38,7 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
   final PageController _heroCtrl = PageController();
   int _heroIndex = 0;
   late List<String> _heroImages;
+  final Map<String, Uint8List> _heroBytes = {};
 
   @override
   void initState() {
@@ -45,15 +48,47 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
         : (widget.imageUrl != null && widget.imageUrl!.isNotEmpty
             ? [widget.imageUrl!]
             : []);
+    _preDecodeAll();
     _loadRooms();
     if (_heroImages.isEmpty) _fetchHeroImages();
+    _startAutoSlide();
+  }
+
+  void _preDecodeAll() {
+    if (_heroImages.isEmpty) return;
+    for (var img in _heroImages) {
+      try {
+        final clean = img.replaceAll(RegExp(r'\s+'), '');
+        _heroBytes[img] = base64Decode(clean);
+      } catch (_) {}
+    }
+  }
+
+  void _startAutoSlide() {
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      if (_heroImages.length > 1) {
+        int next = (_heroIndex + 1) % _heroImages.length;
+        if (_heroCtrl.hasClients) {
+          _heroCtrl.animateToPage(
+            next,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+        _startAutoSlide();
+      }
+    });
   }
 
   Future<void> _fetchHeroImages() async {
     try {
       final imgs = await _hotelService.getHotelImages(int.parse(widget.hotelId));
       if (mounted && imgs.isNotEmpty) {
-        setState(() => _heroImages = imgs);
+        setState(() {
+          _heroImages = imgs;
+          _preDecodeAll();
+        });
       }
     } catch (_) {}
   }
@@ -109,6 +144,7 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
       backgroundColor:
           isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       body: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
         slivers: [
           SliverAppBar(
             expandedHeight: 420,
@@ -215,24 +251,43 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
         else
           PageView.builder(
             controller: _heroCtrl,
-            physics: const BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            allowImplicitScrolling: true,
             onPageChanged: (i) => setState(() => _heroIndex = i),
             itemCount: _heroImages.length,
-            itemBuilder: (_, i) => GestureDetector(
-              onTap: () => openFullscreenGallery(context, _heroImages, initialIndex: i),
-              child: Base64Image(base64String: _heroImages[i], fit: BoxFit.cover),
-            ),
+            itemBuilder: (_, i) {
+              final img = _heroImages[i];
+              final bytes = _heroBytes[img];
+              return GestureDetector(
+                onTap: () => openFullscreenGallery(context, _heroImages, initialIndex: i),
+                child: bytes != null
+                    ? Image.memory(
+                        bytes,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        cacheWidth: 800,
+                      )
+                    : Base64Image(
+                        base64String: img,
+                        fit: BoxFit.cover,
+                        cacheWidth: 800,
+                      ),
+              );
+            },
           ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.black.withAlpha(10),
-                Colors.transparent,
-                Colors.black.withAlpha(180),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.black.withAlpha(10),
+                  Colors.transparent,
+                  Colors.black.withAlpha(180),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
         ),
@@ -240,51 +295,84 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
           left: 20,
           right: 20,
           bottom: 24,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.hotelName,
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                  shadows: [
-                    Shadow(color: Colors.black.withAlpha(180), blurRadius: 8)
+          child: IgnorePointer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.hotelName,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                    shadows: [
+                      Shadow(color: Colors.black.withAlpha(180), blurRadius: 8)
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded,
+                        color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Mumbai, India', // This should probably be dynamic
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(100),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              color: Color(0xFFF59E0B), size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '4.8',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _heroPill(Icons.star_rounded, '4.8',
-                      const Color(0xFFF59E0B), Colors.white),
-                  const SizedBox(width: 8),
-                  _heroPill(Icons.location_on_rounded, 'Premium Destination',
-                      Colors.white.withAlpha(30), Colors.white70),
-                  const Spacer(),
-                  if (_heroImages.length > 1)
-                    Row(
-                      children: List.generate(
-                        _heroImages.length,
-                        (i) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          width: _heroIndex == i ? 18 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: _heroIndex == i
-                                ? Colors.white
-                                : Colors.white.withAlpha(120),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
+                const SizedBox(height: 12),
+                if (_heroImages.length > 1)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _heroImages.length,
+                      (i) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: _heroIndex == i ? 18 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: _heroIndex == i
+                              ? Colors.white
+                              : Colors.white.withAlpha(120),
+                          borderRadius: BorderRadius.circular(99),
                         ),
                       ),
                     ),
-                ],
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
         ),
       ],
@@ -749,11 +837,13 @@ class _RoomThumbnailState extends State<_RoomThumbnail> {
             controller: _ctrl,
             scrollDirection: Axis.vertical,
             physics: const BouncingScrollPhysics(),
+            allowImplicitScrolling: true,
             onPageChanged: (i) => setState(() => _index = i),
             itemCount: widget.images.length,
             itemBuilder: (_, i) => Base64Image(
               base64String: widget.images[i],
               fit: BoxFit.cover,
+              cacheWidth: 200, // Small cache for thumbnails
             ),
           ),
           // Counter badge

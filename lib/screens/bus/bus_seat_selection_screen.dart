@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/bus_model.dart';
@@ -25,6 +27,8 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   int _imgIndex = 0;
   late List<String> _images;
 
+  final Map<String, Uint8List> _imgBytes = {};
+
   @override
   void initState() {
     super.initState();
@@ -33,14 +37,48 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
         : (widget.bus.imageUrl != null && widget.bus.imageUrl!.isNotEmpty
             ? [widget.bus.imageUrl!]
             : []);
+    _preDecodeAll();
     _loadSeats();
     if (_images.isEmpty) _fetchImages();
+    _startAutoSlide();
+  }
+
+  void _preDecodeAll() {
+    if (_images.isEmpty) return;
+    for (var img in _images) {
+      try {
+        final clean = img.replaceAll(RegExp(r'\s+'), '');
+        _imgBytes[img] = base64Decode(clean);
+      } catch (_) {}
+    }
+  }
+
+  void _startAutoSlide() {
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      if (_images.length > 1) {
+        int next = (_imgIndex + 1) % _images.length;
+        if (_imgCtrl.hasClients) {
+          _imgCtrl.animateToPage(
+            next,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOutCubic,
+          );
+        }
+        _startAutoSlide();
+      }
+    });
   }
 
   Future<void> _fetchImages() async {
     try {
       final imgs = await busService.getBusImages(widget.bus.busid);
-      if (mounted && imgs.isNotEmpty) setState(() => _images = imgs);
+      if (mounted && imgs.isNotEmpty) {
+        setState(() {
+          _images = imgs;
+          _preDecodeAll();
+        });
+      }
     } catch (_) {}
   }
 
@@ -95,6 +133,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
+              physics: const ClampingScrollPhysics(),
               slivers: [
                 SliverAppBar(
                   expandedHeight: _images.isNotEmpty ? 340 : 140,
@@ -149,79 +188,98 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
         else
           PageView.builder(
             controller: _imgCtrl,
-            physics: const BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            allowImplicitScrolling: true,
             onPageChanged: (i) => setState(() => _imgIndex = i),
             itemCount: _images.length,
-            itemBuilder: (_, i) => GestureDetector(
-              onTap: () => openFullscreenGallery(context, _images, initialIndex: i),
-              child: Base64Image(base64String: _images[i], fit: BoxFit.cover),
-            ),
+            itemBuilder: (_, i) {
+              final img = _images[i];
+              final bytes = _imgBytes[img];
+              return GestureDetector(
+                onTap: () => openFullscreenGallery(context, _images, initialIndex: i),
+                child: bytes != null
+                    ? Image.memory(
+                        bytes,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        cacheWidth: 800,
+                      )
+                    : Base64Image(
+                        base64String: img,
+                        fit: BoxFit.cover,
+                        cacheWidth: 800,
+                      ),
+              );
+            },
           ),
         // Scrim
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.black.withAlpha(10),
-                Colors.transparent,
-                Colors.black.withAlpha(200),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.black.withAlpha(10),
+                  Colors.transparent,
+                  Colors.black.withAlpha(200),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
         ),
-        // Bus name + route at bottom
         Positioned(
           left: 20,
           right: 20,
-          bottom: 20,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.bus.busName,
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  shadows: [
-                    Shadow(
-                        color: Colors.black.withAlpha(160), blurRadius: 8)
-                  ],
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  _heroBadge(
-                    '${widget.bus.sourceCityName ?? 'Source'} → ${widget.bus.destinationCityName ?? 'Dest'}',
-                    Icons.route_rounded,
+          bottom: 24,
+          child: IgnorePointer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.bus.busName,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    shadows: [
+                      Shadow(color: Colors.black.withAlpha(160), blurRadius: 8)
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _heroBadge(widget.bus.busType, Icons.directions_bus_rounded),
-                  const Spacer(),
-                  if (_images.length > 1)
-                    Row(
-                      children: List.generate(
-                        _images.length,
-                        (i) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          width: _imgIndex == i ? 16 : 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: _imgIndex == i
-                                ? Colors.white
-                                : Colors.white.withAlpha(110),
-                            borderRadius: BorderRadius.circular(99),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _heroBadge(
+                      '${widget.bus.sourceCityName ?? 'Source'} → ${widget.bus.destinationCityName ?? 'Dest'}',
+                      Icons.route_rounded,
+                    ),
+                    const SizedBox(width: 8),
+                    _heroBadge(widget.bus.busType, Icons.directions_bus_rounded),
+                    const Spacer(),
+                    if (_images.length > 1)
+                      Row(
+                        children: List.generate(
+                          _images.length,
+                          (i) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            width: _imgIndex == i ? 16 : 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: _imgIndex == i
+                                  ? Colors.white
+                                  : Colors.white.withAlpha(110),
+                              borderRadius: BorderRadius.circular(99),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
