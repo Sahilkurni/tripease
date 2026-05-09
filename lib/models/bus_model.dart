@@ -17,6 +17,8 @@ class BusModel {
   // UI convenience fields
   final String? sourceCityName;
   final String? destinationCityName;
+  final String? imageUrl;
+  final List<String> images; // all images (primary first)
   final List<BusSeatModel> seats;
 
   BusModel({
@@ -36,6 +38,8 @@ class BusModel {
     this.isactive = 1,
     this.sourceCityName,
     this.destinationCityName,
+    this.imageUrl,
+    this.images = const [],
     this.seats = const [],
   });
 
@@ -57,6 +61,8 @@ class BusModel {
       isactive: int.parse((json['isactive'] ?? '1').toString()),
       sourceCityName: json['source_city_name'] ?? json['source'],
       destinationCityName: json['destination_city_name'] ?? json['destination'],
+      imageUrl: json['imageUrl']?.toString() ?? json['image']?.toString(),
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       seats: (json['seats'] as List<dynamic>?)
               ?.map((e) => BusSeatModel.fromJson(e as Map<String, dynamic>))
               .toList() ??

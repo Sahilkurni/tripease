@@ -1,6 +1,11 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/hotel_partner_service.dart';
+import '../../widgets/base64_image.dart';
+import '../../widgets/fullscreen_gallery.dart';
 
 class ManageRoomsScreen extends StatefulWidget {
   final int hotelid;
@@ -381,6 +386,13 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
   final _extraCtrl = TextEditingController();
   bool _isSaving = false;
 
+  // ── Image handling ──
+  final ImagePicker _picker = ImagePicker();
+  List<Map<String, dynamic>> _existingImages = []; // {imageid, image} from API
+  List<XFile> _selectedImages = [];  // newly picked
+
+  int get _totalImageCount => _existingImages.length + _selectedImages.length;
+
   @override
   void initState() {
     super.initState();
@@ -391,7 +403,66 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
       _totalCtrl.text = widget.room!.totalrooms.toString();
       _priceCtrl.text = widget.room!.price.toString();
       _extraCtrl.text = widget.room!.extraBedPrice.toString();
+      // Load existing images
+      _loadExistingImages(widget.room!.roomid);
     }
+  }
+
+  Future<void> _loadExistingImages(int roomid) async {
+    try {
+      final maps = await HotelPartnerService.getRoomImageMaps(roomid);
+      if (mounted) setState(() => _existingImages = maps);
+    } catch (_) {}
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> picked = await _picker.pickMultiImage(
+        maxWidth: 800,
+        imageQuality: 70,
+      );
+      if (picked.isNotEmpty) {
+        if (_totalImageCount + picked.length > 5) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Max 5 images allowed')),
+            );
+          }
+          return;
+        }
+        setState(() => _selectedImages.addAll(picked));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error picking images: $e')));
+      }
+    }
+  }
+
+  Future<void> _removeExistingImage(int index) async {
+    final map = _existingImages[index];
+    final imageid = map['imageid'] as int? ?? 0;
+    setState(() => _existingImages.removeAt(index));
+    if (imageid > 0) {
+      try {
+        await HotelPartnerService.deleteImage(imageid);
+      } catch (_) {
+        // UI already updated
+      }
+    }
+  }
+
+  void _removeNewImage(int index) =>
+      setState(() => _selectedImages.removeAt(index));
+
+  Future<List<String>> _processImages() async {
+    final List<String> result = [];
+    for (final file in _selectedImages) {
+      final bytes = await file.readAsBytes();
+      result.add(base64Encode(bytes));
+    }
+    return result;
   }
 
   Future<void> _save() async {
@@ -405,7 +476,11 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
 
     setState(() => _isSaving = true);
     try {
-      await HotelPartnerService.saveRoom({
+      final newBase64 = await _processImages();
+      final existingB64 = _existingImages.map((m) => m['image'] as String).toList();
+      final allImages = [...existingB64, ...newBase64];
+
+      final payload = <String, dynamic>{
         'roomid': widget.room?.roomid,
         'hotelid': widget.hotelid,
         'partnerid': widget.partnerid,
@@ -419,7 +494,11 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                 ? 0
                 : double.parse(_extraCtrl.text.trim()),
         'uid': widget.userid,
-      });
+      };
+
+      if (allImages.isNotEmpty) payload['images'] = allImages;
+
+      await HotelPartnerService.saveRoom(payload);
       widget.onSaved();
     } catch (e) {
       print('Error: $e');
@@ -430,6 +509,189 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  Widget _buildImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Room Images (Max 5)',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_totalImageCount > 0) ...[
+          SizedBox(
+            height: 110,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // Existing images (from server)
+                ..._existingImages.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final map = entry.value;
+                  final b64 = map['image'] as String;
+                  final isPrimary = idx == 0 && _selectedImages.isEmpty;
+                  return Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () => openFullscreenGallery(
+                          context,
+                          _existingImages.map((m) => m['image'] as String).toList(),
+                          initialIndex: idx,
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isPrimary
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                            color: Colors.grey[200],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.memory(
+                            base64Decode(b64),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.broken_image, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: () => _removeExistingImage(idx),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle),
+                            child: const Icon(Icons.close,
+                                size: 16, color: Colors.red),
+                          ),
+                        ),
+                      ),
+                      if (isPrimary)
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB).withAlpha(200),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text('Primary',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 10, color: Colors.white)),
+                          ),
+                        ),
+                    ],
+                  );
+                }),
+                // Newly picked images
+                ..._selectedImages.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final file = entry.value;
+                  final globalIdx = _existingImages.length + idx;
+                  final isPrimary = globalIdx == 0;
+                  return Stack(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isPrimary
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFF10B981),
+                            width: 2,
+                          ),
+                          color: Colors.grey[200],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: FutureBuilder<Uint8List>(
+                          future: file.readAsBytes(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Image.memory(snapshot.data!,
+                                  fit: BoxFit.cover);
+                            }
+                            return const Center(
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2));
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: () => _removeNewImage(idx),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle),
+                            child: const Icon(Icons.close,
+                                size: 16, color: Colors.red),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 4,
+                        left: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isPrimary
+                                ? const Color(0xFF2563EB).withAlpha(200)
+                                : const Color(0xFF10B981).withAlpha(200),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isPrimary ? 'Primary' : 'New',
+                            style: GoogleFonts.poppins(
+                                fontSize: 10, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_totalImageCount < 5)
+          OutlinedButton.icon(
+            onPressed: _pickImages,
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text('Add Images',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            style: OutlinedButton.styleFrom(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -566,6 +828,9 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 24),
+                  // ── Room Images ──
+                  _buildImageSection(),
                   const SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: _isSaving ? null : _save,

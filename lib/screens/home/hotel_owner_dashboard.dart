@@ -6,6 +6,7 @@ import '../../services/hotel_partner_service.dart';
 import 'package:go_router/go_router.dart';
 import '../hotel_partner/add_edit_hotel_screen.dart';
 import '../hotel_partner/manage_rooms_screen.dart';
+import '../../widgets/base64_image.dart';
 
 class HotelOwnerDashboard extends StatefulWidget {
   const HotelOwnerDashboard({super.key});
@@ -877,6 +878,9 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
 
   @override
   Widget build(BuildContext context) {
+    final imageStr = widget.hotel['image']?.toString() ?? '';
+    final hasImage = imageStr.trim().isNotEmpty;
+
     // Generate a stable gradient based on hotel id when no image is available.
     final colors = [
       [const Color(0xFF3B82F6), const Color(0xFF8B5CF6)],
@@ -920,21 +924,27 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // Placeholder image gradient
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: gradient,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                        // Image or Placeholder
+                        if (hasImage)
+                          Base64Image(
+                            base64String: imageStr,
+                            fit: BoxFit.cover,
+                          )
+                        else
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: gradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.domain_rounded,
+                              size: 64,
+                              color: Colors.white30,
                             ),
                           ),
-                          child: const Icon(
-                            Icons.domain_rounded,
-                            size: 64,
-                            color: Colors.white30,
-                          ),
-                        ),
                         // Bottom shadow overlay
                         Positioned.fill(
                           child: DecoratedBox(

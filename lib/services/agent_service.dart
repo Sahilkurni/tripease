@@ -106,6 +106,33 @@ class AgentService {
     }
   }
 
+  static Future<int> savePackageRaw(Map<String, dynamic> payload) async {
+    try {
+      final uri = Uri.parse('$_base/agent/savePackage.php');
+      // Ensure itinerary is properly formatted before sending if it exists
+      if (payload['itinerary'] != null) {
+        payload['itinerary'] = payload['itinerary'].map((d) => d.toJson()).toList();
+      }
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
+      print('API Response (savePackageRaw): ${res.body}');
+
+      final json = jsonDecode(res.body);
+      if (json['status'] == 'success') {
+        return int.parse(json['data']['packageid'].toString());
+      }
+      throw Exception(json['message']);
+    } catch (e) {
+      print('savePackageRaw failed: $e');
+      throw Exception('savePackageRaw failed: $e');
+    }
+  }
+
   // Save package (add if packageid==0, edit if packageid>0)
   static Future<int> savePackage({
     required int partnerid,

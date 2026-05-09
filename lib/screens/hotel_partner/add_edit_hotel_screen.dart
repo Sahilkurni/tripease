@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/hotel_partner_service.dart';
+import '../../widgets/fullscreen_gallery.dart';
 
 class AddEditHotelScreen extends StatefulWidget {
   final bool isEdit;
@@ -41,6 +45,10 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
   int? _selectedCityId;
   int _starRating = 3;
 
+  final ImagePicker _picker = ImagePicker();
+  List<XFile> _selectedImages = [];
+  List<Map<String, dynamic>> _existingImages = []; // {imageid, image} from API
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +81,14 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
             _cities = cities;
             _selectedCityId = int.tryParse(hotelDetails['cityid']?.toString() ?? '');
           });
+        }
+
+        // Load existing images from image_master
+        try {
+          final existing = await HotelPartnerService.getHotelImageMaps(hotelid);
+          setState(() => _existingImages = existing);
+        } catch (_) {
+          // Images not critical — continue without them
         }
       }
       
@@ -114,6 +130,52 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
     }
   }
 
+  int get _totalImageCount => _existingImages.length + _selectedImages.length;
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> picked = await _picker.pickMultiImage(
+        maxWidth: 800,
+        imageQuality: 70,
+      );
+      if (picked.isNotEmpty) {
+        if (_totalImageCount + picked.length > 5) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Max 5 images allowed')));
+          return;
+        }
+        setState(() {
+          _selectedImages.addAll(picked);
+        });
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error picking images: $e')));
+    }
+  }
+
+  Future<void> _removeExistingImage(int index) async {
+    final map = _existingImages[index];
+    final imageid = map['imageid'] as int? ?? 0;
+    setState(() => _existingImages.removeAt(index));
+    if (imageid > 0) {
+      try {
+        await HotelPartnerService.deleteImage(imageid);
+      } catch (_) {}
+    }
+  }
+
+  void _removeNewImage(int index) {
+    setState(() => _selectedImages.removeAt(index));
+  }
+
+  Future<List<String>> _processImages() async {
+    List<String> base64Images = [];
+    for (var file in _selectedImages) {
+      final bytes = await file.readAsBytes();
+      base64Images.add(base64Encode(bytes));
+    }
+    return base64Images;
+  }
+
   Future<void> _saveHotel() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCityId == null) {
@@ -124,6 +186,11 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
     setState(() => _isSaving = true);
 
     try {
+      // Combine kept existing images + any newly picked ones
+      final List<String> newBase64 = await _processImages();
+      final List<String> existingB64 = _existingImages.map((m) => m['image'] as String).toList();
+      final List<String> allImages = [...existingB64, ...newBase64];
+
       final payload = {
         'hotelid': widget.isEdit ? widget.hotelData!['hotelid'] : 0,
         'partnerid': widget.partnerid,
@@ -138,6 +205,10 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
         'checkouttime': _checkOutCtrl.text.trim(),
         'uid': widget.userid,
       };
+
+      if (allImages.isNotEmpty) {
+        payload['images'] = allImages;
+      }
 
       if (widget.isEdit) {
         await HotelPartnerService.editHotel(payload);
@@ -253,7 +324,157 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                            
+                            const SizedBox(height: 32),
+                            Text('Property Images (Max 5)', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                            const SizedBox(height: 16),
+                            if (_totalImageCount > 0) ...[
+                              SizedBox(
+                                height: 110,
+                                child: ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  children: [
+                                    // ── Existing images (from server) ──
+                                      ..._existingImages.asMap().entries.map((entry) {
+                                        final idx = entry.key;
+                                        final b64 = (entry.value['image'] as String? ?? '');
+                                        final isPrimary = idx == 0 && _selectedImages.isEmpty;
+                                        return Stack(
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () => openFullscreenGallery(
+                                                context,
+                                                _existingImages.map((m) => m['image'] as String).toList(),
+                                                initialIndex: idx,
+                                              ),
+                                              child: Container(
+                                                margin: const EdgeInsets.only(right: 12),
+                                                width: 100,
+                                                height: 100,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: isPrimary ? const Color(0xFF2563EB) : Colors.transparent,
+                                                    width: 2,
+                                                  ),
+                                                  color: Colors.grey[200],
+                                                ),
+                                                clipBehavior: Clip.antiAlias,
+                                                child: Image.memory(
+                                                  base64Decode(b64),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
+                                                ),
+                                              ),
+                                            ),
+                                          Positioned(
+                                            top: 4,
+                                            right: 16,
+                                            child: GestureDetector(
+                                              onTap: () => _removeExistingImage(idx),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                                child: const Icon(Icons.close, size: 16, color: Colors.red),
+                                              ),
+                                            ),
+                                          ),
+                                          if (isPrimary)
+                                            Positioned(
+                                              bottom: 4,
+                                              left: 4,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF2563EB).withAlpha(200),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text('Primary', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white)),
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    }),
+                                    // ── Newly picked images ──
+                                    ..._selectedImages.asMap().entries.map((entry) {
+                                      final idx = entry.key;
+                                      final file = entry.value;
+                                      final globalIdx = _existingImages.length + idx;
+                                      final isPrimary = globalIdx == 0;
+                                      return Stack(
+                                        children: [
+                                          Container(
+                                            margin: const EdgeInsets.only(right: 12),
+                                            width: 100,
+                                            height: 100,
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: isPrimary ? const Color(0xFF2563EB) : const Color(0xFF10B981),
+                                                width: 2,
+                                              ),
+                                              color: Colors.grey[200],
+                                            ),
+                                            clipBehavior: Clip.antiAlias,
+                                            child: FutureBuilder<Uint8List>(
+                                              future: file.readAsBytes(),
+                                              builder: (context, snapshot) {
+                                                if (snapshot.hasData) {
+                                                  return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                                                }
+                                                return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                              },
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 4,
+                                            right: 16,
+                                            child: GestureDetector(
+                                              onTap: () => _removeNewImage(idx),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                                child: const Icon(Icons.close, size: 16, color: Colors.red),
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            bottom: 4,
+                                            left: 4,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isPrimary
+                                                    ? const Color(0xFF2563EB).withAlpha(200)
+                                                    : const Color(0xFF10B981).withAlpha(200),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                isPrimary ? 'Primary' : 'New',
+                                                style: GoogleFonts.poppins(fontSize: 10, color: Colors.white),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            if (_totalImageCount < 5)
+                              OutlinedButton.icon(
+                                onPressed: _pickImages,
+                                icon: const Icon(Icons.add_photo_alternate_outlined),
+                                label: Text('Add Images', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            
+                            const SizedBox(height: 48),
                           TextFormField(
                             controller: _addressCtrl,
                             decoration: const InputDecoration(labelText: 'Full Address *', prefixIcon: Icon(Icons.location_on_rounded)),

@@ -267,6 +267,91 @@ class HotelPartnerService {
     }
   }
 
+  /// Returns all active images for a hotel as a list of base64 strings (primary first).
+  static Future<List<String>> getHotelImages(int hotelid) async {
+    try {
+      final maps = await getHotelImageMaps(hotelid);
+      return maps.map((m) => m['image'] as String).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Returns [{imageid, image, is_primary}] for a hotel.
+  static Future<List<Map<String, dynamic>>> getHotelImageMaps(int hotelid) async {
+    try {
+      final uri = Uri.parse('$_base/get_images.php?entity_type=hotel&entity_id=$hotelid');
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      final json = jsonDecode(res.body);
+      if (json['status'] == 'success') {
+        final data = json['data'] as List<dynamic>;
+        return data
+            .where((e) => (e['image'] ?? '').toString().isNotEmpty)
+            .map((e) => {
+                  'imageid': e['imageid'] as int? ?? 0,
+                  'image': (e['image'] ?? '').toString(),
+                  'is_primary': e['is_primary'] as int? ?? 0,
+                })
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Returns all active images for a room as a list of base64 strings (primary first).
+  static Future<List<String>> getRoomImages(int roomid) async {
+    try {
+      final maps = await getRoomImageMaps(roomid);
+      return maps.map((m) => m['image'] as String).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Returns [{imageid, image, is_primary}] for a room.
+  static Future<List<Map<String, dynamic>>> getRoomImageMaps(int roomid) async {
+    try {
+      final uri = Uri.parse('$_base/get_images.php?entity_type=room&entity_id=$roomid');
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      final json = jsonDecode(res.body);
+      if (json['status'] == 'success') {
+        final data = json['data'] as List<dynamic>;
+        return data
+            .where((e) => (e['image'] ?? '').toString().isNotEmpty)
+            .map((e) => {
+                  'imageid': e['imageid'] as int? ?? 0,
+                  'image': (e['image'] ?? '').toString(),
+                  'is_primary': e['is_primary'] as int? ?? 0,
+                })
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Soft-deletes an image by imageid (sets isactive=0 in image_master).
+  static Future<void> deleteImage(int imageid) async {
+    try {
+      final uri = Uri.parse('$_base/delete_image.php');
+      final res = await http
+          .post(uri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'imageid': imageid}))
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(res.body);
+      if (json['status'] != 'success') {
+        throw Exception(json['message'] ?? 'Delete failed');
+      }
+    } catch (e) {
+      throw Exception('deleteImage failed: $e');
+    }
+  }
+
+
   static Future<void> editHotel(Map<String, dynamic> payload) async {
     try {
       final uri = Uri.parse('$_base/owner/editHotel.php');

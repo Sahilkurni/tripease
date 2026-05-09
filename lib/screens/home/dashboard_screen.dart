@@ -16,6 +16,7 @@ import '../../models/flight_model.dart';
 import '../../services/flight_service.dart';
 import '../flights/flight_list_screen.dart';
 import '../flights/flight_details_screen.dart';
+import '../../widgets/base64_image.dart';
 
 class ServiceItem {
   final String id;
@@ -100,6 +101,7 @@ class RecommendedItem {
   final double price;
   final String type; // 'hotel' | 'bus' | 'package'
   final String imageUrl;
+  final List<String> images;
   final int days;
   final int nights;
   final String? subType; // For Bus Type (AC, Sleeper) or Room Type (Deluxe, etc.)
@@ -111,6 +113,7 @@ class RecommendedItem {
     required this.price,
     required this.type,
     required this.imageUrl,
+    this.images = const [],
     this.days = 0,
     this.nights = 0,
     this.subType,
@@ -131,6 +134,7 @@ class RecommendedItem {
               : double.tryParse('${json['price']}') ?? 0.0,
       type: json['type'] ?? 'hotel',
       imageUrl: json['imageUrl'] ?? json['image'] ?? '',
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       days: int.tryParse('${json['days'] ?? 0}') ?? 0,
       nights: int.tryParse('${json['nights'] ?? 0}') ?? 0,
       subType: json['subType'] ?? json['bus_type'] ?? json['room_type'] ?? json['bustype'] ?? 'Standard',
@@ -152,6 +156,7 @@ class RecommendedItem {
       imageUrl:
           (json['image'] ?? json['imageUrl'] ?? json['thumbnail'] ?? '')
               .toString(),
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       subType: json['room_type'] ?? json['roomtype'] ?? json['category'] ?? 'Standard',
     );
   }
@@ -1934,6 +1939,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 builder: (_) => HotelDetailsScreen(
                   hotelId: item.id,
                   hotelName: item.name,
+                  imageUrl: item.imageUrl,
+                  images: item.images,
                 ),
               ),
             );
@@ -2841,6 +2848,7 @@ class _PremiumHotelCard extends StatelessWidget {
               children: [
                 _TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
+                  images: item.images,
                   icon: Icons.hotel_rounded,
                   colors: const [Color(0xFF2563EB), Color(0xFF14B8A6)],
                 ),
@@ -2954,8 +2962,9 @@ class _PremiumPackageCard extends StatelessWidget {
               children: [
                 _TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
-                  icon: Icons.flight_takeoff_rounded,
-                  colors: const [Color(0xFFDB2777), Color(0xFFF59E0B)],
+                  images: item.images,
+                  icon: Icons.map_rounded,
+                  colors: const [Color(0xFFF59E0B), Color(0xFFEF4444)],
                 ),
                 Positioned(
                   top: 12,
@@ -3021,24 +3030,86 @@ class _PremiumPackageCard extends StatelessWidget {
   }
 }
 
-class _TravelImagePlaceholder extends StatelessWidget {
+class _TravelImagePlaceholder extends StatefulWidget {
   final String imageUrl;
+  final List<String>? images;
   final IconData icon;
   final List<Color> colors;
 
   const _TravelImagePlaceholder({
     required this.imageUrl,
+    this.images,
     required this.icon,
     required this.colors,
   });
 
   @override
+  State<_TravelImagePlaceholder> createState() => _TravelImagePlaceholderState();
+}
+
+class _TravelImagePlaceholderState extends State<_TravelImagePlaceholder> {
+  final PageController _pageController = PageController();
+  int _currentIndex = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (imageUrl.trim().isNotEmpty) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallback(),
+    final displayImages = (widget.images != null && widget.images!.isNotEmpty)
+        ? widget.images!
+        : (widget.imageUrl.trim().isNotEmpty ? [widget.imageUrl] : <String>[]);
+
+    if (displayImages.isNotEmpty) {
+      if (displayImages.length == 1) {
+        return Base64Image(
+          base64String: displayImages.first,
+          fit: BoxFit.cover,
+        );
+      }
+
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() => _currentIndex = index);
+            },
+            itemCount: displayImages.length,
+            itemBuilder: (context, index) {
+              return Base64Image(
+                base64String: displayImages[index],
+                fit: BoxFit.cover,
+              );
+            },
+          ),
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                displayImages.length,
+                (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  width: _currentIndex == index ? 6 : 4,
+                  height: _currentIndex == index ? 6 : 4,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentIndex == index
+                        ? Colors.white
+                        : Colors.white.withAlpha(128),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
     return _fallback();
@@ -3048,13 +3119,13 @@ class _TravelImagePlaceholder extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: colors,
+          colors: widget.colors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Center(
-        child: Icon(icon, color: Colors.white.withAlpha(210), size: 54),
+        child: Icon(widget.icon, color: Colors.white.withAlpha(210), size: 54),
       ),
     );
   }
@@ -3252,8 +3323,9 @@ class _PremiumBusCard extends StatelessWidget {
               children: [
                 _TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
+                  images: item.images,
                   icon: Icons.directions_bus_rounded,
-                  colors: const [Color(0xFF0F172A), Color(0xFF334155)],
+                  colors: const [Color(0xFF8B5CF6), Color(0xFFD946EF)],
                 ),
                 Positioned(
                   top: 12,

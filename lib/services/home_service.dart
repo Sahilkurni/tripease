@@ -58,14 +58,15 @@ class HomeService {
       print("Home Buses Response: ${response.body}");
       final rows = _dataListFromResponse(response);
       return rows.map((row) => RecommendedItem(
-        id: row['tripid']?.toString() ?? '',
+        id: row['tripid']?.toString() ?? row['busid']?.toString() ?? '',
         name: row['busname']?.toString() ?? 'Bus',
         location: '${row['source']} to ${row['destination']}',
-        rating: 4.5, // Placeholder rating for buses
+        rating: 4.5,
         price: double.tryParse(row['price']?.toString() ?? '0') ?? 0,
         type: 'bus',
-        imageUrl: '', // Placeholder image
-        subType: row['bus_type'] ?? row['bustype'] ?? 'Non-A/C',
+        imageUrl: row['imageUrl']?.toString() ?? row['image']?.toString() ?? '',
+        images: (row['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+        subType: row['bus_type'] ?? row['bustype'] ?? 'Standard',
       )).toList();
     } catch (e, st) {
       debugPrint('getHomeBuses error: $e');

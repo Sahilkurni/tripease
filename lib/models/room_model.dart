@@ -11,7 +11,8 @@ class RoomModel {
   final String? edatetime;
   final int isactive;
   final int availableRooms;
-  
+  final List<String> images; // all room images (primary first)
+
   // Joined fields for UI convenience
   final String? roomTypeName;
 
@@ -28,6 +29,7 @@ class RoomModel {
     this.edatetime,
     this.isactive = 1,
     this.availableRooms = 0,
+    this.images = const [],
     this.roomTypeName,
   });
 
@@ -44,8 +46,9 @@ class RoomModel {
       uid: json['uid'] != null ? int.parse(json['uid'].toString()) : null,
       edatetime: json['edatetime'],
       isactive: int.parse(json['isactive']?.toString() ?? '1'),
-      availableRooms: int.parse(json['available_rooms']?.toString() ?? 
+      availableRooms: int.parse(json['available_rooms']?.toString() ??
                                json['totalrooms']?.toString() ?? '0'),
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       roomTypeName: json['room_type_name'],
     );
   }

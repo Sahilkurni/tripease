@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 // Note: Since you're not using 'app_colors.dart', we define our colors in the widget directly.
 import '../../services/agent_service.dart';
 
@@ -37,7 +40,9 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
   final _daysCtrl        = TextEditingController();
   final _nightsCtrl      = TextEditingController();
   final _maxPersonsCtrl  = TextEditingController();
-  final _thumbnailCtrl   = TextEditingController();
+
+  final ImagePicker _picker = ImagePicker();
+  List<XFile> _selectedImages = [];
 
   // ── State ─────────────────────────────────────────────────────────────────
   List<CategoryItem>     _categories      = [];
@@ -86,7 +91,6 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     _nameCtrl.dispose();       _descCtrl.dispose();
     _priceCtrl.dispose();      _daysCtrl.dispose();
     _nightsCtrl.dispose();     _maxPersonsCtrl.dispose();
-    _thumbnailCtrl.dispose();
     super.dispose();
   }
 
@@ -135,7 +139,6 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     _daysCtrl.text       = d['days']?.toString()  ?? '';
     _nightsCtrl.text     = d['nights']?.toString() ?? '';
     _maxPersonsCtrl.text = d['maxpersons']?.toString() ?? '';
-    _thumbnailCtrl.text  = d['thumbnail']    ?? '';
 
     if (d['itinerary'] is List) {
       _itinerary = (d['itinerary'] as List)
@@ -165,6 +168,41 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     }
   }
 
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> picked = await _picker.pickMultiImage(
+        maxWidth: 800,
+        imageQuality: 70,
+      );
+      if (picked.isNotEmpty) {
+        if (_selectedImages.length + picked.length > 5) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Max 5 images allowed')));
+          return;
+        }
+        setState(() {
+          _selectedImages.addAll(picked);
+        });
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error picking images: $e')));
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
+  Future<List<String>> _processImages() async {
+    List<String> base64Images = [];
+    for (var file in _selectedImages) {
+      final bytes = await file.readAsBytes();
+      base64Images.add(base64Encode(bytes));
+    }
+    return base64Images;
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
   Future<void> _save() async {
     setState(() => _errorMessage = null);
@@ -192,23 +230,33 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     setState(() => _saving = true);
 
     try {
-      final packageid = await AgentService.savePackage(
-        partnerid:   widget.partnerid,
-        uid:         widget.userid,
-        packageid:   widget.isEdit
+      List<String>? base64Images;
+      if (_selectedImages.isNotEmpty) {
+        base64Images = await _processImages();
+      }
+
+      final payload = {
+        'partnerid':   widget.partnerid,
+        'uid':         widget.userid,
+        'packageid':   widget.isEdit
             ? int.parse(widget.packageData!['packageid'].toString())
             : 0,
-        categoryid:  _selectedCategory!.categoryid,
-        packagename: _nameCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        cityid:      _selectedCity!.cityid,
-        days:        int.parse(_daysCtrl.text.trim()),
-        nights:      int.parse(_nightsCtrl.text.trim()),
-        price:       double.parse(_priceCtrl.text.trim()),
-        maxpersons:  int.parse(_maxPersonsCtrl.text.trim()),
-        thumbnail:   _thumbnailCtrl.text.trim(),
-        itinerary:   _itinerary,
-      );
+        'categoryid':  _selectedCategory!.categoryid,
+        'packagename': _nameCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
+        'cityid':      _selectedCity!.cityid,
+        'days':        int.parse(_daysCtrl.text.trim()),
+        'nights':      int.parse(_nightsCtrl.text.trim()),
+        'price':       double.parse(_priceCtrl.text.trim()),
+        'maxpersons':  int.parse(_maxPersonsCtrl.text.trim()),
+        'itinerary':   _itinerary,
+      };
+
+      if (base64Images != null) {
+        payload['images'] = base64Images;
+      }
+
+      final packageid = await AgentService.savePackageRaw(payload);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -695,52 +743,93 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     ]);
   }
 
-  // ── SECTION: Thumbnail URL ────────────────────────────────────────────────
+  // ── SECTION: Images ────────────────────────────────────────────────
   Widget _buildThumbnailSection(bool isDark) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionHeader('Package Image', Icons.image_rounded),
-      TextFormField(
-        controller: _thumbnailCtrl,
-        decoration: _fieldDecoration(
-          'Thumbnail URL (optional)',
-          icon: Icons.link_rounded,
-          hint: 'https://images.unsplash.com/...',
-        ),
-      ),
-      // Preview
-      if (_thumbnailCtrl.text.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              _thumbnailCtrl.text,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                height: 160,
-                color: _inputBorder,
-                child: const Center(child: Icon(
-                    Icons.broken_image_rounded, color: _textSub, size: 40)),
-              ),
-            ),
+      _sectionHeader('Package Images (Max 5)', Icons.image_rounded),
+      const SizedBox(height: 16),
+      if (_selectedImages.isNotEmpty) ...[
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _selectedImages.length,
+            itemBuilder: (context, index) {
+              return Stack(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[200],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: FutureBuilder<List<int>>(
+                      future: _selectedImages[index].readAsBytes().then((value) => value.toList()),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          return Image.memory(
+                            Uint8List.fromList(snapshot.data!),
+                            fit: BoxFit.cover,
+                          );
+                        }
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 20,
+                    child: GestureDetector(
+                      onTap: () => _removeImage(index),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, size: 16, color: Colors.red),
+                      ),
+                    ),
+                  ),
+                  if (index == 0)
+                    Positioned(
+                      bottom: 4,
+                      left: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(150),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('Primary', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white)),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
-      // Live preview update button
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: () => setState(() {}),
-          icon: const Icon(Icons.refresh_rounded, size: 16),
-          label: Text('Preview Image',
-              style: GoogleFonts.poppins(fontSize: 12)),
-          style: TextButton.styleFrom(foregroundColor: _primary),
+        const SizedBox(height: 16),
+      ],
+      if (_selectedImages.length < 5)
+        OutlinedButton.icon(
+          onPressed: _pickImages,
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+          label: Text('Add Images', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         ),
-      ),
 
       // Desktop: show save bar inside left column
-      if (_isDesktop) _buildSaveBar(isDark),
+      if (_isDesktop) ...[
+        const SizedBox(height: 24),
+        _buildSaveBar(isDark)
+      ],
     ]);
   }
 

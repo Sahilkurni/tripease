@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../widgets/base64_image.dart';
 import '../dashboard_screen.dart';
 
 class RecommendedCard extends StatelessWidget {
@@ -66,36 +67,12 @@ class RecommendedCard extends StatelessWidget {
                             color: _typeColor(item.type),
                           ),
                         )
-                        : Image.network(
-                          item.imageUrl,
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (_, __, ___) => Container(
-                                width: 90,
-                                height: 90,
-                                color: const Color(0xFF1E3A5F),
-                                child: const Icon(
-                                  Icons.image_not_supported,
-                                  color: Colors.white38,
-                                ),
-                              ),
-                          loadingBuilder:
-                              (_, child, progress) =>
-                                  progress == null
-                                      ? child
-                                      : Container(
-                                        width: 90,
-                                        height: 90,
-                                        color: const Color(0xFFE2E8F0),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      ),
-                        ),
+                        : Base64Image(
+                            base64String: item.imageUrl,
+                            width: 90,
+                            height: 90,
+                            fit: BoxFit.cover,
+                          ),
               ),
               const SizedBox(width: 12),
               // Details

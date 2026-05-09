@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/base64_image.dart';
 
 class HotelCard extends StatelessWidget {
   final String name;
@@ -25,8 +26,8 @@ class HotelCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.network(
-              imageUrl,
+            child: Base64Image(
+              base64String: imageUrl,
               height: 160,
               fit: BoxFit.cover,
             ),

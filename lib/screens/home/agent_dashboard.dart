@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../../services/agent_service.dart';
 import '../agent/add_edit_package_screen.dart';
 import '../agent/agent_add_flight_screen.dart';
+import '../../widgets/base64_image.dart';
 
 class AgentDashboard extends StatefulWidget {
   const AgentDashboard({super.key});
@@ -446,19 +447,10 @@ class _AgentDashboardState extends State<AgentDashboard>
               ),
               child:
                   package.thumbnail != null && package.thumbnail!.isNotEmpty
-                      ? Image.network(
-                        package.thumbnail!,
+                      ? Base64Image(
+                        base64String: package.thumbnail!,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) => Container(
-                              color: Colors.grey[200],
-                              child: const Icon(
-                                Icons.image,
-                                size: 50,
-                                color: Colors.grey,
-                              ),
-                            ),
                       )
                       : Container(
                         color: Colors.grey[200],
@@ -597,15 +589,22 @@ class _AgentDashboardState extends State<AgentDashboard>
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16),
                     leading: Container(
-                      padding: const EdgeInsets.all(12),
+                      width: 60,
+                      height: 60,
                       decoration: BoxDecoration(
                         color: Colors.blue[50],
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.directions_bus,
-                        color: Colors.blue,
-                      ),
+                      clipBehavior: Clip.hardEdge,
+                      child: (bus.imageUrl != null && bus.imageUrl!.trim().isNotEmpty)
+                          ? Base64Image(
+                              base64String: bus.imageUrl!,
+                              fit: BoxFit.cover,
+                            )
+                          : const Icon(
+                              Icons.directions_bus,
+                              color: Colors.blue,
+                            ),
                     ),
                     title: Text(
                       bus.busName,

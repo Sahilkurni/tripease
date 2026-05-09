@@ -54,6 +54,58 @@ class BusService {
     }
   }
 
+  /// Returns all active images for a bus as a list of base64 strings (primary first).
+  Future<List<String>> getBusImages(int busid) async {
+    try {
+      final maps = await getBusImageMaps(busid);
+      return maps.map((m) => m['image'] as String).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Returns [{imageid, image, is_primary}] for a bus — primary first.
+  Future<List<Map<String, dynamic>>> getBusImageMaps(int busid) async {
+    try {
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}get_images.php?entity_type=bus&entity_id=$busid');
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      final json = jsonDecode(res.body);
+      if (json['status'] == 'success') {
+        final data = json['data'] as List<dynamic>;
+        return data
+            .where((e) => (e['image'] ?? '').toString().isNotEmpty)
+            .map((e) => {
+                  'imageid': e['imageid'] as int? ?? 0,
+                  'image': (e['image'] ?? '').toString(),
+                  'is_primary': e['is_primary'] as int? ?? 0,
+                })
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Soft-deletes an image by imageid.
+  Future<void> deleteImage(int imageid) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}delete_image.php');
+      final res = await http
+          .post(uri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'imageid': imageid}))
+          .timeout(const Duration(seconds: 10));
+      final data = jsonDecode(res.body);
+      if (data['status'] != 'success') {
+        throw Exception(data['message'] ?? 'Delete failed');
+      }
+    } catch (e) {
+      throw Exception('deleteImage failed: $e');
+    }
+  }
+
   Future<void> deleteBus({
     required int busid,
     required int partnerid,

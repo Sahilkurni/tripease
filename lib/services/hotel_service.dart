@@ -75,6 +75,28 @@ class HotelService {
       rethrow;
     }
   }
+
+  // Fetch multiple images for a hotel
+  Future<List<String>> getHotelImages(int hotelId) async {
+    final url = '${ApiConfig.baseUrl}get_images.php?entity_type=hotel&entity_id=$hotelId';
+    print("API URL (Images): $url");
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['status'] == 'success') {
+          final data = decoded['data'];
+          if (data is List) {
+            return data.map((e) => e['image'].toString()).toList();
+          }
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching images: $e");
+      return [];
+    }
+  }
   Future<bool> createBooking({
     required int userId,
     required int hotelId,
