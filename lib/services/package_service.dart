@@ -6,7 +6,7 @@ import '../core/api_config.dart';
 class PackageService {
   // Fetch packages for a specific agent
   Future<List<PackageModel>> getAgentPackages(int partnerId) async {
-    final url = '${ApiConfig.packages}?partnerid=$partnerId';
+    final url = '${ApiConfig.baseUrl}agent/packages.php?partnerid=$partnerId';
     print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));

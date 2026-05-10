@@ -50,8 +50,18 @@ class _Base64ImageState extends State<Base64Image> {
       _lastBase64 = widget.base64String;
       return;
     }
+
+    final String source = widget.base64String!.trim();
+
+    // Check if it's a URL
+    if (source.startsWith('http')) {
+      _bytes = null; // We'll use Image.network
+      _lastBase64 = source;
+      return;
+    }
+
     try {
-      final String cleanBase64 = widget.base64String!.replaceAll(RegExp(r'\s+'), '');
+      final String cleanBase64 = source.replaceAll(RegExp(r'\s+'), '');
       _bytes = base64Decode(cleanBase64);
       _lastBase64 = widget.base64String;
     } catch (e) {
@@ -61,10 +71,21 @@ class _Base64ImageState extends State<Base64Image> {
 
   @override
   Widget build(BuildContext context) {
-    if (_bytes == null) {
-      return _buildFallback();
+    final String? source = widget.base64String?.trim();
+
+    // Case 1: URL
+    if (source != null && source.startsWith('http')) {
+      return Image.network(
+        source,
+        fit: widget.fit,
+        width: widget.width,
+        height: widget.height,
+        errorBuilder: (context, error, stackTrace) => _buildFallback(),
+      );
     }
 
+    // Case 2: Base64
+    if (_bytes != null) {
       return Image.memory(
         _bytes!,
         fit: widget.fit,
@@ -73,9 +94,13 @@ class _Base64ImageState extends State<Base64Image> {
         cacheWidth: widget.cacheWidth,
         cacheHeight: widget.cacheHeight,
         gaplessPlayback: true,
-        filterQuality: FilterQuality.none, // Fastest possible rendering
+        filterQuality: FilterQuality.none,
         errorBuilder: (context, error, stackTrace) => _buildFallback(),
       );
+    }
+
+    // Fallback
+    return _buildFallback();
   }
 
   Widget _buildFallback() {

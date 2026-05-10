@@ -13,11 +13,14 @@ class PackageModel {
   final int? uid;
   final String? edatetime;
   final int isactive;
+  final double? latitude;
+  final double? longitude;
 
   // Joined fields for UI convenience
   final String? categoryName;
   final String? cityName;
   final List<PackageItineraryModel> itineraries;
+  final List<String> images;
 
   PackageModel({
     required this.packageid,
@@ -37,6 +40,9 @@ class PackageModel {
     this.categoryName,
     this.cityName,
     this.itineraries = const [],
+    this.images = const [],
+    this.latitude,
+    this.longitude,
   });
 
   factory PackageModel.fromJson(Map<String, dynamic> json) {
@@ -55,12 +61,15 @@ class PackageModel {
       uid: json['uid'] != null ? int.parse(json['uid'].toString()) : null,
       edatetime: json['edatetime'],
       isactive: int.parse(json['isactive']?.toString() ?? '1'),
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       categoryName: json['categoryName'],
       cityName: json['cityName'],
       itineraries: (json['itineraries'] as List<dynamic>?)
               ?.map((e) => PackageItineraryModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 

@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import '../hotel_partner/add_edit_hotel_screen.dart';
 import '../hotel_partner/manage_rooms_screen.dart';
 import '../../core/api_config.dart';
+import '../profile/edit_profile_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -31,6 +32,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   int _selectedIndex = 0;
   int _partnerid = 0;
   int _userid = 0;
+  String _fullname = '';
+  String _email = '';
+  String _photo = '';
   bool _roleLoading = false;
   bool _hotelsLoading = true;
   bool _bookingsLoading = true;
@@ -77,6 +81,9 @@ class _AdminDashboardState extends State<AdminDashboard>
     final user = authService.currentUser;
     _partnerid = prefs.getInt('partnerid') ?? 0;
     _userid = prefs.getInt('userid') ?? _asInt(user?.userid);
+    _fullname = prefs.getString('fullname') ?? user?.name ?? '';
+    _email = prefs.getString('email') ?? user?.email ?? '';
+    _photo = prefs.getString('photo') ?? '';
     await _refreshDashboardData();
   }
 
@@ -383,6 +390,37 @@ class _AdminDashboardState extends State<AdminDashboard>
                     },
                   ),
                 );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              leading: const Icon(Icons.person_outline_rounded, color: _muted),
+              title: isDesktop 
+                  ? Text('Edit Profile', style: GoogleFonts.poppins(color: _muted, fontWeight: FontWeight.w500)) 
+                  : null,
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileScreen(
+                      userData: {
+                        'userid': _userid,
+                        'fullname': _fullname,
+                        'email': _email,
+                        'photo': _photo,
+                      },
+                    ),
+                  ),
+                );
+                if (result == true) {
+                  _bootstrap(); // Reload session data
+                }
+                if (!isDesktop) Navigator.pop(context);
               },
             ),
           ),

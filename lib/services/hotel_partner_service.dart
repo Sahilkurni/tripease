@@ -479,4 +479,28 @@ class HotelPartnerService {
       throw Exception('getEarnings failed: $e');
     }
   }
+
+  static Future<CityItem> addCity(String cityName, int stateId, int uid) async {
+    try {
+      final uri = Uri.parse('$_base/agent/addCity.php');
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'cityname': cityName,
+              'stateid': stateId,
+              'uid': uid,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(res.body);
+      if (json['status'] == 'success') {
+        return CityItem.fromJson(json['data']);
+      }
+      throw Exception(json['message']);
+    } catch (e) {
+      throw Exception('addCity failed: $e');
+    }
+  }
 }

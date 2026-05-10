@@ -13,8 +13,13 @@ class FlightModel {
   final String status;
   final int isActive;
   final int? createdBy;
+  final double? latitude;
+  final double? longitude;
   final String? fromCityName;
   final String? toCityName;
+  final double? distance;
+  final String? image;
+  final List<String>? images;
 
   FlightModel({
     required this.flightId,
@@ -31,8 +36,13 @@ class FlightModel {
     required this.status,
     required this.isActive,
     this.createdBy,
+    this.latitude,
+    this.longitude,
     this.fromCityName,
     this.toCityName,
+    this.distance,
+    this.image,
+    this.images,
   });
 
   factory FlightModel.fromJson(Map<String, dynamic> json) {
@@ -51,8 +61,13 @@ class FlightModel {
       status: json['status'] ?? 'pending',
       isActive: int.parse(json['isactive'].toString()),
       createdBy: json['created_by'] != null ? int.tryParse(json['created_by'].toString()) : null,
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       fromCityName: json['from_city_name'],
       toCityName: json['to_city_name'],
+      distance: json['distance'] != null ? double.tryParse(json['distance'].toString()) : null,
+      image: json['image'] ?? '',
+      images: json['images'] != null ? List<String>.from(json['images']) : [],
     );
   }
 }

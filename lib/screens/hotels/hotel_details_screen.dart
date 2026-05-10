@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../services/auth_service.dart';
 import '../../services/hotel_service.dart';
 import '../../models/room_model.dart';
+import '../../models/hotel_model.dart';
 import 'guest_details_screen.dart';
 import '../../widgets/base64_image.dart';
 import '../../services/hotel_partner_service.dart';
@@ -32,6 +35,7 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
   final HotelService _hotelService = hotelService;
   final AuthService _authService = authService;
   List<RoomModel> _rooms = [];
+  HotelModel? _hotelModel;
   bool _isLoading = true;
   String? _error;
 
@@ -49,9 +53,42 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
             ? [widget.imageUrl!]
             : []);
     _preDecodeAll();
-    _loadRooms();
+    _loadData();
     if (_heroImages.isEmpty) _fetchHeroImages();
     _startAutoSlide();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final results = await Future.wait([
+        _hotelService.getHotelRooms(int.parse(widget.hotelId)),
+        _fetchHotelDetails(),
+      ]);
+      
+      if (!mounted) return;
+      setState(() {
+        _rooms = results[0] as List<RoomModel>;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchHotelDetails() async {
+    try {
+      final hotels = await _hotelService.getHomeHotels();
+      final hotel = hotels.firstWhere((h) => h.hotelid.toString() == widget.hotelId);
+      if (mounted) {
+        setState(() {
+          _hotelModel = hotel;
+        });
+      }
+    } catch (_) {}
   }
 
   void _preDecodeAll() {
@@ -99,23 +136,7 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadRooms() async {
-    try {
-      final rooms =
-          await _hotelService.getHotelRooms(int.parse(widget.hotelId));
-      if (!mounted) return;
-      setState(() {
-        _rooms = rooms;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
+
 
   Future<void> _bookRoom(RoomModel room) async {
     final user = _authService.currentUser;
@@ -227,8 +248,88 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
                   )
                 else
                   ...(_rooms.map((r) => _buildRoomCard(r, isDark))),
+                
+                // Location Section
+                if (_hotelModel != null && _hotelModel!.latitude != null && _hotelModel!.longitude != null)
+                  _buildLocationSection(isDark),
+
                 const SizedBox(height: 32),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSection(bool isDark) {
+    final latLng = LatLng(_hotelModel!.latitude!, _hotelModel!.longitude!);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Location',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: SizedBox(
+              height: 200,
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: latLng,
+                  initialZoom: 14,
+                  interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.tripease.app',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: latLng,
+                        width: 60,
+                        height: 60,
+                        child: const Icon(Icons.location_on, color: Colors.red, size: 35),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _hotelModel!.address ?? 'Address not specified',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: isDark ? Colors.white70 : const Color(0xFF64748B),
             ),
           ),
         ],

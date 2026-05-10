@@ -13,6 +13,8 @@ class BusModel {
   final int? uid;
   final String? edatetime;
   final int isactive;
+  final double? latitude;
+  final double? longitude;
 
   // UI convenience fields
   final String? sourceCityName;
@@ -41,6 +43,8 @@ class BusModel {
     this.imageUrl,
     this.images = const [],
     this.seats = const [],
+    this.latitude,
+    this.longitude,
   });
 
   factory BusModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +63,8 @@ class BusModel {
       uid: json['uid'] != null ? int.parse(json['uid'].toString()) : null,
       edatetime: json['edatetime'],
       isactive: int.parse((json['isactive'] ?? '1').toString()),
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       sourceCityName: json['source_city_name'] ?? json['source'],
       destinationCityName: json['destination_city_name'] ?? json['destination'],
       imageUrl: json['imageUrl']?.toString() ?? json['image']?.toString(),

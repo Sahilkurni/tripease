@@ -7,6 +7,7 @@ import '../../models/bus_model.dart';
 import '../../services/bus_service.dart';
 import '../../services/hotel_partner_service.dart';
 import '../../widgets/fullscreen_gallery.dart';
+import '../../widgets/location_picker_screen.dart';
 
 class AddEditBusScreen extends StatefulWidget {
   final BusModel? bus;
@@ -33,6 +34,8 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
   final _arrivalCtrl = TextEditingController();
   final _fareCtrl = TextEditingController();
   final _seatsCtrl = TextEditingController();
+  final _latCtrl = TextEditingController();
+  final _lngCtrl = TextEditingController();
 
   final _busTypes = const ['AC', 'Non-AC', 'Sleeper'];
   final _layoutTypes = const ['1x2', '2x2', 'sleeper'];
@@ -69,6 +72,8 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
       _arrivalCtrl.text = bus.arrivalTime;
       _fareCtrl.text = bus.baseFare.toStringAsFixed(0);
       _seatsCtrl.text = bus.totalSeats.toString();
+      _latCtrl.text = bus.latitude?.toString() ?? '';
+      _lngCtrl.text = bus.longitude?.toString() ?? '';
 
       // Load existing images
       _loadExistingImages(bus.busid);
@@ -89,6 +94,8 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
     _arrivalCtrl.dispose();
     _fareCtrl.dispose();
     _seatsCtrl.dispose();
+    _latCtrl.dispose();
+    _lngCtrl.dispose();
     super.dispose();
   }
 
@@ -162,6 +169,115 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
   void _removeNewImage(int index) =>
       setState(() => _selectedImages.removeAt(index));
 
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLat: double.tryParse(_latCtrl.text),
+          initialLng: double.tryParse(_lngCtrl.text),
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _latCtrl.text = result['latitude']?.toString() ?? '';
+        _lngCtrl.text = result['longitude']?.toString() ?? '';
+        
+        // Match city
+        if (result['city'] != null) {
+          final cityName = result['city'].toString().toLowerCase();
+          final cityMatch = _cities.where((c) => c.cityname.toLowerCase().contains(cityName)).firstOrNull;
+          if (cityMatch != null) {
+            if (_sourceCityId == null) {
+              _sourceCityId = cityMatch.cityid;
+            } else if (_destinationCityId == null) {
+              _destinationCityId = cityMatch.cityid;
+            }
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _showAddCityDialog() async {
+    final ctrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSavingCity = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('Add New City', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: ctrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'City Name *',
+                    prefixIcon: Icon(Icons.location_city_rounded),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'City name is required';
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSavingCity ? null : () => Navigator.pop(ctx),
+                  child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: isSavingCity
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setStateDialog(() => isSavingCity = true);
+                          try {
+                            // Default stateid to 1 for buses if not specified
+                            final newCity = await HotelPartnerService.addCity(
+                              ctrl.text.trim(),
+                              1, 
+                              widget.userid,
+                            );
+                            
+                            setState(() {
+                              if (!_cities.any((c) => c.cityid == newCity.cityid)) {
+                                _cities.add(newCity);
+                                _cities.sort((a, b) => a.cityname.compareTo(b.cityname));
+                              }
+                            });
+                            if (mounted) Navigator.pop(ctx);
+                          } catch (e) {
+                            setStateDialog(() => isSavingCity = false);
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent)
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: isSavingCity
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Add City', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<List<String>> _processImages() async {
     final List<String> result = [];
     for (final file in _selectedImages) {
@@ -206,6 +322,8 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
         'arrival_time': _arrivalCtrl.text.trim(),
         'base_fare': double.parse(_fareCtrl.text.trim()),
         'total_seats': int.parse(_seatsCtrl.text.trim()),
+        'latitude': double.tryParse(_latCtrl.text),
+        'longitude': double.tryParse(_lngCtrl.text),
         'uid': widget.userid,
       };
 
@@ -507,6 +625,85 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
                             ]),
                             const SizedBox(height: 16),
                             _responsiveRow([
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      value: _sourceCityId,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Source City *',
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.trip_origin),
+                                      ),
+                                      items: _cities.map<DropdownMenuItem<int>>((city) {
+                                        return DropdownMenuItem<int>(
+                                          value: city.cityid,
+                                          child: Text(city.cityname),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) => setState(() => _sourceCityId = value),
+                                      validator: (value) => value == null ? 'Select source' : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    height: 52,
+                                    width: 52,
+                                    margin: const EdgeInsets.only(bottom: 2),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(Icons.add_location_alt_rounded, color: Theme.of(context).primaryColor),
+                                      onPressed: _showAddCityDialog,
+                                      tooltip: 'Add new city',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      value: _destinationCityId,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Destination City *',
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.location_on_outlined),
+                                      ),
+                                      items: _cities.map<DropdownMenuItem<int>>((city) {
+                                        return DropdownMenuItem<int>(
+                                          value: city.cityid,
+                                          child: Text(city.cityname),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) => setState(() => _destinationCityId = value),
+                                      validator: (value) => value == null ? 'Select destination' : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    height: 52,
+                                    width: 52,
+                                    margin: const EdgeInsets.only(bottom: 2),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(Icons.add_location_alt_rounded, color: Theme.of(context).primaryColor),
+                                      onPressed: _showAddCityDialog,
+                                      tooltip: 'Add new city',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ]),
+                            const SizedBox(height: 16),
+                            _responsiveRow([
                               DropdownButtonFormField<String>(
                                 value: _layoutType,
                                 decoration: const InputDecoration(
@@ -545,52 +742,6 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
                                   if (seats > 80) return 'Maximum 80 seats';
                                   return null;
                                 },
-                              ),
-                            ]),
-                            const SizedBox(height: 16),
-                            _responsiveRow([
-                              DropdownButtonFormField<int>(
-                                value: _sourceCityId,
-                                decoration: const InputDecoration(
-                                  labelText: 'Source City *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.trip_origin),
-                                ),
-                                items: _cities.map<DropdownMenuItem<int>>((city) {
-                                  return DropdownMenuItem<int>(
-                                    value: city.cityid,
-                                    child: Text(city.cityname),
-                                  );
-                                }).toList(),
-                                onChanged:
-                                    (value) =>
-                                        setState(() => _sourceCityId = value),
-                                validator:
-                                    (value) =>
-                                        value == null ? 'Select source' : null,
-                              ),
-                              DropdownButtonFormField<int>(
-                                value: _destinationCityId,
-                                decoration: const InputDecoration(
-                                  labelText: 'Destination City *',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.location_on_outlined),
-                                ),
-                                items: _cities.map<DropdownMenuItem<int>>((city) {
-                                  return DropdownMenuItem<int>(
-                                    value: city.cityid,
-                                    child: Text(city.cityname),
-                                  );
-                                }).toList(),
-                                onChanged:
-                                    (value) => setState(
-                                      () => _destinationCityId = value,
-                                    ),
-                                validator:
-                                    (value) =>
-                                        value == null
-                                            ? 'Select destination'
-                                            : null,
                               ),
                             ]),
                             const SizedBox(height: 16),
@@ -641,6 +792,41 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
                               },
                             ),
                             const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text('Bus Station Location', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _openLocationPicker,
+                                  icon: const Icon(Icons.map_rounded),
+                                  label: Text('Pick on Map', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _responsiveRow([
+                              TextFormField(
+                                controller: _latCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Latitude',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.explore_rounded),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                              TextFormField(
+                                controller: _lngCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Longitude',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.explore_rounded),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ]),
+                            const SizedBox(height: 24),
+
                             // ── Image Section ──
                             _buildImageSection(),
                             const SizedBox(height: 24),

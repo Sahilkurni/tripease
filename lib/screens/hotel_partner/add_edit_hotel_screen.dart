@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/hotel_partner_service.dart';
 import '../../widgets/fullscreen_gallery.dart';
+import '../../widgets/location_picker_screen.dart';
 
 class AddEditHotelScreen extends StatefulWidget {
   final bool isEdit;
@@ -167,6 +168,130 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
     setState(() => _selectedImages.removeAt(index));
   }
 
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLat: double.tryParse(_latCtrl.text),
+          initialLng: double.tryParse(_lngCtrl.text),
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _addressCtrl.text = result['address'] ?? '';
+        _latCtrl.text = result['latitude']?.toString() ?? '';
+        _lngCtrl.text = result['longitude']?.toString() ?? '';
+        
+        // Attempt to match state
+        if (result['state'] != null) {
+          final stateName = result['state'].toString().toLowerCase();
+          final match = _states.where((s) => s.statename.toLowerCase().contains(stateName)).firstOrNull;
+          if (match != null) {
+            _selectedStateId = match.stateid;
+            _onStateSelected(_selectedStateId);
+            
+            // Attempt to match city after state is selected
+            if (result['city'] != null) {
+               Future.delayed(const Duration(milliseconds: 500), () {
+                 final cityName = result['city'].toString().toLowerCase();
+                 final cityMatch = _cities.where((c) => c.cityname.toLowerCase().contains(cityName)).firstOrNull;
+                 if (cityMatch != null) {
+                   setState(() => _selectedCityId = cityMatch.cityid);
+                 }
+               });
+            }
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _showAddCityDialog() async {
+    if (_selectedStateId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a state first')));
+      return;
+    }
+
+    final ctrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSavingCity = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('Add New City', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: ctrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'City Name *',
+                    prefixIcon: Icon(Icons.location_city_rounded),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'City name is required';
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSavingCity ? null : () => Navigator.pop(ctx),
+                  child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: isSavingCity
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setStateDialog(() => isSavingCity = true);
+                          try {
+                            final newCity = await HotelPartnerService.addCity(
+                              ctrl.text.trim(),
+                              _selectedStateId!,
+                              widget.userid,
+                            );
+                            
+                            setState(() {
+                              if (!_cities.any((c) => c.cityid == newCity.cityid)) {
+                                _cities.add(newCity);
+                                _cities.sort((a, b) => a.cityname.compareTo(b.cityname));
+                              }
+                              _selectedCityId = newCity.cityid;
+                            });
+                            if (mounted) Navigator.pop(ctx);
+                          } catch (e) {
+                            setStateDialog(() => isSavingCity = false);
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent)
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: isSavingCity
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Add City', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<List<String>> _processImages() async {
     List<String> base64Images = [];
     for (var file in _selectedImages) {
@@ -313,13 +438,35 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                               ),
                               const SizedBox(width: 20),
                               Expanded(
-                                child: DropdownButtonFormField<int>(
-                                  value: _selectedCityId,
-                                  decoration: const InputDecoration(labelText: 'City *', prefixIcon: Icon(Icons.location_city_rounded)),
-                                  items: _cities.map((c) => DropdownMenuItem(value: c.cityid, child: Text(c.cityname))).toList(),
-                                  onChanged: _cities.isEmpty ? null : (val) => setState(() => _selectedCityId = val),
-                                  validator: (val) => val == null ? 'Please select a city' : null,
-                                  hint: Text(_selectedStateId == null ? 'Select state first' : (_cities.isEmpty ? 'Loading cities...' : 'Select a city')),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<int>(
+                                        value: _selectedCityId,
+                                        decoration: const InputDecoration(labelText: 'City *', prefixIcon: Icon(Icons.location_city_rounded)),
+                                        items: _cities.map((c) => DropdownMenuItem(value: c.cityid, child: Text(c.cityname))).toList(),
+                                        onChanged: _cities.isEmpty && _selectedStateId == null ? null : (val) => setState(() => _selectedCityId = val),
+                                        validator: (val) => val == null ? 'Please select a city' : null,
+                                        hint: Text(_selectedStateId == null ? 'Select state' : (_cities.isEmpty ? 'No cities' : 'Select city')),
+                                        isExpanded: true,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      height: 52,
+                                      width: 52,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2563EB).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.add_location_alt_rounded, color: Color(0xFF2563EB)),
+                                        onPressed: _showAddCityDialog,
+                                        tooltip: 'Add new city',
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -475,12 +622,37 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                               ),
                             
                             const SizedBox(height: 48),
-                          TextFormField(
-                            controller: _addressCtrl,
-                            decoration: const InputDecoration(labelText: 'Full Address *', prefixIcon: Icon(Icons.location_on_rounded)),
-                            maxLines: 2,
-                            validator: (val) => (val == null || val.trim().length < 10) ? 'Must be at least 10 characters' : null,
-                          ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text('Location Details',
+                                      style: GoogleFonts.poppins(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF1E293B))),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _openLocationPicker,
+                                  icon: const Icon(Icons.map_rounded, size: 20),
+                                  label: Text('Pick on Map',
+                                      style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600)),
+                                  style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFF2563EB)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _addressCtrl,
+                              decoration: const InputDecoration(
+                                  labelText: 'Full Address *',
+                                  prefixIcon: Icon(Icons.location_on_rounded)),
+                              maxLines: 2,
+                              validator: (val) => (val == null || val.trim().length < 10)
+                                  ? 'Must be at least 10 characters'
+                                  : null,
+                            ),
                           const SizedBox(height: 20),
                           Row(
                             children: [

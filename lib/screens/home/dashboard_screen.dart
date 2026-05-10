@@ -10,6 +10,7 @@ import '../../services/customer_service.dart';
 import '../../services/home_service.dart';
 import 'widgets/home_header.dart';
 import 'widgets/custom_bottom_nav.dart';
+import '../../widgets/custom_footer.dart';
 import '../hotels/hotel_details_screen.dart';
 import 'package_details_screen.dart';
 import '../../models/flight_model.dart';
@@ -17,6 +18,9 @@ import '../../services/flight_service.dart';
 import '../flights/flight_list_screen.dart';
 import '../flights/flight_details_screen.dart';
 import '../../widgets/base64_image.dart';
+import '../profile/edit_profile_screen.dart';
+import 'discovery_map_screen.dart';
+import '../../services/location_service.dart';
 
 class ServiceItem {
   final String id;
@@ -105,6 +109,10 @@ class RecommendedItem {
   final int days;
   final int nights;
   final String? subType; // For Bus Type (AC, Sleeper) or Room Type (Deluxe, etc.)
+  final double? latitude;
+  final double? longitude;
+  final double? distance;
+
   const RecommendedItem({
     required this.id,
     required this.name,
@@ -117,6 +125,9 @@ class RecommendedItem {
     this.days = 0,
     this.nights = 0,
     this.subType,
+    this.latitude,
+    this.longitude,
+    this.distance,
   });
 
   factory RecommendedItem.fromJson(Map<String, dynamic> json) {
@@ -138,6 +149,9 @@ class RecommendedItem {
       days: int.tryParse('${json['days'] ?? 0}') ?? 0,
       nights: int.tryParse('${json['nights'] ?? 0}') ?? 0,
       subType: json['subType'] ?? json['bus_type'] ?? json['room_type'] ?? json['bustype'] ?? 'Standard',
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      distance: double.tryParse(json['distance']?.toString() ?? ''),
     );
   }
 
@@ -158,6 +172,9 @@ class RecommendedItem {
               .toString(),
       images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       subType: json['room_type'] ?? json['roomtype'] ?? json['category'] ?? 'Standard',
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      distance: double.tryParse(json['distance']?.toString() ?? ''),
     );
   }
 
@@ -172,9 +189,13 @@ class RecommendedItem {
       imageUrl:
           (json['thumbnail'] ?? json['image'] ?? json['imageUrl'] ?? '')
               .toString(),
+      images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       days: int.tryParse(json['days']?.toString() ?? '0') ?? 0,
       nights: int.tryParse(json['nights']?.toString() ?? '0') ?? 0,
       subType: json['package_type'] ?? json['category'],
+      latitude: double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: double.tryParse(json['longitude']?.toString() ?? ''),
+      distance: double.tryParse(json['distance']?.toString() ?? ''),
     );
   }
   @override
@@ -378,7 +399,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _selectedLocation = _userLocation;
+    _initLocation();
     _loadHomeData();
+  }
+
+  Future<void> _initLocation() async {
+    await locationService.init();
+    if (locationService.currentLocation != null) {
+      setState(() {
+        _selectedLocation = locationService.currentLocation!.city;
+      });
+    } else {
+      _refreshLocation();
+    }
+  }
+
+  Future<void> _refreshLocation() async {
+    final loc = await locationService.refreshLocation();
+    if (loc != null) {
+      setState(() {
+        _selectedLocation = loc.city;
+      });
+      // Optional: reload data based on new location
+      _loadHomeData();
+    }
   }
 
   @override
@@ -386,6 +430,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+
 
   void _showFilterBottomSheet() {
     showModalBottomSheet(
@@ -936,7 +982,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _profile?.name.trim().isNotEmpty == true
                         ? _profile!.name
                         : authService.currentUser?.name ?? 'Traveler',
-                location: _userLocation,
+                location: _selectedLocation,
+                onRefresh: _refreshLocation,
+                onMapOpen: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DiscoveryMapScreen()),
+                  );
+                },
               ),
             ),
 
@@ -1004,6 +1057,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 SliverToBoxAdapter(child: _buildRecentBookingsSection()),
               ],
             ],
+
+            // Footer
+            const SliverToBoxAdapter(child: CustomFooter()),
 
             // Bottom padding for nav bar
             SliverToBoxAdapter(child: SizedBox(height: safeBot + 90)),
@@ -1193,6 +1249,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Theme.of(context).brightness == Brightness.dark
                                   ? AppColors.darkText
                                   : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DiscoveryMapScreen())),
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 8, bottom: 8, left: 8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.map_rounded,
+                          color: AppColors.primary,
+                          size: 18,
                         ),
                       ),
                     ),
@@ -1711,6 +1783,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: _ProfileSummaryCard(
                             profile: _profile,
                             fallbackUser: authService.currentUser,
+                            onRefresh: _loadHomeData,
                             onSignOut: () async {
                               await authService.clearSession();
                               if (!mounted) return;
@@ -1926,6 +1999,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   packageId: item.id,
                   packageName: item.name,
                   price: item.price,
+                  imageUrl: item.imageUrl,
+                  images: item.images,
                 ),
               ),
             );
@@ -2161,16 +2236,17 @@ class _CustomerEmptyState extends StatelessWidget {
     );
   }
 }
-
 class _ProfileSummaryCard extends StatelessWidget {
   final CustomerProfile? profile;
   final UserModel? fallbackUser;
   final Future<void> Function() onSignOut;
+  final Future<void> Function() onRefresh;
 
   const _ProfileSummaryCard({
     required this.profile,
     required this.fallbackUser,
     required this.onSignOut,
+    required this.onRefresh,
   });
 
   String get _name {
@@ -2253,21 +2329,10 @@ class _ProfileSummaryCard extends StatelessWidget {
                             ),
                           ),
                         )
-                        : Image.network(
-                          _photo,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (_, __, ___) => Center(
-                                child: Text(
-                                  initial,
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                        ),
+                        : Base64Image(
+                            base64String: _photo,
+                            fit: BoxFit.cover,
+                          ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -2309,10 +2374,24 @@ class _ProfileSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit profile is coming soon.')),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(
+                    userData: {
+                      'userid': profile?.userId ?? fallbackUser?.userid ?? '',
+                      'fullname': _name,
+                      'email': _email,
+                      'photo': _photo,
+                      'role': _role,
+                    },
+                  ),
+                ),
               );
+              if (result == true) {
+                onRefresh(); // Refresh dashboard data
+              }
             },
             icon: const Icon(Icons.edit_rounded, size: 18),
             label: Text(
@@ -2405,7 +2484,7 @@ class _WishlistCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _TravelImagePlaceholder(
+                TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
                   icon:
                       item.itemType == 'package'
@@ -2846,7 +2925,7 @@ class _PremiumHotelCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _TravelImagePlaceholder(
+                TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
                   images: item.images,
                   icon: Icons.hotel_rounded,
@@ -2862,6 +2941,12 @@ class _PremiumHotelCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (item.distance != null && item.distance! > 0)
+                  Positioned(
+                    left: 12,
+                    bottom: 12,
+                    child: _SoftBadge(label: '${item.distance!.toStringAsFixed(1)} km away', color: Colors.blue[700]),
                   ),
               ],
             ),
@@ -2960,7 +3045,7 @@ class _PremiumPackageCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _TravelImagePlaceholder(
+                TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
                   images: item.images,
                   icon: Icons.map_rounded,
@@ -2976,6 +3061,12 @@ class _PremiumPackageCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (item.distance != null && item.distance! > 0)
+                  Positioned(
+                    left: 12,
+                    bottom: 12,
+                    child: _SoftBadge(label: '${item.distance!.toStringAsFixed(1)} km away', color: Colors.blue[700]),
                   ),
               ],
             ),
@@ -3030,13 +3121,13 @@ class _PremiumPackageCard extends StatelessWidget {
   }
 }
 
-class _TravelImagePlaceholder extends StatefulWidget {
+class TravelImagePlaceholder extends StatefulWidget {
   final String imageUrl;
   final List<String>? images;
   final IconData icon;
   final List<Color> colors;
 
-  const _TravelImagePlaceholder({
+  const TravelImagePlaceholder({
     required this.imageUrl,
     this.images,
     required this.icon,
@@ -3044,10 +3135,10 @@ class _TravelImagePlaceholder extends StatefulWidget {
   });
 
   @override
-  State<_TravelImagePlaceholder> createState() => _TravelImagePlaceholderState();
+  State<TravelImagePlaceholder> createState() => TravelImagePlaceholderState();
 }
 
-class _TravelImagePlaceholderState extends State<_TravelImagePlaceholder> {
+class TravelImagePlaceholderState extends State<TravelImagePlaceholder> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
@@ -3144,8 +3235,9 @@ class _PriceBadge extends StatelessWidget {
 
 class _SoftBadge extends StatelessWidget {
   final String label;
+  final Color? color;
 
-  const _SoftBadge({required this.label});
+  const _SoftBadge({required this.label, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -3158,7 +3250,7 @@ class _SoftBadge extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.poppins(
-          color: AppColors.textPrimary,
+          color: color ?? AppColors.textPrimary,
           fontSize: 11,
           fontWeight: FontWeight.w800,
         ),
@@ -3321,7 +3413,7 @@ class _PremiumBusCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _TravelImagePlaceholder(
+                TravelImagePlaceholder(
                   imageUrl: item.imageUrl,
                   images: item.images,
                   icon: Icons.directions_bus_rounded,
@@ -3433,8 +3525,9 @@ class _PremiumFlightCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _TravelImagePlaceholder(
-                  imageUrl: '',
+                TravelImagePlaceholder(
+                  imageUrl: item.image ?? '',
+                  images: item.images,
                   icon: Icons.flight_rounded,
                   colors: const [Color(0xFF6366F1), Color(0xFFA855F7)],
                 ),
@@ -3467,6 +3560,12 @@ class _PremiumFlightCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (item.distance != null && item.distance! > 0)
+                  Positioned(
+                    left: 12,
+                    bottom: 12,
+                    child: _SoftBadge(label: '${item.distance!.toStringAsFixed(1)} km away', color: Colors.blue[700]),
                   ),
               ],
             ),

@@ -67,6 +67,8 @@ class HomeService {
         imageUrl: row['imageUrl']?.toString() ?? row['image']?.toString() ?? '',
         images: (row['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
         subType: row['bus_type'] ?? row['bustype'] ?? 'Standard',
+        latitude: double.tryParse(row['latitude']?.toString() ?? ''),
+        longitude: double.tryParse(row['longitude']?.toString() ?? ''),
       )).toList();
     } catch (e, st) {
       debugPrint('getHomeBuses error: $e');

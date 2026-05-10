@@ -8,12 +8,14 @@ class CustomerProfile {
   final String email;
   final String role;
   final String profilePhoto;
+  final String userId;
 
   const CustomerProfile({
     required this.name,
     required this.email,
     required this.role,
     required this.profilePhoto,
+    required this.userId,
   });
 
   factory CustomerProfile.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,7 @@ class CustomerProfile {
       profilePhoto:
           (json['profile_photo'] ?? json['profilephoto'] ?? json['photo'] ?? '')
               .toString(),
+      userId: (json['userid'] ?? json['id'] ?? '').toString(),
     );
   }
 }

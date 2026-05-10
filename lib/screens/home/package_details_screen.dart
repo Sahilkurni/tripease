@@ -6,17 +6,23 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../core/api_config.dart';
 import '../../services/payment_service.dart';
+import '../../widgets/base64_image.dart';
+import 'dashboard_screen.dart'; // To use _TravelImagePlaceholder
 
 class PackageDetailsScreen extends StatefulWidget {
   final String packageId;
   final String packageName;
   final double price;
+  final String? imageUrl;
+  final List<String>? images;
 
   const PackageDetailsScreen({
     super.key,
     required this.packageId,
     required this.packageName,
     required this.price,
+    this.imageUrl,
+    this.images,
   });
 
   @override
@@ -130,16 +136,18 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFDB2777), Color(0xFFF59E0B)],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                height: 250,
+                width: double.infinity,
+                child: TravelImagePlaceholder(
+                  imageUrl: widget.imageUrl ?? '',
+                  images: widget.images,
+                  icon: Icons.map_rounded,
+                  colors: const [Color(0xFFDB2777), Color(0xFFF59E0B)],
                 ),
               ),
-              child: const Icon(Icons.flight_takeoff_rounded, size: 80, color: Colors.white),
             ),
             const SizedBox(height: 24),
             Text(

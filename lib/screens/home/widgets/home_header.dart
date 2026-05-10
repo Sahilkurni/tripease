@@ -4,11 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 class HomeHeaderWidget extends StatelessWidget {
   final String userName;
   final String location;
+  final VoidCallback? onRefresh;
+  final VoidCallback? onMapOpen;
 
   const HomeHeaderWidget({
     super.key,
     required this.userName,
     required this.location,
+    this.onRefresh,
+    this.onMapOpen,
   });
 
   @override
@@ -191,17 +195,53 @@ class HomeHeaderWidget extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.location_on,
-                        color: Colors.white70,
-                        size: 14,
+                      GestureDetector(
+                        onTap: onRefresh,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              color: Colors.white70,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              location,
+                              style: GoogleFonts.poppins(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.refresh_rounded,
+                              color: Colors.white54,
+                              size: 14,
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        location,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white70,
-                          fontSize: 12,
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: onMapOpen,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.map_outlined, color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Explore Map',
+                                style: GoogleFonts.poppins(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../hotel_partner/add_edit_hotel_screen.dart';
 import '../hotel_partner/manage_rooms_screen.dart';
 import '../../widgets/base64_image.dart';
+import '../profile/edit_profile_screen.dart';
 
 class HotelOwnerDashboard extends StatefulWidget {
   const HotelOwnerDashboard({super.key});
@@ -24,6 +25,8 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
   int _partnerid = 0;
   int _userid = 0;
   String _fullname = '';
+  String _email = '';
+  String _photo = '';
 
   Map<String, dynamic> _stats = {
     'total_hotels': 0,
@@ -68,6 +71,8 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
     _userid = prefs.getInt('userid') ?? 0;
     _partnerid = prefs.getInt('partnerid') ?? 1;
     _fullname = prefs.getString('fullname') ?? 'Partner';
+    _email = prefs.getString('email') ?? '';
+    _photo = prefs.getString('photo') ?? '';
     _fetchDashboardData();
   }
 
@@ -360,6 +365,35 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                     },
                   ),
                 );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              leading: const Icon(Icons.person_outline_rounded, color: Color(0xFF64748B)),
+              title: Text('Edit Profile', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileScreen(
+                      userData: {
+                        'userid': _userid,
+                        'fullname': _fullname,
+                        'email': _email,
+                        'photo': _photo,
+                      },
+                    ),
+                  ),
+                );
+                if (result == true) {
+                  _initSession();
+                }
+                if (!isDesktop) Navigator.pop(context);
               },
             ),
           ),

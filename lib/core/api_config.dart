@@ -48,4 +48,7 @@ class ApiConfig {
   static String get adminFlights => '${baseUrl}admin/get_all_flights.php';
   static String get updateFlightStatus => '${baseUrl}admin/update_flight_status.php';
   static String get createFlight => '${baseUrl}create_flight.php';
+  static String get updateFlight => '${baseUrl}update_flight.php';
+  static String get deleteFlight => '${baseUrl}delete_flight.php';
+  static String get nearbyItems => '${baseUrl}get_nearby_items.php';
 }

@@ -13,6 +13,7 @@ import '../../services/agent_service.dart';
 import '../agent/add_edit_package_screen.dart';
 import '../agent/agent_add_flight_screen.dart';
 import '../../widgets/base64_image.dart';
+import '../profile/edit_profile_screen.dart';
 
 class AgentDashboard extends StatefulWidget {
   const AgentDashboard({super.key});
@@ -31,6 +32,9 @@ class _AgentDashboardState extends State<AgentDashboard>
   List<PackageModel> _packages = [];
   List<BusModel> _buses = [];
   List<FlightModel> _flights = [];
+  String _fullname = '';
+  String _email = '';
+  String _photo = '';
 
   @override
   void initState() {
@@ -57,10 +61,12 @@ class _AgentDashboardState extends State<AgentDashboard>
           _userid;
 
       if (_partnerid == 0) {
-        // Fallback to 1 (default user/partner in db seeds) to avoid crashes 
-        // when session is stale or backend omits it
         _partnerid = 1; 
       }
+
+      _fullname = prefs.getString('fullname') ?? user['fullname'] ?? '';
+      _email = prefs.getString('email') ?? user['email'] ?? '';
+      _photo = prefs.getString('photo') ?? user['photo'] ?? '';
 
       final packages = await packageService.getAgentPackages(_partnerid);
       final buses = await busService.getAgentBuses(_partnerid);
@@ -142,6 +148,55 @@ class _AgentDashboardState extends State<AgentDashboard>
     }
   }
 
+  Future<void> _openFlightForm([FlightModel? flight]) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AgentAddFlightScreen(flight: flight),
+      ),
+    );
+    if (result == true) {
+      setState(() => _isLoading = true);
+      await _fetchDashboardData();
+    }
+  }
+
+  Future<void> _deleteFlight(FlightModel flight) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete flight?'),
+        content: Text('${flight.airline} ${flight.flightNumber} will be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final success = await flightService.deleteFlight(flight.flightId.toString(), _userid.toString());
+      if (success) {
+        await _fetchDashboardData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flight deleted successfully')));
+        }
+      } else {
+        throw Exception('Server returned failure');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      }
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -198,14 +253,7 @@ class _AgentDashboardState extends State<AgentDashboard>
                   } else if (_tabController.index == 1) {
                     _openBusForm();
                   } else {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AgentAddFlightScreen()),
-                    );
-                    if (result == true) {
-                      setState(() => _isLoading = true);
-                      await _fetchDashboardData();
-                    }
+                    _openFlightForm();
                   }
                 },
                 backgroundColor: Theme.of(context).primaryColor,
@@ -290,6 +338,28 @@ class _AgentDashboardState extends State<AgentDashboard>
             leading: const Icon(Icons.monetization_on),
             title: const Text('Earnings & Taxes'),
             onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('Edit Profile'),
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(
+                    userData: {
+                      'userid': _userid,
+                      'fullname': _fullname,
+                      'email': _email,
+                      'photo': _photo,
+                    },
+                  ),
+                ),
+              );
+              if (result == true) {
+                _fetchDashboardData();
+              }
+            },
           ),
           const Spacer(),
           ListTile(
@@ -693,16 +763,7 @@ class _AgentDashboardState extends State<AgentDashboard>
               ),
               if (MediaQuery.of(context).size.width > 800)
                 ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AgentAddFlightScreen()),
-                    );
-                    if (result == true) {
-                      setState(() => _isLoading = true);
-                      await _fetchDashboardData();
-                    }
-                  },
+                  onPressed: () => _openFlightForm(),
                   icon: const Icon(Icons.add),
                   label: const Text('Add Flight'),
                   style: ElevatedButton.styleFrom(minimumSize: const Size(0, 44)),
@@ -755,15 +816,29 @@ class _AgentDashboardState extends State<AgentDashboard>
                         ),
                       ],
                     ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '₹${flight.price}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${flight.price}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
+                            ),
+                            Text('${flight.availableSeats}/${flight.totalSeats} seats'),
+                          ],
                         ),
-                        Text('${flight.availableSeats}/${flight.totalSeats} seats'),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                          onPressed: () => _openFlightForm(flight),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteFlight(flight),
+                        ),
                       ],
                     ),
                   ),

@@ -27,6 +27,11 @@ import '../screens/flights/flight_list_screen.dart';
 import '../screens/flights/flight_bookings_screen.dart';
 import '../screens/admin/admin_flights_screen.dart';
 import '../screens/agent/agent_add_flight_screen.dart';
+import '../screens/info/about_us_screen.dart';
+import '../screens/info/contact_us_screen.dart';
+import '../screens/info/privacy_policy_screen.dart';
+import '../screens/info/refund_policy_screen.dart';
+import '../screens/info/terms_conditions_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -238,6 +243,26 @@ final appRouter = GoRouter(
           body: const Center(child: Text('Required booking data missing.')),
         );
       },
+    ),
+    GoRoute(
+      path: '/about',
+      builder: (context, state) => const AboutUsScreen(),
+    ),
+    GoRoute(
+      path: '/contact',
+      builder: (context, state) => const ContactUsScreen(),
+    ),
+    GoRoute(
+      path: '/privacy',
+      builder: (context, state) => const PrivacyPolicyScreen(),
+    ),
+    GoRoute(
+      path: '/refund',
+      builder: (context, state) => const RefundPolicyScreen(),
+    ),
+    GoRoute(
+      path: '/terms',
+      builder: (context, state) => const TermsConditionsScreen(),
     ),
   ],
 );

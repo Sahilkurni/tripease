@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../widgets/location_picker_screen.dart';
 // Note: Since you're not using 'app_colors.dart', we define our colors in the widget directly.
 import '../../services/agent_service.dart';
+import '../../widgets/base64_image.dart';
+import '../../models/package_model.dart';
 
 class AddEditPackageScreen extends StatefulWidget {
   // isEdit=false → Add mode. isEdit=true → Edit mode.
@@ -40,9 +43,12 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
   final _daysCtrl        = TextEditingController();
   final _nightsCtrl      = TextEditingController();
   final _maxPersonsCtrl  = TextEditingController();
+  final _latCtrl         = TextEditingController();
+  final _lngCtrl         = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
+  List<String> _existingImages = []; // URLs or Base64 from server
 
   // ── State ─────────────────────────────────────────────────────────────────
   List<CategoryItem>     _categories      = [];
@@ -91,10 +97,39 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     _nameCtrl.dispose();       _descCtrl.dispose();
     _priceCtrl.dispose();      _daysCtrl.dispose();
     _nightsCtrl.dispose();     _maxPersonsCtrl.dispose();
+    _latCtrl.dispose();        _lngCtrl.dispose();
     super.dispose();
   }
 
   // ── Load dropdowns ────────────────────────────────────────────────────────
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLat: double.tryParse(_latCtrl.text),
+          initialLng: double.tryParse(_lngCtrl.text),
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _latCtrl.text = result['latitude']?.toString() ?? '';
+        _lngCtrl.text = result['longitude']?.toString() ?? '';
+        
+        // Match city
+        if (result['city'] != null) {
+          final cityName = result['city'].toString().toLowerCase();
+          final cityMatch = _cities.where((c) => c.cityname.toLowerCase().contains(cityName)).firstOrNull;
+          if (cityMatch != null) {
+            _selectedCity = cityMatch;
+          }
+        }
+      });
+    }
+  }
+
   Future<void> _loadDropdowns() async {
     try {
       final results = await Future.wait([
@@ -139,11 +174,16 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     _daysCtrl.text       = d['days']?.toString()  ?? '';
     _nightsCtrl.text     = d['nights']?.toString() ?? '';
     _maxPersonsCtrl.text = d['maxpersons']?.toString() ?? '';
+    _latCtrl.text        = d['latitude']?.toString() ?? '';
+    _lngCtrl.text        = d['longitude']?.toString() ?? '';
 
     if (d['itinerary'] is List) {
       _itinerary = (d['itinerary'] as List)
           .map((e) => ItineraryDayItem.fromJson(e))
           .toList();
+    }
+    if (d['images'] is List) {
+      _existingImages = (d['images'] as List).map((e) => e.toString()).toList();
     }
   }
 
@@ -194,6 +234,12 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     });
   }
 
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImages.removeAt(index);
+    });
+  }
+
   Future<List<String>> _processImages() async {
     List<String> base64Images = [];
     for (var file in _selectedImages) {
@@ -230,10 +276,12 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
     setState(() => _saving = true);
 
     try {
-      List<String>? base64Images;
+      List<String> base64Images = [];
       if (_selectedImages.isNotEmpty) {
         base64Images = await _processImages();
       }
+      
+      final combinedImages = [..._existingImages, ...base64Images];
 
       final payload = {
         'partnerid':   widget.partnerid,
@@ -249,12 +297,11 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
         'nights':      int.parse(_nightsCtrl.text.trim()),
         'price':       double.parse(_priceCtrl.text.trim()),
         'maxpersons':  int.parse(_maxPersonsCtrl.text.trim()),
+        'latitude':    double.tryParse(_latCtrl.text),
+        'longitude':   double.tryParse(_lngCtrl.text),
         'itinerary':   _itinerary,
+        'images':      combinedImages,
       };
-
-      if (base64Images != null) {
-        payload['images'] = base64Images;
-      }
 
       final packageid = await AgentService.savePackageRaw(payload);
 
@@ -596,7 +643,45 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
           return null;
         },
       ),
-      const SizedBox(height: 14),
+      const SizedBox(height: 24),
+
+      _sectionHeader('Package Location', Icons.location_on_rounded),
+      const SizedBox(height: 8),
+      
+      Row(
+        children: [
+          Expanded(
+            child: Text('Coordinates', style: GoogleFonts.poppins(fontSize: 14, color: _textSub)),
+          ),
+          TextButton.icon(
+            onPressed: _openLocationPicker,
+            icon: const Icon(Icons.map_rounded, size: 20),
+            label: Text('Pick on Map', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: TextButton.styleFrom(foregroundColor: _primary),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _latCtrl,
+              decoration: _fieldDecoration('Latitude', icon: Icons.explore_rounded),
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: TextFormField(
+              controller: _lngCtrl,
+              decoration: _fieldDecoration('Longitude', icon: Icons.explore_rounded),
+              keyboardType: TextInputType.number,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 24),
 
       // Category dropdown
       DropdownButtonFormField<CategoryItem>(
@@ -745,83 +830,125 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
 
   // ── SECTION: Images ────────────────────────────────────────────────
   Widget _buildThumbnailSection(bool isDark) {
+    final int totalCount = _existingImages.length + _selectedImages.length;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionHeader('Package Images (Max 5)', Icons.image_rounded),
       const SizedBox(height: 16),
-      if (_selectedImages.isNotEmpty) ...[
+      
+      if (totalCount > 0) ...[
         SizedBox(
-          height: 100,
+          height: 120,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: _selectedImages.length,
+            itemCount: totalCount,
             itemBuilder: (context, index) {
-              return Stack(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.grey[200],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: FutureBuilder<List<int>>(
-                      future: _selectedImages[index].readAsBytes().then((value) => value.toList()),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          return Image.memory(
-                            Uint8List.fromList(snapshot.data!),
-                            fit: BoxFit.cover,
-                          );
-                        }
-                        return const Center(child: CircularProgressIndicator());
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    top: 4,
-                    right: 20,
-                    child: GestureDetector(
-                      onTap: () => _removeImage(index),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
+              final bool isExisting = index < _existingImages.length;
+              final int actualIndex = isExisting ? index : index - _existingImages.length;
+
+              return Container(
+                margin: const EdgeInsets.only(right: 12),
+                width: 120,
+                child: Stack(
+                  children: [
+                    // Image Container
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
                         ),
-                        child: const Icon(Icons.close, size: 16, color: Colors.red),
                       ),
+                      clipBehavior: Clip.antiAlias,
+                      child: isExisting
+                          ? Base64Image(
+                              base64String: _existingImages[actualIndex],
+                              fit: BoxFit.cover,
+                              width: 120,
+                              height: 120,
+                            )
+                          : FutureBuilder<Uint8List>(
+                              future: _selectedImages[actualIndex].readAsBytes(),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  return Image.memory(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    width: 120,
+                                    height: 120,
+                                  );
+                                }
+                                return const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                );
+                              },
+                            ),
                     ),
-                  ),
-                  if (index == 0)
+                    // Remove Button
                     Positioned(
-                      bottom: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withAlpha(150),
-                          borderRadius: BorderRadius.circular(4),
+                      top: 6,
+                      right: 6,
+                      child: GestureDetector(
+                        onTap: () => isExisting
+                            ? _removeExistingImage(actualIndex)
+                            : _removeImage(actualIndex),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.close, size: 14, color: Colors.red),
                         ),
-                        child: Text('Primary', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white)),
                       ),
                     ),
-                ],
+                    // Primary Label
+                    if (index == 0)
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Primary',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               );
             },
           ),
         ),
         const SizedBox(height: 16),
       ],
-      if (_selectedImages.length < 5)
+
+      if (totalCount < 5)
         OutlinedButton.icon(
           onPressed: _pickImages,
           icon: const Icon(Icons.add_photo_alternate_outlined),
-          label: Text('Add Images', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+          label: Text('Add Images',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
 

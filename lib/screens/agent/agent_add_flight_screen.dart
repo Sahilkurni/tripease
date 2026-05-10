@@ -5,9 +5,12 @@ import '../../core/constants/app_colors.dart';
 import '../../services/flight_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/city_service.dart';
+import '../../widgets/location_picker_screen.dart';
+import '../../models/flight_model.dart';
 
 class AgentAddFlightScreen extends StatefulWidget {
-  const AgentAddFlightScreen({super.key});
+  final FlightModel? flight;
+  const AgentAddFlightScreen({super.key, this.flight});
 
   @override
   State<AgentAddFlightScreen> createState() => _AgentAddFlightScreenState();
@@ -16,10 +19,12 @@ class AgentAddFlightScreen extends StatefulWidget {
 class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  final _airlineController = TextEditingController();
-  final _flightNumberController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _seatsController = TextEditingController();
+  late final TextEditingController _airlineController;
+  late final TextEditingController _flightNumberController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _seatsController;
+  late final TextEditingController _latController;
+  late final TextEditingController _lngController;
   
   CityModel? _fromCity;
   CityModel? _toCity;
@@ -33,6 +38,19 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
   @override
   void initState() {
     super.initState();
+    _airlineController = TextEditingController(text: widget.flight?.airline);
+    _flightNumberController = TextEditingController(text: widget.flight?.flightNumber);
+    _priceController = TextEditingController(text: widget.flight?.price.toString());
+    _seatsController = TextEditingController(text: widget.flight?.totalSeats.toString());
+    _latController = TextEditingController(text: widget.flight?.latitude?.toString() ?? '');
+    _lngController = TextEditingController(text: widget.flight?.longitude?.toString() ?? '');
+    
+    if (widget.flight != null) {
+      final dep = DateTime.parse(widget.flight!.departureTime);
+      _departureDate = dep;
+      _departureTime = TimeOfDay(hour: dep.hour, minute: dep.minute);
+    }
+    
     _loadCities();
   }
 
@@ -41,13 +59,18 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
     setState(() {
       _cities = cities;
       _isLoadingCities = false;
+      
+      if (widget.flight != null) {
+        _fromCity = _cities.where((c) => c.cityId == widget.flight!.fromCity).firstOrNull;
+        _toCity = _cities.where((c) => c.cityId == widget.flight!.toCity).firstOrNull;
+      }
     });
   }
 
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().add(const Duration(days: 1)),
+      initialDate: _departureDate ?? DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
@@ -59,7 +82,7 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: _departureTime ?? TimeOfDay.now(),
     );
     if (picked != null) {
       setState(() => _departureTime = picked);
@@ -100,23 +123,142 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
       'duration': '3h 00m',
       'price': _priceController.text,
       'total_seats': _seatsController.text,
+      'latitude': _latController.text,
+      'longitude': _lngController.text,
       'userid': user.userid,
     };
 
-    final success = await flightService.createFlight(flightData);
+    bool success;
+    if (widget.flight != null) {
+      flightData['flightid'] = widget.flight!.flightId.toString();
+      success = await flightService.updateFlight(flightData);
+    } else {
+      success = await flightService.createFlight(flightData);
+    }
 
     setState(() => _isSubmitting = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Flight created successfully. Pending admin approval.')),
+        SnackBar(content: Text(widget.flight != null ? 'Flight updated successfully' : 'Flight created successfully. Pending admin approval.')),
       );
       Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create flight')),
+        SnackBar(content: Text('Failed to ${widget.flight != null ? 'update' : 'create'} flight')),
       );
     }
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLat: double.tryParse(_latController.text),
+          initialLng: double.tryParse(_lngController.text),
+        ),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _latController.text = result['latitude']?.toString() ?? '';
+        _lngController.text = result['longitude']?.toString() ?? '';
+        
+        // Match city
+        if (result['city'] != null) {
+          final cityName = result['city'].toString().toLowerCase();
+          final cityMatch = _cities.where((c) => c.cityName.toLowerCase().contains(cityName)).firstOrNull;
+          if (cityMatch != null) {
+            if (_fromCity == null) {
+              _fromCity = cityMatch;
+            } else if (_toCity == null) {
+              _toCity = cityMatch;
+            }
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _showAddCityDialog() async {
+    final ctrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSavingCity = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('Add New City', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: ctrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'City Name *',
+                    prefixIcon: Icon(Icons.location_city_rounded),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'City name is required';
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSavingCity ? null : () => Navigator.pop(ctx),
+                  child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: isSavingCity
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setStateDialog(() => isSavingCity = true);
+                          try {
+                            final user = authService.currentUser;
+                            if (user == null) throw Exception('User not logged in');
+                            
+                            final newCity = await cityService.addCity(
+                              ctrl.text.trim(),
+                              int.parse(user.userid),
+                            );
+                            
+                            setState(() {
+                              if (!_cities.any((c) => c.cityId == newCity.cityId)) {
+                                _cities.add(newCity);
+                                _cities.sort((a, b) => a.cityName.compareTo(b.cityName));
+                              }
+                            });
+                            if (mounted) Navigator.pop(ctx);
+                          } catch (e) {
+                            setStateDialog(() => isSavingCity = false);
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent)
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: isSavingCity
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Add City', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -127,7 +269,7 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
       appBar: AppBar(
         title: Text(
-          'Add New Flight',
+          widget.flight != null ? 'Edit Flight' : 'Add New Flight',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
         ),
         backgroundColor: Colors.transparent,
@@ -147,10 +289,46 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
                     _buildTextField(_flightNumberController, 'Flight Number', Icons.numbers_rounded),
                     const SizedBox(height: 16),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(child: _buildCityDropdown('From City', _fromCity, (val) => setState(() => _fromCity = val))),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
+                        Container(
+                          height: 52,
+                          width: 52,
+                          margin: const EdgeInsets.only(bottom: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add_location_alt_rounded, color: AppColors.primary),
+                            onPressed: _showAddCityDialog,
+                            tooltip: 'Add new city',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
                         Expanded(child: _buildCityDropdown('To City', _toCity, (val) => setState(() => _toCity = val))),
+                        const SizedBox(width: 12),
+                        Container(
+                          height: 52,
+                          width: 52,
+                          margin: const EdgeInsets.only(bottom: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add_location_alt_rounded, color: AppColors.primary),
+                            onPressed: _showAddCityDialog,
+                            tooltip: 'Add new city',
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -169,7 +347,29 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
                         Expanded(child: _buildTextField(_seatsController, 'Total Seats', Icons.airline_seat_recline_extra_rounded, isNumeric: true)),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('Airport Location', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+                        ),
+                        TextButton.icon(
+                          onPressed: _openLocationPicker,
+                          icon: const Icon(Icons.map_rounded),
+                          label: Text('Pick on Map', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField(_latController, 'Latitude', Icons.explore_rounded, isNumeric: true)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField(_lngController, 'Longitude', Icons.explore_rounded, isNumeric: true)),
+                      ],
+                    ),
                     const SizedBox(height: 32),
+
                     ElevatedButton(
                       onPressed: _isSubmitting ? null : _submit,
                       style: ElevatedButton.styleFrom(
@@ -180,7 +380,7 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
                       child: _isSubmitting
                           ? const CircularProgressIndicator(color: Colors.white)
                           : Text(
-                              'Create Flight',
+                              widget.flight != null ? 'Update Flight' : 'Create Flight',
                               style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
                     ),

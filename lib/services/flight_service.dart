@@ -175,6 +175,39 @@ class FlightService {
       return false;
     }
   }
+
+  Future<bool> updateFlight(Map<String, dynamic> flightData) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.updateFlight),
+        body: flightData,
+      );
+      print("Update Flight Response: ${response.body}");
+      final data = json.decode(response.body);
+      return data['status'] == 'success';
+    } catch (e) {
+      print("Error updating flight: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deleteFlight(String flightId, String userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.deleteFlight),
+        body: {
+          'flightid': flightId,
+          'userid': userId,
+        },
+      );
+      print("Delete Flight Response: ${response.body}");
+      final data = json.decode(response.body);
+      return data['status'] == 'success';
+    } catch (e) {
+      print("Error deleting flight: $e");
+      return false;
+    }
+  }
 }
 
 final flightService = FlightService();

@@ -30,6 +30,23 @@ class CityService {
       return [];
     }
   }
+
+  Future<CityModel> addCity(String cityName, int uid) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}agent/addCity.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'cityname': cityName, 'uid': uid}),
+      );
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        return CityModel.fromJson(data['data']);
+      }
+      throw Exception(data['message']);
+    } catch (e) {
+      throw Exception('addCity failed: $e');
+    }
+  }
 }
 
 final cityService = CityService();

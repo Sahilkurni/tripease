@@ -17,7 +17,7 @@ $queries = [
         fullname VARCHAR(100) NOT NULL,
         email VARCHAR(100) NOT NULL UNIQUE,
         password_hash VARCHAR(255),
-        photo VARCHAR(255),
+        profilephoto LONGTEXT,
         roleid INT,
         isactive TINYINT DEFAULT 1,
         edatetime DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -105,6 +105,27 @@ $queries = [
         booking_date DATE,
         status ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending',
         FOREIGN KEY (userid) REFERENCES users(userid)
+    )",
+    "CREATE TABLE IF NOT EXISTS flights (
+        flightid INT AUTO_INCREMENT PRIMARY KEY,
+        airline VARCHAR(100),
+        flight_number VARCHAR(20),
+        from_city INT,
+        to_city INT,
+        departure_time DATETIME,
+        arrival_time DATETIME,
+        duration VARCHAR(20),
+        price DECIMAL(10,2),
+        total_seats INT,
+        available_seats INT,
+        status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+        isactive TINYINT DEFAULT 1,
+        created_by INT,
+        latitude DECIMAL(10,8),
+        longitude DECIMAL(11,8),
+        FOREIGN KEY (from_city) REFERENCES cities(cityid),
+        FOREIGN KEY (to_city) REFERENCES cities(cityid),
+        FOREIGN KEY (created_by) REFERENCES users(userid)
     )"
 ];
 
