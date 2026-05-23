@@ -49,6 +49,14 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
   List<Map<String, dynamic>> _existingImages = []; // {imageid, image} from API
+  
+  // Theme aware color getters
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
+
+  int get _totalImageCount => _existingImages.length + _selectedImages.length;
 
   @override
   void initState() {
@@ -62,7 +70,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
       setState(() => _states = states);
 
       if (widget.isEdit && widget.hotelData != null) {
-        final hotelid = widget.hotelData!['hotelid'] as int;
+        final hotelid = int.tryParse(widget.hotelData!['hotelid']?.toString() ?? '0') ?? 0;
         final hotelDetails = await HotelPartnerService.getHotel(hotelid);
         
         _hotelNameCtrl.text = hotelDetails['hotelname'] ?? '';
@@ -130,8 +138,6 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
       });
     }
   }
-
-  int get _totalImageCount => _existingImages.length + _selectedImages.length;
 
   Future<void> _pickImages() async {
     try {
@@ -366,7 +372,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
             padding: const EdgeInsets.only(right: 8.0),
             child: Icon(
               isSelected ? Icons.star_rounded : Icons.star_border_rounded,
-              color: isSelected ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1),
+              color: isSelected ? const Color(0xFFF59E0B) : _muted.withAlpha(50),
               size: 40,
             ),
           ),
@@ -378,12 +384,12 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        title: Text(widget.isEdit ? 'Edit Property' : 'Add New Property', style: GoogleFonts.poppins(color: Colors.black87, fontWeight: FontWeight.w600)),
+        iconTheme: IconThemeData(color: _ink),
+        title: Text(widget.isEdit ? 'Edit Property' : 'Add New Property', style: GoogleFonts.poppins(color: _ink, fontWeight: FontWeight.w600)),
       ),
       body: _isLoadingForm
           ? const Center(child: CircularProgressIndicator())
@@ -394,7 +400,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                   constraints: const BoxConstraints(maxWidth: 800),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _surface,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 20, offset: const Offset(0, 4))],
                     ),
@@ -404,7 +410,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Basic Details', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                          Text('Basic Details', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: _ink)),
                           const SizedBox(height: 24),
                           
                           TextFormField(
@@ -422,7 +428,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                           ),
                           
                           const SizedBox(height: 32),
-                          Text('Location Details', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                          Text('Location Details', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: _ink)),
                           const SizedBox(height: 24),
                           
                           Row(
@@ -457,11 +463,11 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                       height: 52,
                                       width: 52,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF2563EB).withOpacity(0.1),
+                                        color: _primary.withAlpha(25),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: IconButton(
-                                        icon: const Icon(Icons.add_location_alt_rounded, color: Color(0xFF2563EB)),
+                                        icon: Icon(Icons.add_location_alt_rounded, color: _primary),
                                         onPressed: _showAddCityDialog,
                                         tooltip: 'Add new city',
                                       ),
@@ -473,7 +479,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                           ),
                             
                             const SizedBox(height: 32),
-                            Text('Property Images (Max 5)', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                            Text('Property Images (Max 5)', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: _ink)),
                             const SizedBox(height: 16),
                             if (_totalImageCount > 0) ...[
                               SizedBox(
@@ -501,10 +507,10 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                                 decoration: BoxDecoration(
                                                   borderRadius: BorderRadius.circular(12),
                                                   border: Border.all(
-                                                    color: isPrimary ? const Color(0xFF2563EB) : Colors.transparent,
+                                                    color: isPrimary ? _primary : Colors.transparent,
                                                     width: 2,
                                                   ),
-                                                  color: Colors.grey[200],
+                                                  color: Theme.of(context).dividerColor.withAlpha(20),
                                                 ),
                                                 clipBehavior: Clip.antiAlias,
                                                 child: Image.memory(
@@ -521,7 +527,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                               onTap: () => _removeExistingImage(idx),
                                               child: Container(
                                                 padding: const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                                decoration: BoxDecoration(color: _surface, shape: BoxShape.circle),
                                                 child: const Icon(Icons.close, size: 16, color: Colors.red),
                                               ),
                                             ),
@@ -533,7 +539,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFF2563EB).withAlpha(200),
+                                                  color: _primary.withAlpha(200),
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
                                                 child: Text('Primary', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white)),
@@ -557,10 +563,10 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                             decoration: BoxDecoration(
                                               borderRadius: BorderRadius.circular(12),
                                               border: Border.all(
-                                                color: isPrimary ? const Color(0xFF2563EB) : const Color(0xFF10B981),
+                                                color: isPrimary ? _primary : const Color(0xFF10B981),
                                                 width: 2,
                                               ),
-                                              color: Colors.grey[200],
+                                              color: Theme.of(context).dividerColor.withAlpha(20),
                                             ),
                                             clipBehavior: Clip.antiAlias,
                                             child: FutureBuilder<Uint8List>(
@@ -580,7 +586,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                               onTap: () => _removeNewImage(idx),
                                               child: Container(
                                                 padding: const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                                decoration: BoxDecoration(color: _surface, shape: BoxShape.circle),
                                                 child: const Icon(Icons.close, size: 16, color: Colors.red),
                                               ),
                                             ),
@@ -592,7 +598,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: isPrimary
-                                                    ? const Color(0xFF2563EB).withAlpha(200)
+                                                    ? _primary.withAlpha(200)
                                                     : const Color(0xFF10B981).withAlpha(200),
                                                 borderRadius: BorderRadius.circular(4),
                                               ),
@@ -629,7 +635,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                       style: GoogleFonts.poppins(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          color: const Color(0xFF1E293B))),
+                                          color: _ink)),
                                 ),
                                 TextButton.icon(
                                   onPressed: _openLocationPicker,
@@ -638,7 +644,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                       style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.w600)),
                                   style: TextButton.styleFrom(
-                                      foregroundColor: const Color(0xFF2563EB)),
+                                      foregroundColor: _primary),
                                 ),
                               ],
                             ),
@@ -675,7 +681,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                           ),
                           
                           const SizedBox(height: 32),
-                          Text('Property Ratings & Timings', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                          Text('Property Ratings & Timings', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: _ink)),
                           const SizedBox(height: 24),
                           
                           Row(
@@ -684,7 +690,7 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Star Rating *', style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF64748B))),
+                                    Text('Star Rating *', style: GoogleFonts.poppins(fontSize: 14, color: _muted)),
                                     const SizedBox(height: 8),
                                     _buildStarRating(),
                                   ],
@@ -730,9 +736,9 @@ class _AddEditHotelScreenState extends State<AddEditHotelScreen> {
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 20),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                backgroundColor: const Color(0xFF2563EB),
+                                backgroundColor: _primary,
                                 elevation: 4,
-                                shadowColor: const Color(0xFF2563EB).withAlpha(100),
+                                shadowColor: _primary.withAlpha(100),
                               ),
                               child: _isSaving
                                   ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))

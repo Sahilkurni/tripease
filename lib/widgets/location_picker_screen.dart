@@ -85,7 +85,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _reverseGeocode(_selectedLocation!);
       _mapController.move(_selectedLocation!, 15);
     } catch (e) {
-      debugPrint("Location error: $e");
+      // debugPrint("Location error: $e");
       _useDefaultLocation();
     }
   }
@@ -123,7 +123,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         });
       }
     } catch (e) {
-      debugPrint("Search error: $e");
+      // debugPrint("Search error: $e");
       setState(() => _isSearching = false);
     }
   }
@@ -150,7 +150,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         });
       }
     } catch (e) {
-      debugPrint("Reverse geocoding error: $e");
+      // debugPrint("Reverse geocoding error: $e");
       setState(() {
         _address = "Coordinates: ${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}";
       });

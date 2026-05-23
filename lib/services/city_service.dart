@@ -26,7 +26,7 @@ class CityService {
       }
       return [];
     } catch (e) {
-      print("Error fetching cities: $e");
+      // print("Error fetching cities: $e");
       return [];
     }
   }

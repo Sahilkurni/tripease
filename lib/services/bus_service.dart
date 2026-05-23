@@ -7,10 +7,10 @@ class BusService {
   // Fetch buses for a specific agent
   Future<List<BusModel>> getAgentBuses(int partnerId) async {
     final url = '${ApiConfig.buses}?partnerid=$partnerId';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -23,14 +23,14 @@ class BusService {
       }
       throw Exception('HTTP ${response.statusCode}');
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       throw Exception('getAgentBuses failed: $e');
     }
   }
 
   Future<int> saveBus(Map<String, dynamic> payload) async {
     final url = ApiConfig.buses;
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final safePayload = Map<String, dynamic>.from(payload);
       safePayload.putIfAbsent('status', () => 'pending');
@@ -41,7 +41,7 @@ class BusService {
             body: jsonEncode(safePayload),
           )
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       final Map<String, dynamic> data = json.decode(response.body);
       if (response.statusCode == 200 && data['status'] == 'success') {
@@ -49,7 +49,7 @@ class BusService {
       }
       throw Exception(data['message'] ?? 'Failed to save bus');
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       throw Exception('saveBus failed: $e');
     }
   }
@@ -112,7 +112,7 @@ class BusService {
     required int uid,
   }) async {
     final url = ApiConfig.buses;
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http
           .post(
@@ -126,14 +126,14 @@ class BusService {
             }),
           )
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       final Map<String, dynamic> data = json.decode(response.body);
       if (response.statusCode != 200 || data['status'] != 'success') {
         throw Exception(data['message'] ?? 'Failed to delete bus');
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       throw Exception('deleteBus failed: $e');
     }
   }
@@ -151,10 +151,10 @@ class BusService {
         'date': date,
       },
     ).toString();
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
@@ -168,7 +168,7 @@ class BusService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }
@@ -176,10 +176,10 @@ class BusService {
   // Fetch home bus trips
   Future<List<BusModel>> getHomeBusTrips() async {
     final url = '${ApiConfig.baseUrl}get_bus_trips.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
@@ -193,17 +193,17 @@ class BusService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }
 
   Future<List<Map<String, dynamic>>> getBusSeats(int tripId) async {
     final url = '${ApiConfig.baseUrl}get_bus_seats.php?tripid=$tripId';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
@@ -217,7 +217,7 @@ class BusService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }
@@ -233,7 +233,7 @@ class BusService {
     String? paymentId,
   }) async {
     final url = '${ApiConfig.baseUrl}create_bus_booking.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -248,7 +248,7 @@ class BusService {
           'payment_id': paymentId ?? '',
         },
       );
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -257,7 +257,7 @@ class BusService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }

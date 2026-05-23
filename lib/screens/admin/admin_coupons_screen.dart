@@ -10,9 +10,11 @@ class AdminCouponsScreen extends StatefulWidget {
 }
 
 class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   bool _loading = true;
   bool _updating = false;
@@ -77,7 +79,7 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
   void _openCreateDialog() {
     final codeCtrl = TextEditingController();
     final valCtrl = TextEditingController();
-    String type = 'PERCENTAGE';
+    String type = 'PERCENT';
 
     showDialog(
       context: context,
@@ -103,11 +105,11 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
                         value: type,
                         items: const [
                           DropdownMenuItem(
-                            value: 'PERCENTAGE',
+                            value: 'PERCENT',
                             child: Text('Percentage (%)'),
                           ),
                           DropdownMenuItem(
-                            value: 'FIXED',
+                            value: 'FLAT',
                             child: Text('Fixed Amount (₹)'),
                           ),
                         ],
@@ -243,8 +245,8 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -272,7 +274,7 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
         child: DataTable(
           headingTextStyle: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            color: _ink,
+            color: _muted,
           ),
           columns: const [
             DataColumn(label: Text('Code')),
@@ -292,35 +294,85 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
                   cells: [
                     DataCell(
                       Text(
-                        (item['code'] ?? '-').toString(),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        (item['couponcode'] ?? '-').toString(),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: _ink),
                       ),
                     ),
-                    DataCell(Text((item['discount_type'] ?? '-').toString())),
+                    DataCell(Text((item['discounttype'] ?? '-').toString(), style: TextStyle(color: _ink))),
                     DataCell(
                       Text(
-                        item['discount_type'] == 'PERCENTAGE'
-                            ? '${item['discount_value']}%'
-                            : '₹${item['discount_value']}',
+                        item['discounttype'] == 'PERCENT'
+                            ? '${item['discountvalue']}%'
+                            : '₹${item['discountvalue']}', style: TextStyle(color: _ink),
                       ),
                     ),
-                    DataCell(Text('₹${item['min_booking_amount'] ?? '0'}')),
-                    DataCell(Text(_lifetime(item['valid_until']))),
-                    DataCell(_statusChip(isActive ? 'ACTIVE' : 'INACTIVE')),
+                    DataCell(Text('₹${item['minamount'] ?? '0'}', style: TextStyle(color: _ink))),
+                    DataCell(Text(_lifetime(item['expirydate']), style: TextStyle(color: _ink))),
+                    DataCell(_statusChip(item['status'] ?? (isActive ? 'approved' : 'inactive'))),
                     DataCell(
-                      id == null
-                          ? const Text('-')
-                          : OutlinedButton(
-                            onPressed:
-                                _updating
-                                    ? null
-                                    : () => _toggleStatus(id, isActive ? 1 : 0),
-                            child: Text(isActive ? 'Disable' : 'Enable'),
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (item['status'] == 'pending') ...[
+                              _actionButton(
+                                icon: Icons.check_rounded,
+                                color: Colors.green,
+                                tooltip: 'Approve',
+                                onTap: _updating || id == null ? null : () => _updateApproval(id!, 'approved'),
+                              ),
+                              const SizedBox(width: 8),
+                              _actionButton(
+                                icon: Icons.close_rounded,
+                                color: Colors.red,
+                                tooltip: 'Reject',
+                                onTap: _updating || id == null ? null : () => _updateApproval(id!, 'rejected'),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(width: 1, height: 20, color: _muted.withAlpha(50)),
+                              const SizedBox(width: 12),
+                            ],
+                            _actionButton(
+                              icon: isActive ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                              color: isActive ? Colors.orange : Colors.blue,
+                              tooltip: isActive ? 'Disable' : 'Enable',
+                              onTap: _updating || id == null ? null : () => _toggleStatus(id, isActive ? 1 : 0),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 );
               }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withAlpha(Theme.of(context).brightness == Brightness.dark ? 30 : 15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withAlpha(50), width: 1.5),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
         ),
       ),
     );
@@ -334,51 +386,59 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
       itemBuilder: (_, i) {
         final item = _data[i];
         final id = int.tryParse((item['couponid'] ?? '').toString());
-        final isActive =
-            int.tryParse((item['isactive'] ?? '0').toString()) == 1;
+        final isActive = int.tryParse((item['isactive'] ?? '0').toString()) == 1;
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
+            color: _surface,
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                (item['code'] ?? '-').toString(),
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w800,
-                  color: _ink,
-                  fontSize: 18,
-                ),
+                (item['couponcode'] ?? '-').toString(),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: _ink, fontSize: 18),
               ),
               const SizedBox(height: 4),
               Text(
-                'Type: ${(item['discount_type'] ?? '-').toString()} | Value: ${item['discount_type'] == 'PERCENTAGE' ? '${item['discount_value']}%' : '₹${item['discount_value']}'}',
-                style: GoogleFonts.poppins(fontSize: 13, color: _muted),
-              ),
-              Text(
-                'Valid Until: ${_lifetime(item['valid_until'])}',
+                'Type: ${(item['discounttype'] ?? '-').toString()} | Value: ${item['discounttype'] == 'PERCENT' ? '${item['discountvalue']}%' : '₹${item['discountvalue']}'}',
                 style: GoogleFonts.poppins(fontSize: 13, color: _muted),
               ),
               const SizedBox(height: 12),
-              _statusChip(isActive ? 'ACTIVE' : 'INACTIVE'),
+              _statusChip(item['status'] ?? (isActive ? 'ACTIVE' : 'INACTIVE')),
               const Divider(height: 24),
-              OutlinedButton(
-                onPressed:
-                    _updating || id == null
-                        ? null
-                        : () => _toggleStatus(id, isActive ? 1 : 0),
-                child: Text(isActive ? 'Disable' : 'Enable'),
+              Row(
+                children: [
+                  if (item['status'] == 'pending') ...[
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _updating || id == null ? null : () => _updateApproval(id!, 'approved'),
+                        icon: const Icon(Icons.check, size: 16),
+                        label: const Text('Approve'),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _updating || id == null ? null : () => _updateApproval(id!, 'rejected'),
+                        icon: const Icon(Icons.close, size: 16),
+                        label: const Text('Reject'),
+                        style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _updating || id == null ? null : () => _toggleStatus(id, isActive ? 1 : 0),
+                      icon: Icon(isActive ? Icons.block : Icons.check_circle_outline, size: 16),
+                      label: Text(isActive ? 'Disable' : 'Enable'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -387,21 +447,54 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
     );
   }
 
+  Future<void> _updateApproval(int id, String status) async {
+    setState(() => _updating = true);
+    final response = await adminService.updateCouponApproval(
+      couponId: id,
+      status: status,
+    );
+    if (!mounted) return;
+    setState(() => _updating = false);
+
+    if (response['status'] == 'success') {
+      _showMessage('Coupon $status');
+      await _fetchData();
+    } else {
+      _showMessage(response['message']?.toString() ?? 'Failed', isError: true);
+    }
+  }
+
   Widget _statusChip(String status) {
-    final isActive = status == 'ACTIVE';
-    final fg = isActive ? Colors.green.shade800 : Colors.red.shade800;
-    final bg = isActive ? Colors.green.shade50 : Colors.red.shade50;
+    final s = status.toLowerCase();
+    Color fg;
+    switch (s) {
+      case 'approved':
+      case 'active':
+        fg = Colors.green;
+        break;
+      case 'pending':
+        fg = Colors.orange;
+        break;
+      case 'rejected':
+      case 'inactive':
+        fg = Colors.red;
+        break;
+      default:
+        fg = Colors.grey;
+    }
+    final bg = fg.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25);
     return Chip(
       label: Text(
-        status,
+        s.toUpperCase(),
         style: GoogleFonts.poppins(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
           color: fg,
         ),
       ),
       backgroundColor: bg,
       side: BorderSide.none,
+      visualDensity: VisualDensity.compact,
     );
   }
 
@@ -418,7 +511,7 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           height: 58,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).dividerColor.withAlpha(50),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

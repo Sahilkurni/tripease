@@ -21,7 +21,7 @@ class AdminService {
     }
 
     try {
-      print(response.data);
+      // print(response.data);
       final data =
           response.data is String ? jsonDecode(response.data) : response.data;
       if (data is Map<String, dynamic>) {
@@ -53,7 +53,7 @@ class AdminService {
 
   Future<Map<String, dynamic>> getDashboardStats() async {
     final url = '${_apiBase}admin/get_admin_dashboard_stats.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
 
@@ -63,7 +63,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -71,7 +71,7 @@ class AdminService {
   /// Get Dashboard Charts
   Future<Map<String, dynamic>> getDashboardCharts() async {
     final url = '${_apiBase}admin/get_admin_chart_data.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
 
@@ -81,14 +81,14 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllUsers() async {
     final url = '${_apiBase}admin/get_all_users.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
 
@@ -98,7 +98,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -108,7 +108,7 @@ class AdminService {
     required bool isActive,
   }) async {
     final url = '${_apiBase}admin/update_user_status.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
 
@@ -122,14 +122,14 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllPartners() async {
     final url = '${_apiBase}admin/get_all_partners.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
 
@@ -139,7 +139,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -150,7 +150,7 @@ class AdminService {
     double? commission,
   }) async {
     final url = '${_apiBase}admin/update_partner_status.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
 
@@ -169,20 +169,20 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllHotels() async {
     final url = '${_apiBase}admin/get_all_hotels.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(url, queryParameters: {'userid': userid});
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -192,7 +192,7 @@ class AdminService {
     required String status,
   }) async {
     final url = '${_apiBase}admin/update_hotel_status.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.post(
@@ -205,20 +205,20 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllPackages() async {
     final url = '${_apiBase}admin/get_all_packages.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(url, queryParameters: {'userid': userid});
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -228,7 +228,7 @@ class AdminService {
     required String status,
   }) async {
     final url = '${_apiBase}admin/update_package_status.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.post(
@@ -241,14 +241,14 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllBuses() async {
     final url = '${_apiBase}admin/get_all_buses.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(
@@ -257,7 +257,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -267,7 +267,7 @@ class AdminService {
     required String status,
   }) async {
     final url = '${_apiBase}admin/update_bus_status.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.post(
@@ -280,14 +280,14 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllBookings() async {
     final url = '${_apiBase}admin/get_all_bookings.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(
@@ -296,14 +296,14 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllPayments() async {
     final url = '${_apiBase}admin/get_all_payments.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(
@@ -312,14 +312,14 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getAllCoupons() async {
     final url = '${_apiBase}admin/get_all_coupons.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(
@@ -328,7 +328,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -343,7 +343,7 @@ class AdminService {
     int isActive = 1,
   }) async {
     final url = '${_apiBase}admin/create_coupon.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.post(
@@ -361,7 +361,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
@@ -371,7 +371,7 @@ class AdminService {
     required int isActive,
   }) async {
     final url = '${_apiBase}admin/update_coupon_status.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.post(
@@ -384,14 +384,37 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
+      return {'status': 'error', 'message': 'Network error: $e', 'data': null};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateCouponApproval({
+    required int couponId,
+    required String status,
+  }) async {
+    final url = '${_apiBase}admin/update_coupon_approval.php';
+    // print("API URL: $url");
+    try {
+      final userid = await _resolveUserId();
+      final res = await _dio.post(
+        url,
+        data: FormData.fromMap({
+          'userid': userid,
+          'couponid': couponId,
+          'status': status,
+        }),
+      );
+      return _parseResponse(res);
+    } catch (e) {
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }
 
   Future<Map<String, dynamic>> getSupportTickets() async {
     final url = '${_apiBase}admin/get_support_tickets.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final userid = await _resolveUserId();
       final res = await _dio.get(
@@ -400,7 +423,7 @@ class AdminService {
       );
       return _parseResponse(res);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return {'status': 'error', 'message': 'Network error: $e', 'data': null};
     }
   }

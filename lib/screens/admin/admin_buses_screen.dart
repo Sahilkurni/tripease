@@ -10,9 +10,11 @@ class AdminBusesScreen extends StatefulWidget {
 }
 
 class _AdminBusesScreenState extends State<AdminBusesScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   bool _loading = true;
   bool _updating = false;
@@ -140,8 +142,8 @@ class _AdminBusesScreenState extends State<AdminBusesScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -167,6 +169,10 @@ class _AdminBusesScreenState extends State<AdminBusesScreen> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
+          headingTextStyle: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            color: _muted,
+          ),
           columns: const [
             DataColumn(label: Text('Bus Name')),
             DataColumn(label: Text('Route')),
@@ -185,18 +191,18 @@ class _AdminBusesScreenState extends State<AdminBusesScreen> {
                     DataCell(
                       Text(
                         (item['bus_name'] ?? item['operator'] ?? '-')
-                            .toString(),
+                            .toString(), style: TextStyle(color: _ink),
                       ),
                     ),
-                    DataCell(Text(route)),
+                    DataCell(Text(route, style: TextStyle(color: _ink))),
                     DataCell(
                       Text(
                         (item['bus_type'] ?? item['layout_type'] ?? '-')
-                            .toString(),
+                            .toString(), style: TextStyle(color: _ink),
                       ),
                     ),
                     DataCell(
-                      Text('₹${item['base_fare'] ?? item['fare'] ?? '0'}'),
+                      Text('₹${item['base_fare'] ?? item['fare'] ?? '0'}', style: TextStyle(color: _ink)),
                     ),
                     DataCell(_statusChip((item['status'] ?? '').toString())),
                     DataCell(
@@ -243,9 +249,16 @@ class _AdminBusesScreenState extends State<AdminBusesScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
+            color: _surface,
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,9 +307,8 @@ class _AdminBusesScreenState extends State<AdminBusesScreen> {
 
   Widget _statusChip(String status) {
     final normalized = status.toUpperCase();
-    final isRejected = normalized == 'REJECTED';
-    final fg = isRejected ? Colors.red.shade800 : Colors.orange.shade800;
-    final bg = isRejected ? Colors.red.shade50 : Colors.orange.shade50;
+    final fg = normalized == 'APPROVED' ? Colors.green : normalized == 'REJECTED' ? Colors.red : Colors.orange;
+    final bg = fg.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25);
     return Chip(
       label: Text(
         normalized.isEmpty ? 'PENDING' : normalized,
@@ -319,7 +331,7 @@ class _AdminBusesScreenState extends State<AdminBusesScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           height: 58,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).dividerColor.withAlpha(50),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

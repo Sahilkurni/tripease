@@ -8,7 +8,7 @@ class HomeService {
   String get baseUrl => ApiConfig.baseUrl;
 
   List<Map<String, dynamic>> _dataListFromResponse(http.Response response) {
-    print(response.body);
+    // print(response.body);
     final decoded = jsonDecode(response.body);
     if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
       final List data = decoded['data'] is List ? decoded['data'] as List : [];
@@ -25,12 +25,12 @@ class HomeService {
       final response = await http.get(
         Uri.parse('$baseUrl' 'get_home_hotels.php'),
       );
-      print("Home Hotels Response: ${response.body}");
+      // print("Home Hotels Response: ${response.body}");
       final rows = _dataListFromResponse(response);
       return rows.map(RecommendedItem.fromHotelJson).toList();
     } catch (e, st) {
-      debugPrint('getHomeHotels error: $e');
-      debugPrint('$st');
+      // debugPrint('getHomeHotels error: $e');
+      // debugPrint('$st');
       return [];
     }
   }
@@ -40,12 +40,12 @@ class HomeService {
       final response = await http.get(
         Uri.parse('$baseUrl' 'get_home_packages.php'),
       );
-      print("Home Packages Response: ${response.body}");
+      // print("Home Packages Response: ${response.body}");
       final rows = _dataListFromResponse(response);
       return rows.map(RecommendedItem.fromPackageJson).toList();
     } catch (e, st) {
-      debugPrint('getHomePackages error: $e');
-      debugPrint('$st');
+      // debugPrint('getHomePackages error: $e');
+      // debugPrint('$st');
       return [];
     }
   }
@@ -55,7 +55,7 @@ class HomeService {
       final response = await http.get(
         Uri.parse('$baseUrl' 'get_bus_trips.php'),
       );
-      print("Home Buses Response: ${response.body}");
+      // print("Home Buses Response: ${response.body}");
       final rows = _dataListFromResponse(response);
       return rows.map((row) => RecommendedItem(
         id: row['tripid']?.toString() ?? row['busid']?.toString() ?? '',
@@ -71,8 +71,8 @@ class HomeService {
         longitude: double.tryParse(row['longitude']?.toString() ?? ''),
       )).toList();
     } catch (e, st) {
-      debugPrint('getHomeBuses error: $e');
-      debugPrint('$st');
+      // debugPrint('getHomeBuses error: $e');
+      // debugPrint('$st');
       return [];
     }
   }
@@ -83,12 +83,12 @@ class HomeService {
       final response = await http.get(
         Uri.parse('$baseUrl' 'get_bookings.php$query'),
       );
-      print("Recent Bookings Response: ${response.body}");
+      // print("Recent Bookings Response: ${response.body}");
       final rows = _dataListFromResponse(response);
       return rows.map(BookingItem.fromJson).toList();
     } catch (e, st) {
-      debugPrint('getRecentBookings error: $e');
-      debugPrint('$st');
+      // debugPrint('getRecentBookings error: $e');
+      // debugPrint('$st');
       return [];
     }
   }

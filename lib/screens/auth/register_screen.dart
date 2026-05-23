@@ -7,6 +7,9 @@ import '../../core/constants/role_constants.dart';
 import '../../core/utils/responsive.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
+import '../../core/utils/validators.dart';
+import '../../widgets/otp_verification_dialog.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -44,29 +47,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
-    final result = await authService.register(
-      _nameCtrl.text.trim(),
-      _emailCtrl.text.trim(),
-      _passCtrl.text,
-      _selectedRole!,
-    );
+    final email = _emailCtrl.text.trim();
+
+    // 1. Send OTP first
+    final otpResult = await authService.sendOtp(email);
 
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (result['success']) {
-      final user = result['user'];
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Registration successful!')));
-      debugPrint(
-        'Registered user roleid=${user.roleid} rolename=${user.rolename}',
+    if (otpResult['success'] == true) {
+      // 2. Show OTP Verification Dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => OtpVerificationDialog(
+          email: email,
+          onSuccess: () async {
+            // 3. Proceed with actual registration on success
+            setState(() => _loading = true);
+            final result = await authService.register(
+              _nameCtrl.text.trim(),
+              email,
+              _passCtrl.text,
+              _selectedRole!,
+            );
+
+            if (!mounted) return;
+            setState(() => _loading = false);
+
+            if (result['success']) {
+              final user = result['user'];
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Registration successful!')),
+              );
+              _redirectByRole(roleId: user.roleid, roleName: user.rolename);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message'] ?? 'Registration failed'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
       );
-      _redirectByRole(roleId: user.roleid, roleName: user.rolename);
     } else {
+      // Failed to send OTP
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Registration failed'),
+          content: Text(otpResult['message'] ?? 'Failed to send OTP email'),
           backgroundColor: Colors.red,
         ),
       );
@@ -274,9 +304,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
               prefixIcon: Icon(Icons.email_outlined),
               hintText: 'Email Address',
             ),
-            validator:
-                (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+            validator: Validators.validateEmail,
           ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _mobileCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.phone_outlined),
+              hintText: 'Mobile Number',
+            ),
+            validator: Validators.validatePhone,
+          ),
+
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
             value: _selectedRole,

@@ -8,6 +8,9 @@ import '../hotel_partner/add_edit_hotel_screen.dart';
 import '../hotel_partner/manage_rooms_screen.dart';
 import '../../widgets/base64_image.dart';
 import '../profile/edit_profile_screen.dart';
+import '../admin/coupon_management_screen.dart';
+import '../admin/offer_management_screen.dart';
+import '../../main.dart';
 
 class HotelOwnerDashboard extends StatefulWidget {
   const HotelOwnerDashboard({super.key});
@@ -41,11 +44,20 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
   Map<String, dynamic> _earnings = {};
   String _earningsPeriod = 'month';
 
+  // Theme aware color getters
+  Color get primary => Theme.of(context).colorScheme.primary;
+  Color get ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
+  Color get muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get surface => Theme.of(context).cardColor;
+
+
   final List<String> _menu = [
     'Dashboard',
     'My Hotels',
     'Room Inventory',
     'Earnings & Taxes',
+    'Coupons',
+    'Offers',
   ];
 
   late AnimationController _fadeController;
@@ -100,7 +112,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
         _fadeController.forward(from: 0.0);
       }
     } catch (e) {
-      debugPrint('Error fetching data: $e');
+      // debugPrint('Error fetching data: $e');
       if (mounted)
         setState(() {
           _isLoading = false;
@@ -110,7 +122,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
   }
 
   String _formatAmount(dynamic val) {
-    final d = (val is int ? val.toDouble() : (val as double?) ?? 0.0);
+    final d = double.tryParse(val?.toString() ?? '0') ?? 0.0;
     if (d >= 100000) return '${(d / 100000).toStringAsFixed(1)}L';
     if (d >= 1000) return '${(d / 1000).toStringAsFixed(1)}k';
     return d.toStringAsFixed(0);
@@ -120,23 +132,43 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     final isDesktop = w >= 1024;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar:
           isDesktop
               ? null
               : AppBar(
-                backgroundColor: Colors.white,
+                backgroundColor: Theme.of(context).cardColor,
                 elevation: 0,
-                iconTheme: const IconThemeData(color: Colors.black87),
+                iconTheme: IconThemeData(
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 title: Text(
                   'Partner Panel',
                   style: GoogleFonts.poppins(
-                    color: Colors.black87,
+                    color: isDark ? Colors.white : Colors.black87,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                actions: [
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, themeMode, _) {
+                      final isDark = themeMode == ThemeMode.dark;
+                      return IconButton(
+                        icon: Icon(
+                          isDark ? Icons.light_mode : Icons.dark_mode,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        onPressed: () {
+                          themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
       drawer: isDesktop ? null : Drawer(child: _buildSidebar(false)),
       body: Row(
@@ -159,6 +191,10 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                           return _buildRoomsTab();
                         case 3:
                           return _buildEarningsTab();
+                        case 4:
+                          return const CouponManagementScreen(roleView: 'owner');
+                        case 5:
+                          return const OfferManagementScreen(roleView: 'owner');
                         default:
                           return const Center(child: Text('Invalid Tab'));
                       }
@@ -182,7 +218,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                     color: Colors.white,
                   ),
                 ),
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: primary,
               )
               : null,
     );
@@ -206,7 +242,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
               minimumSize: Size.zero,
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: primary,
             ),
           ),
         ],
@@ -217,7 +253,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-      decoration: const BoxDecoration(color: Colors.white),
+      decoration: BoxDecoration(color: surface),
       child: Row(
         children: [
           Column(
@@ -226,7 +262,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
               Text(
                 'Welcome back, $_fullname',
                 style: GoogleFonts.poppins(
-                  color: const Color(0xFF1E293B),
+                  color: ink,
                   fontWeight: FontWeight.bold,
                   fontSize: 28,
                 ),
@@ -235,31 +271,47 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
               Text(
                 'Manage your hotels and bookings',
                 style: GoogleFonts.poppins(
-                  color: const Color(0xFF64748B),
+                  color: muted,
                   fontSize: 14,
                 ),
               ),
             ],
           ),
           const Spacer(),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, themeMode, _) {
+              final isDark = themeMode == ThemeMode.dark;
+              return IconButton(
+                icon: Icon(
+                  isDark ? Icons.light_mode : Icons.dark_mode,
+                  color: ink,
+                ),
+                onPressed: () {
+                  themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                },
+              );
+            },
+          ),
+          const SizedBox(width: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: muted.withAlpha(20),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.notifications_none,
-                    color: Color(0xFF64748B),
+                    color: muted,
                   ),
                   onPressed: () {},
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: primary,
                   child: Text(
                     _fullname.isNotEmpty ? _fullname[0].toUpperCase() : 'P',
                     style: const TextStyle(
@@ -280,10 +332,14 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
     return Container(
       width: isDesktop ? 260 : null,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: surface,
         border:
             isDesktop
-                ? Border(right: BorderSide(color: Colors.grey.shade200))
+                ? Border(
+                  right: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                  ),
+                )
                 : null,
       ),
       child: Column(
@@ -296,12 +352,12 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB).withAlpha(25),
+                      color: primary.withAlpha(25),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.business_center,
-                      color: Color(0xFF2563EB),
+                      color: primary,
                       size: 24,
                     ),
                   ),
@@ -311,7 +367,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                     style: GoogleFonts.poppins(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E293B),
+                      color: ink,
                     ),
                   ),
                 ],
@@ -337,11 +393,15 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                           ? Icons.domain_rounded
                           : i == 2
                           ? Icons.meeting_room_rounded
-                          : Icons.account_balance_wallet_rounded,
+                          : i == 3
+                          ? Icons.account_balance_wallet_rounded
+                          : i == 4
+                          ? Icons.local_offer_rounded
+                          : Icons.card_giftcard_rounded,
                       color:
                           active
-                              ? const Color(0xFF2563EB)
-                              : const Color(0xFF64748B),
+                               ? primary
+                               : muted,
                     ),
                     title: Text(
                       _menu[i],
@@ -349,12 +409,12 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                         fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                         color:
                             active
-                                ? const Color(0xFF2563EB)
-                                : const Color(0xFF64748B),
+                                ? primary
+                                : muted,
                       ),
                     ),
                     selected: active,
-                    selectedTileColor: const Color(0xFF2563EB).withAlpha(20),
+                    selectedTileColor: primary.withAlpha(20),
                     onTap: () {
                       setState(() {
                         _selectedIndex = i;
@@ -374,8 +434,8 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              leading: const Icon(Icons.person_outline_rounded, color: Color(0xFF64748B)),
-              title: Text('Edit Profile', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w500)),
+              leading: Icon(Icons.person_outline_rounded, color: muted),
+              title: Text('Edit Profile', style: GoogleFonts.poppins(color: muted, fontWeight: FontWeight.w500)),
               onTap: () async {
                 final result = await Navigator.push(
                   context,
@@ -441,6 +501,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: ink,
                 ),
               ),
               const SizedBox(height: 24),
@@ -460,7 +521,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                   childAspectRatio: 2.2,
                   children: [
                     _isLoading
-                        ? const _ShimmerCard()
+                        ? _ShimmerCard()
                         : _PremiumStatCard(
                           label: 'Total Hotels',
                           value: '${_stats['total_hotels']}',
@@ -471,7 +532,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                           ], // Rose
                         ),
                     _isLoading
-                        ? const _ShimmerCard()
+                        ? _ShimmerCard()
                         : _PremiumStatCard(
                           label: 'Active Bookings',
                           value: '${_stats['active_bookings']}',
@@ -482,7 +543,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                           ], // Primary Blue
                         ),
                     _isLoading
-                        ? const _ShimmerCard()
+                        ? _ShimmerCard()
                         : _PremiumStatCard(
                           label: 'Total Revenue',
                           value: '₹${_formatAmount(_stats['total_revenue'])}',
@@ -493,7 +554,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                           ], // Secondary Teal
                         ),
                     _isLoading
-                        ? const _ShimmerCard()
+                        ? _ShimmerCard()
                         : _PremiumStatCard(
                           label: 'Net Earnings',
                           value: '₹${_formatAmount(_stats['net_earnings'])}',
@@ -531,7 +592,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1E293B),
+                    color: ink,
                   ),
                 ),
                 if (w > 800)
@@ -547,7 +608,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                     ),
                     style: ElevatedButton.styleFrom(
                       minimumSize: Size.zero,
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: primary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 16,
@@ -556,7 +617,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 4,
-                      shadowColor: const Color(0xFF2563EB).withAlpha(100),
+                      shadowColor: primary.withAlpha(100),
                     ),
                   ),
               ],
@@ -588,7 +649,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
         childAspectRatio: 0.85,
       ),
       itemCount: 6,
-      itemBuilder: (_, __) => const _ShimmerCard(isHotel: true),
+      itemBuilder: (_, __) => _ShimmerCard(isHotel: true),
     );
   }
 
@@ -600,13 +661,13 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: primary.withAlpha(20),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.domain_add_outlined,
               size: 64,
-              color: Color(0xFF2563EB),
+              color: primary,
             ),
           ),
           const SizedBox(height: 24),
@@ -615,13 +676,13 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E293B),
+              color: ink,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Start by adding your first hotel to the platform',
-            style: GoogleFonts.poppins(color: const Color(0xFF64748B)),
+            style: GoogleFonts.poppins(color: muted),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -636,7 +697,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
             ),
             style: ElevatedButton.styleFrom(
               minimumSize: Size.zero,
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: primary,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -752,7 +813,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
               style: GoogleFonts.poppins(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF1E293B),
+                color: ink,
               ),
             ),
           ),
@@ -775,7 +836,7 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
                             'No inventory available',
                             style: GoogleFonts.poppins(
                               fontSize: 18,
-                              color: Colors.grey.shade600,
+                              color: muted,
                             ),
                           ),
                         ],
@@ -890,6 +951,7 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
   bool _isHovered = false;
   late AnimationController _animCtrl;
   late Animation<double> _scaleAnim;
+  
 
   @override
   void initState() {
@@ -912,6 +974,13 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.hotel == null) return const SizedBox.shrink();
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = Theme.of(context).colorScheme.primary;
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final surface = Theme.of(context).cardColor;
+
     final imageStr = widget.hotel['image']?.toString() ?? '';
     final hasImage = imageStr.trim().isNotEmpty;
 
@@ -921,7 +990,7 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
       [const Color(0xFF14B8A6), const Color(0xFF3B82F6)],
       [const Color(0xFFF43F5E), const Color(0xFFF97316)],
     ];
-    final hid = widget.hotel['hotelid'] as int? ?? 0;
+    final hid = int.tryParse(widget.hotel['hotelid']?.toString() ?? '0') ?? 0;
     final gradient = colors[hid % colors.length];
 
     return MouseRegion(
@@ -936,7 +1005,7 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -945,6 +1014,9 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
                   offset: Offset(0, _isHovered ? 12 : 4),
                 ),
               ],
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.transparent,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1093,7 +1165,7 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
                           'Manage your rooms, rates, and availability for this premium property.',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: muted,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -1109,9 +1181,9 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
                                   style: GoogleFonts.poppins(),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF64748B),
-                                  side: const BorderSide(
-                                    color: Color(0xFFE2E8F0),
+                                  foregroundColor: muted,
+                                  side: BorderSide(
+                                    color: Theme.of(context).dividerColor,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -1140,7 +1212,7 @@ class _PremiumHotelCardState extends State<_PremiumHotelCard>
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: Size.zero,
-                                  backgroundColor: const Color(0xFF2563EB),
+                                  backgroundColor: primary,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -1185,9 +1257,14 @@ class _ShimmerCardState extends State<_ShimmerCard>
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat(reverse: true);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _colorAnim = ColorTween(
-      begin: Colors.grey.shade200,
-      end: Colors.grey.shade100,
+      begin: Theme.of(context).dividerColor,
+      end: Theme.of(context).dividerColor.withAlpha(50),
     ).animate(_ctrl);
   }
 
@@ -1225,7 +1302,7 @@ class _PremiumInventoryCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1234,7 +1311,7 @@ class _PremiumInventoryCard extends StatelessWidget {
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1242,19 +1319,19 @@ class _PremiumInventoryCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withAlpha(5) : const Color(0xFFF8FAFC),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withAlpha(25),
+                    color: Theme.of(context).colorScheme.primary.withAlpha(25),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.domain_rounded, color: Color(0xFF2563EB), size: 20),
+                  child: Icon(Icons.domain_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1263,14 +1340,14 @@ class _PremiumInventoryCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E293B),
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B),
                     ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Theme.of(context).colorScheme.primary.withAlpha(25),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -1278,7 +1355,7 @@ class _PremiumInventoryCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF2563EB),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -1291,7 +1368,7 @@ class _PremiumInventoryCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   'No rooms added for this hotel yet.',
-                  style: GoogleFonts.poppins(color: Colors.grey.shade500),
+                  style: GoogleFonts.poppins(color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey.shade500),
                 ),
               ),
             )
@@ -1300,7 +1377,7 @@ class _PremiumInventoryCard extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: rooms.length,
-              separatorBuilder: (context, index) => Divider(color: Colors.grey.shade100, height: 1),
+              separatorBuilder: (context, index) => Divider(color: Theme.of(context).dividerColor, height: 1),
               itemBuilder: (context, index) {
                 final room = rooms[index];
                 final String roomName = room['roomname'] ?? 'Unnamed Room';
@@ -1331,7 +1408,7 @@ class _PremiumInventoryCard extends StatelessWidget {
                                     style: GoogleFonts.poppins(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF1E293B),
+                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -1340,16 +1417,16 @@ class _PremiumInventoryCard extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).dividerColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   child: Text(
                                     typeName,
                                     style: GoogleFonts.poppins(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade600,
+                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade600,
                                     ),
                                   ),
                                 ),
@@ -1374,6 +1451,7 @@ class _PremiumInventoryCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _buildInventoryStat(
+                                context,
                                 'Total',
                                 totalRooms.toString(),
                                 Icons.meeting_room_rounded,
@@ -1382,6 +1460,7 @@ class _PremiumInventoryCard extends StatelessWidget {
                             ),
                             Expanded(
                               child: _buildInventoryStat(
+                                context,
                                 'Booked',
                                 bookedCount.toString(),
                                 Icons.bookmark_added_rounded,
@@ -1390,6 +1469,7 @@ class _PremiumInventoryCard extends StatelessWidget {
                             ),
                             Expanded(
                               child: _buildInventoryStat(
+                                context,
                                 'Available',
                                 availableCount.toString(),
                                 Icons.check_circle_outline_rounded,
@@ -1409,7 +1489,7 @@ class _PremiumInventoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInventoryStat(String label, String value, IconData icon, Color color) {
+  Widget _buildInventoryStat(BuildContext context, String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, size: 20, color: color.withAlpha(150)),
@@ -1428,7 +1508,7 @@ class _PremiumInventoryCard extends StatelessWidget {
           label,
           style: GoogleFonts.poppins(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade600,
           ),
           textAlign: TextAlign.center,
         ),

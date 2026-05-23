@@ -54,26 +54,33 @@ class _DiscoveryMapScreenState extends State<DiscoveryMapScreen> {
         if (data['status'] == 'success') {
           final items = data['data'];
           setState(() {
-            _hotels = (items['hotels'] as List).map<RecommendedItem>((h) => RecommendedItem.fromHotelJson(Map<String, dynamic>.from(h))).toList();
-            _buses = (items['buses'] as List).map((row) => RecommendedItem(
-              id: row['busid'].toString(),
-              name: row['bus_name'] ?? 'Bus',
-              location: '${row['source_city_id']} to ${row['destination_city_id']}',
+            _hotels = (items['hotels'] as List? ?? []).map<RecommendedItem>((h) => RecommendedItem.fromHotelJson(Map<String, dynamic>.from(h))).toList();
+            _buses = (items['buses'] as List? ?? []).map((row) => RecommendedItem(
+              id: row['busid']?.toString() ?? row['id']?.toString() ?? '',
+              name: row['bus_name'] ?? row['name'] ?? 'Bus',
+              location: '${row['source_city_id'] ?? ''} to ${row['destination_city_id'] ?? ''}',
               rating: 4.2,
-              price: double.tryParse(row['base_fare'].toString()) ?? 0,
+              price: double.tryParse(row['base_fare']?.toString() ?? row['price']?.toString() ?? '0') ?? 0,
               type: 'bus',
               imageUrl: '',
-              latitude: double.tryParse(row['latitude'].toString()),
-              longitude: double.tryParse(row['longitude'].toString()),
+              latitude: double.tryParse(row['latitude']?.toString() ?? ''),
+              longitude: double.tryParse(row['longitude']?.toString() ?? ''),
             )).toList();
-            _packages = (items['packages'] as List).map<RecommendedItem>((p) => RecommendedItem.fromPackageJson(Map<String, dynamic>.from(p))).toList();
-            _flights = (items['flights'] as List).map<FlightModel>((f) => FlightModel.fromJson(Map<String, dynamic>.from(f))).toList();
+            _packages = (items['packages'] as List? ?? []).map<RecommendedItem>((p) => RecommendedItem.fromPackageJson(Map<String, dynamic>.from(p))).toList();
+            _flights = (items['flights'] as List? ?? []).map<FlightModel>((f) => FlightModel.fromJson(Map<String, dynamic>.from(f))).toList();
             _isLoading = false;
           });
+
+          // Debug logs to help the user
+          // debugPrint("Map Stats:");
+          // debugPrint("Hotels: ${_hotels.length} total, ${_hotels.where((h) => h.latitude != null && h.longitude != null).length} with coords");
+          // debugPrint("Buses: ${_buses.length} total, ${_buses.where((b) => b.latitude != null && b.longitude != null).length} with coords");
+          // debugPrint("Packages: ${_packages.length} total, ${_packages.where((p) => p.latitude != null && p.longitude != null).length} with coords");
+          // debugPrint("Flights: ${_flights.length} total, ${_flights.where((f) => f.latitude != null && f.longitude != null).length} with coords");
         }
       }
     } catch (e) {
-      debugPrint("Fetch nearby error: $e");
+      // debugPrint("Fetch nearby error: $e");
       setState(() => _isLoading = false);
     }
   }
@@ -207,9 +214,9 @@ class _DiscoveryMapScreenState extends State<DiscoveryMapScreen> {
             top: MediaQuery.of(context).padding.top + 16,
             left: 16,
             child: CircleAvatar(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).cardColor,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -229,14 +236,14 @@ class _DiscoveryMapScreenState extends State<DiscoveryMapScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
                       label: Text(f, style: GoogleFonts.poppins(
-                        color: selected ? Colors.white : Colors.black,
+                        color: selected ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       )),
                       selected: selected,
                       onSelected: (v) => setState(() => _selectedFilter = f),
-                      backgroundColor: Colors.white,
-                      selectedColor: Colors.blue[700],
+                      backgroundColor: Theme.of(context).cardColor,
+                      selectedColor: Theme.of(context).colorScheme.primary,
                       checkmarkColor: Colors.white,
                       elevation: 2,
                     ),
@@ -255,13 +262,13 @@ class _DiscoveryMapScreenState extends State<DiscoveryMapScreen> {
             right: 16,
             child: FloatingActionButton(
               mini: true,
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).cardColor,
               onPressed: () {
                 if (loc != null) {
                   _mapController.move(LatLng(loc.latitude, loc.longitude), 14);
                 }
               },
-              child: const Icon(Icons.my_location, color: Colors.blue),
+              child: Icon(Icons.my_location, color: Theme.of(context).colorScheme.primary),
             ),
           ),
         ],
@@ -298,11 +305,13 @@ class _ItemDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
+        border: isDark ? Border.all(color: Colors.white10) : null,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -344,7 +353,7 @@ class _ItemDetailsSheet extends StatelessWidget {
                         children: [
                           Icon(Icons.star_rounded, color: Colors.amber[700], size: 16),
                           Text(' ${item.rating} ', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
-                          const Spacer(),
+                          Spacer(),
                           Text('${distance.toStringAsFixed(1)} km away', style: GoogleFonts.poppins(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.w600)),
                         ],
                       ),

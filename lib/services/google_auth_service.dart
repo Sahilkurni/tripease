@@ -34,10 +34,10 @@ class GoogleAuthService {
       );
       return userCredential.user;
     } on FirebaseAuthException catch (e) {
-      debugPrint("Firebase Auth error: ${e.code} - ${e.message}");
+      // debugPrint("Firebase Auth error: ${e.code} - ${e.message}");
       rethrow;
     } catch (e) {
-      debugPrint("Google Sign in error: $e");
+      // debugPrint("Google Sign in error: $e");
       rethrow;
     }
   }
@@ -49,11 +49,11 @@ class GoogleAuthService {
         await googleSignIn.signOut();
       } catch (e) {
         // Plugin may not be available on all platforms; log and continue
-        debugPrint("Google Sign out plugin error: $e");
+        // debugPrint("Google Sign out plugin error: $e");
       }
       await _auth.signOut();
     } catch (e) {
-      debugPrint("Google Sign out error: $e");
+      // debugPrint("Google Sign out error: $e");
     }
   }
 }

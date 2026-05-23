@@ -10,6 +10,9 @@ import '../hotel_partner/add_edit_hotel_screen.dart';
 import '../hotel_partner/manage_rooms_screen.dart';
 import '../../core/api_config.dart';
 import '../profile/edit_profile_screen.dart';
+import '../admin/coupon_management_screen.dart';
+import '../admin/offer_management_screen.dart';
+import '../../main.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -20,11 +23,12 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard>
     with SingleTickerProviderStateMixin {
-  static const Color _primary = Color(0xFF2563EB);
-  static const Color _surface = Colors.white;
-  static const Color _bg = Color(0xFFF6F8FB);
-  static const Color _ink = Color(0xFF172033);
-  static const Color _muted = Color(0xFF64748B);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _surface => Theme.of(context).cardColor;
+  Color get _bg => Theme.of(context).scaffoldBackgroundColor;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
 
   final Dio _dio = Dio();
   late final AnimationController _fadeController;
@@ -48,6 +52,8 @@ class _AdminDashboardState extends State<AdminDashboard>
     'Users',
     'Hotels',
     'Bookings',
+    'Coupons',
+    'Offers',
     'Settings',
   ];
 
@@ -248,9 +254,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           isDesktop
               ? null
               : AppBar(
-                backgroundColor: Colors.white,
+                backgroundColor: _surface,
                 elevation: 0,
-                iconTheme: const IconThemeData(color: _ink),
+                iconTheme: IconThemeData(color: _ink),
                 title: Text(
                   'Admin Panel',
                   style: GoogleFonts.poppins(
@@ -258,6 +264,23 @@ class _AdminDashboardState extends State<AdminDashboard>
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                actions: [
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, themeMode, _) {
+                      final isDark = themeMode == ThemeMode.dark;
+                      return IconButton(
+                        icon: Icon(
+                          isDark ? Icons.light_mode : Icons.dark_mode,
+                          color: _ink,
+                        ),
+                        onPressed: () {
+                          themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
       drawer: isDesktop ? null : Drawer(child: _buildSidebar(false)),
       floatingActionButton:
@@ -304,6 +327,10 @@ class _AdminDashboardState extends State<AdminDashboard>
         return Center(
           child: Text('Settings', style: GoogleFonts.poppins(fontSize: 20)),
         );
+      case 4:
+        return const CouponManagementScreen(roleView: 'admin');
+      case 5:
+        return const OfferManagementScreen(roleView: 'admin');
       default:
         return _buildOverviewPanel();
     }
@@ -313,10 +340,10 @@ class _AdminDashboardState extends State<AdminDashboard>
     return Container(
       width: isDesktop ? 260 : null,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surface,
         border:
             isDesktop
-                ? Border(right: BorderSide(color: Colors.grey.shade200))
+                ? Border(right: BorderSide(color: Theme.of(context).dividerColor))
                 : null,
       ),
       child: Column(
@@ -332,7 +359,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       color: _primary.withAlpha(22),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.travel_explore, color: _primary),
+                    child: Icon(Icons.travel_explore, color: _primary),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -368,6 +395,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                           ? Icons.domain_rounded
                           : i == 3
                           ? Icons.confirmation_number_rounded
+                          : i == 4
+                          ? Icons.local_offer_rounded
+                          : i == 5
+                          ? Icons.card_giftcard_rounded
                           : Icons.settings_rounded,
                       color: active ? _primary : _muted,
                     ),
@@ -399,7 +430,7 @@ class _AdminDashboardState extends State<AdminDashboard>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              leading: const Icon(Icons.person_outline_rounded, color: _muted),
+              leading: Icon(Icons.person_outline_rounded, color: _muted),
               title: isDesktop 
                   ? Text('Edit Profile', style: GoogleFonts.poppins(color: _muted, fontWeight: FontWeight.w500)) 
                   : null,
@@ -463,7 +494,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         horizontal: compact ? 20 : 40,
         vertical: compact ? 18 : 26,
       ),
-      color: Colors.white,
+      color: _surface,
       child: Row(
         children: [
           Expanded(
@@ -490,6 +521,22 @@ class _AdminDashboardState extends State<AdminDashboard>
           ),
           if (!compact) ...[
             const SizedBox(width: 20),
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: themeNotifier,
+              builder: (context, themeMode, _) {
+                final isDark = themeMode == ThemeMode.dark;
+                return IconButton(
+                  icon: Icon(
+                    isDark ? Icons.light_mode : Icons.dark_mode,
+                    color: _ink,
+                  ),
+                  onPressed: () {
+                    themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                  },
+                );
+              },
+            ),
+            const SizedBox(width: 16),
             CircleAvatar(
               radius: 22,
               backgroundColor: _primary,
@@ -511,6 +558,10 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _buildOverviewPanel() {
     final width = MediaQuery.of(context).size.width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? Colors.white : const Color(0xFF172033);
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final primary = Theme.of(context).colorScheme.primary;
     final activeHotels = _hotels.where(_isHotelActive).length;
     final stats = [
       _StatData(
@@ -675,6 +726,9 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _buildHotelEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? Colors.white : const Color(0xFF172033);
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
     return _StateShell(
       icon: Icons.apartment_rounded,
       iconColor: _primary,
@@ -740,6 +794,10 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _buildUsersPanel() {
     final user = authService.currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? Colors.white : const Color(0xFF172033);
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final primary = Theme.of(context).colorScheme.primary;
     if (user == null) {
       return Center(
         child: Text('No user session found. Login as admin to manage users.'),
@@ -761,10 +819,10 @@ class _AdminDashboardState extends State<AdminDashboard>
           const SizedBox(height: 16),
           Card(
             elevation: 0,
-            color: Colors.white,
+            color: _surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.grey.shade200),
+              side: BorderSide(color: Theme.of(context).dividerColor),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -875,19 +933,16 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? Colors.white : const Color(0xFF172033);
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(8),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -895,7 +950,7 @@ class _StatCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: data.color.withAlpha(20),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(data.icon, color: data.color),
           ),
@@ -910,7 +965,7 @@ class _StatCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    color: _AdminDashboardState._muted,
+                    color: muted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -918,7 +973,7 @@ class _StatCard extends StatelessWidget {
                 Text(
                   data.value,
                   style: GoogleFonts.poppins(
-                    color: _AdminDashboardState._ink,
+                    color: ink,
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                   ),
@@ -983,7 +1038,7 @@ class _AddHotelButtonState extends State<_AddHotelButton>
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _AdminDashboardState._primary,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1014,13 +1069,17 @@ class _StateShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? Colors.white : const Color(0xFF172033);
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 64),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         children: [
@@ -1037,7 +1096,7 @@ class _StateShell extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              color: _AdminDashboardState._ink,
+              color: ink,
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -1046,7 +1105,7 @@ class _StateShell extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(color: _AdminDashboardState._muted),
+            style: GoogleFonts.poppins(color: muted),
           ),
           const SizedBox(height: 28),
           Center(child: action),
@@ -1149,6 +1208,11 @@ class _HotelCardState extends State<_HotelCard>
     ];
     final gradient = gradients[hotelId.abs() % gradients.length];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = Theme.of(context).colorScheme.primary;
+    final ink = isDark ? Colors.white : const Color(0xFF172033);
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -1161,13 +1225,13 @@ class _HotelCardState extends State<_HotelCard>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color:
                     _hovered
-                        ? _AdminDashboardState._primary.withAlpha(70)
-                        : Colors.grey.shade200,
+                        ? primary.withAlpha(70)
+                        : Theme.of(context).dividerColor,
               ),
               boxShadow: [
                 BoxShadow(
@@ -1281,7 +1345,7 @@ class _HotelCardState extends State<_HotelCard>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.poppins(
-                            color: _AdminDashboardState._muted,
+                            color: muted,
                             fontSize: 12,
                           ),
                         ),
@@ -1299,8 +1363,8 @@ class _HotelCardState extends State<_HotelCard>
                                   ),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: _AdminDashboardState._ink,
-                                  side: BorderSide(color: Colors.grey.shade300),
+                                  foregroundColor: ink,
+                                  side: BorderSide(color: Theme.of(context).dividerColor),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
                                   ),
@@ -1329,8 +1393,7 @@ class _HotelCardState extends State<_HotelCard>
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      _AdminDashboardState._primary,
+                                  backgroundColor: primary,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
                                   ),
@@ -1405,7 +1468,7 @@ class _ShimmerCard extends StatefulWidget {
 class _ShimmerCardState extends State<_ShimmerCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<Color?> _color;
+  late Animation<Color?> _color;
 
   @override
   void initState() {
@@ -1414,9 +1477,15 @@ class _ShimmerCardState extends State<_ShimmerCard>
       vsync: this,
       duration: const Duration(milliseconds: 850),
     )..repeat(reverse: true);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     _color = ColorTween(
-      begin: Colors.grey.shade200,
-      end: Colors.grey.shade100,
+      begin: isDark ? Colors.white.withAlpha(10) : Colors.grey.shade200,
+      end: isDark ? Colors.white.withAlpha(25) : Colors.grey.shade100,
     ).animate(_controller);
   }
 
@@ -1434,9 +1503,9 @@ class _ShimmerCardState extends State<_ShimmerCard>
           (_, __) => Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child:
                 widget.isHotel

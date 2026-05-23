@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 import '../../services/package_service.dart';
@@ -14,6 +15,9 @@ import '../agent/add_edit_package_screen.dart';
 import '../agent/agent_add_flight_screen.dart';
 import '../../widgets/base64_image.dart';
 import '../profile/edit_profile_screen.dart';
+import '../admin/coupon_management_screen.dart';
+import '../admin/offer_management_screen.dart';
+import '../../main.dart';
 
 class AgentDashboard extends StatefulWidget {
   const AgentDashboard({super.key});
@@ -24,6 +28,11 @@ class AgentDashboard extends StatefulWidget {
 
 class _AgentDashboardState extends State<AgentDashboard>
     with SingleTickerProviderStateMixin {
+  // Theme aware color getters
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
   late TabController _tabController;
   bool _isLoading = true;
   String? _errorMessage;
@@ -206,7 +215,7 @@ class _AgentDashboardState extends State<AgentDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Row(
         children: [
           if (MediaQuery.of(context).size.width > 800) _buildSidebar(context),
@@ -295,49 +304,68 @@ class _AgentDashboardState extends State<AgentDashboard>
   }
 
   Widget _buildSidebar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: 250,
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(24.0),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
             child: Row(
               children: [
-                Icon(Icons.flight_takeoff, color: Colors.blueAccent, size: 28),
-                SizedBox(width: 12),
+                Icon(Icons.flight_takeoff, color: _primary, size: 28),
+                const SizedBox(width: 12),
                 Text(
                   'Agent Panel',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _ink,
+                  ),
                 ),
               ],
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.dashboard, color: Colors.blueAccent),
-            title: const Text('Dashboard'),
+            leading: Icon(Icons.dashboard, color: _primary),
+            title: Text('Dashboard', style: GoogleFonts.poppins(color: _ink)),
             selected: true,
             onTap: () {},
           ),
           ListTile(
-            leading: const Icon(Icons.map),
-            title: const Text('Tour Packages'),
+            leading: Icon(Icons.map, color: _muted),
+            title: Text('Tour Packages', style: GoogleFonts.poppins(color: _ink)),
             onTap: () => _tabController.animateTo(0),
           ),
           ListTile(
-            leading: const Icon(Icons.directions_bus),
-            title: const Text('Bus Inventory'),
+            leading: Icon(Icons.directions_bus, color: _muted),
+            title: Text('Bus Inventory', style: GoogleFonts.poppins(color: _ink)),
             onTap: () => _tabController.animateTo(1),
           ),
           ListTile(
-            leading: const Icon(Icons.flight_takeoff),
-            title: const Text('Flight Inventory'),
+            leading: Icon(Icons.flight_takeoff, color: _muted),
+            title: Text('Flight Inventory', style: GoogleFonts.poppins(color: _ink)),
             onTap: () => _tabController.animateTo(2),
           ),
           ListTile(
-            leading: const Icon(Icons.monetization_on),
-            title: const Text('Earnings & Taxes'),
+            leading: Icon(Icons.monetization_on, color: _muted),
+            title: Text('Earnings & Taxes', style: GoogleFonts.poppins(color: _ink)),
             onTap: () {},
+          ),
+          ListTile(
+            leading: Icon(Icons.local_offer, color: _muted),
+            title: Text('My Coupons', style: GoogleFonts.poppins(color: _ink)),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const CouponManagementScreen(roleView: 'agent')));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.card_giftcard, color: _muted),
+            title: Text('My Offers', style: GoogleFonts.poppins(color: _ink)),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const OfferManagementScreen(roleView: 'agent')));
+            },
           ),
           ListTile(
             leading: const Icon(Icons.person_outline),
@@ -377,18 +405,19 @@ class _AgentDashboardState extends State<AgentDashboard>
   }
 
   SliverAppBar _buildAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SliverAppBar(
       expandedHeight: 180,
       floating: true,
       pinned: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
         title: Text(
-          'Welcome, Travel Agent',
-          style: TextStyle(
-            color: Colors.blueGrey[900],
+          'Welcome, ${authService.currentUser?.rolename?.replaceAll('_', ' ').toLowerCase().split(' ').map((s) => s[0].toUpperCase() + s.substring(1)).join(' ') ?? 'Partner'}',
+          style: GoogleFonts.poppins(
+            color: _ink,
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
@@ -396,16 +425,31 @@ class _AgentDashboardState extends State<AgentDashboard>
       ),
       bottom: TabBar(
         controller: _tabController,
-        labelColor: Theme.of(context).primaryColor,
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: Theme.of(context).primaryColor,
-        tabs: const [
-          Tab(icon: Icon(Icons.map), text: 'Packages'),
-          Tab(icon: Icon(Icons.directions_bus), text: 'Buses'),
-          Tab(icon: Icon(Icons.flight_takeoff), text: 'Flights'),
+        labelColor: _primary,
+        unselectedLabelColor: _muted,
+        indicatorColor: _primary,
+        tabs: [
+          Tab(child: Text('Packages', style: GoogleFonts.poppins())),
+          Tab(child: Text('Buses', style: GoogleFonts.poppins())),
+          Tab(child: Text('Flights', style: GoogleFonts.poppins())),
         ],
       ),
       actions: [
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeNotifier,
+          builder: (context, themeMode, _) {
+            final isDark = themeMode == ThemeMode.dark;
+            return IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode : Icons.dark_mode,
+                color: _ink,
+              ),
+              onPressed: () {
+                themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+              },
+            );
+          },
+        ),
         if (MediaQuery.of(context).size.width <= 800)
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.red),
@@ -495,13 +539,14 @@ class _AgentDashboardState extends State<AgentDashboard>
   }
 
   Widget _buildPackageCard(PackageModel package) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -523,11 +568,11 @@ class _AgentDashboardState extends State<AgentDashboard>
                         fit: BoxFit.cover,
                       )
                       : Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Icon(
                           Icons.image,
                           size: 50,
-                          color: Colors.grey,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
             ),
@@ -550,17 +595,17 @@ class _AgentDashboardState extends State<AgentDashboard>
                 Text(
                   '${package.days} Days / ${package.nights} Nights',
                   style: TextStyle(
-                    color: Colors.blue[700],
+                    color: _primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '₹${package.price}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                    color: _primary,
                   ),
                 ),
                 const SizedBox(height: 16),

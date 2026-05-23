@@ -8,10 +8,10 @@ import '../models/seat_model.dart';
 class FlightService {
   Future<List<FlightModel>> getHomeFlights() async {
     final url = ApiConfig.flightHome;
-    print("API URL (Flights Home): $url");
+    // print("API URL (Flights Home): $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Flights Home Response: ${response.body}");
+      // print("Flights Home Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -24,17 +24,17 @@ class FlightService {
       }
       return [];
     } catch (e) {
-      print("Error fetching home flights: $e");
+      // print("Error fetching home flights: $e");
       return [];
     }
   }
 
   Future<List<SeatModel>> getFlightSeats(int flightId) async {
     final url = '${ApiConfig.flightSeats}?flightid=$flightId';
-    print("API URL (Flight Seats): $url");
+    // print("API URL (Flight Seats): $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Flight Seats Response: ${response.body}");
+      // print("Flight Seats Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -47,7 +47,7 @@ class FlightService {
       }
       return [];
     } catch (e) {
-      print("Error fetching flight seats: $e");
+      // print("Error fetching flight seats: $e");
       return [];
     }
   }
@@ -60,7 +60,7 @@ class FlightService {
     String? paymentId,
   }) async {
     final url = ApiConfig.flightBooking;
-    print("API URL (Create Flight Booking): $url");
+    // print("API URL (Create Flight Booking): $url");
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -73,7 +73,7 @@ class FlightService {
           'payment_id': paymentId,
         }),
       );
-      print("Create Flight Booking Response: ${response.body}");
+      // print("Create Flight Booking Response: ${response.body}");
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -84,7 +84,7 @@ class FlightService {
         };
       }
     } catch (e) {
-      print("Error creating flight booking: $e");
+      // print("Error creating flight booking: $e");
       return {'status': 'error', 'message': e.toString()};
     }
   }
@@ -94,7 +94,7 @@ class FlightService {
       final response = await http.get(
         Uri.parse("${ApiConfig.userFlightBookings}?userid=$userId"),
       );
-      print("User Flight Bookings Response: ${response.body}");
+      // print("User Flight Bookings Response: ${response.body}");
 
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
@@ -102,7 +102,7 @@ class FlightService {
       }
       return [];
     } catch (e) {
-      print("Error fetching user flight bookings: $e");
+      // print("Error fetching user flight bookings: $e");
       return [];
     }
   }
@@ -120,7 +120,7 @@ class FlightService {
       }
       return [];
     } catch (e) {
-      print("Error fetching admin flights: $e");
+      // print("Error fetching admin flights: $e");
       return [];
     }
   }
@@ -136,7 +136,7 @@ class FlightService {
       }
       return [];
     } catch (e) {
-      print("Error fetching agent flights: $e");
+      // print("Error fetching agent flights: $e");
       return [];
     }
   }
@@ -156,7 +156,7 @@ class FlightService {
       final data = json.decode(response.body);
       return data['status'] == 'success';
     } catch (e) {
-      print("Error updating flight status: $e");
+      // print("Error updating flight status: $e");
       return false;
     }
   }
@@ -167,11 +167,11 @@ class FlightService {
         Uri.parse(ApiConfig.createFlight),
         body: flightData,
       );
-      print("Create Flight Response: ${response.body}");
+      // print("Create Flight Response: ${response.body}");
       final data = json.decode(response.body);
       return data['status'] == 'success';
     } catch (e) {
-      print("Error creating flight: $e");
+      // print("Error creating flight: $e");
       return false;
     }
   }
@@ -182,11 +182,11 @@ class FlightService {
         Uri.parse(ApiConfig.updateFlight),
         body: flightData,
       );
-      print("Update Flight Response: ${response.body}");
+      // print("Update Flight Response: ${response.body}");
       final data = json.decode(response.body);
       return data['status'] == 'success';
     } catch (e) {
-      print("Error updating flight: $e");
+      // print("Error updating flight: $e");
       return false;
     }
   }
@@ -200,11 +200,11 @@ class FlightService {
           'userid': userId,
         },
       );
-      print("Delete Flight Response: ${response.body}");
+      // print("Delete Flight Response: ${response.body}");
       final data = json.decode(response.body);
       return data['status'] == 'success';
     } catch (e) {
-      print("Error deleting flight: $e");
+      // print("Error deleting flight: $e");
       return false;
     }
   }

@@ -8,10 +8,10 @@ class HotelService {
   // Fetch hotels for a specific partner (Owner)
   Future<List<HotelModel>> getPartnerHotels(int partnerId) async {
     final url = '${ApiConfig.hotels}?partnerid=$partnerId';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body)['data'];
@@ -21,7 +21,7 @@ class HotelService {
       }
       return [];
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       return [];
     }
   }
@@ -29,10 +29,10 @@ class HotelService {
   // Fetch all approved hotels for home
   Future<List<HotelModel>> getHomeHotels() async {
     final url = ApiConfig.searchHotels;
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -45,7 +45,7 @@ class HotelService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }
@@ -53,10 +53,10 @@ class HotelService {
   // Fetch rooms for a specific hotel
   Future<List<RoomModel>> getHotelRooms(int hotelId) async {
     final url = '${ApiConfig.rooms}?hotelid=$hotelId';
-    print("API URL (Rooms): $url");
+    // print("API URL (Rooms): $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Hotel Rooms Response: ${response.body}");
+      // print("Hotel Rooms Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -71,7 +71,7 @@ class HotelService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error fetching rooms: $e");
+      // print("Error fetching rooms: $e");
       rethrow;
     }
   }
@@ -79,7 +79,7 @@ class HotelService {
   // Fetch multiple images for a hotel
   Future<List<String>> getHotelImages(int hotelId) async {
     final url = '${ApiConfig.baseUrl}get_images.php?entity_type=hotel&entity_id=$hotelId';
-    print("API URL (Images): $url");
+    // print("API URL (Images): $url");
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -93,7 +93,7 @@ class HotelService {
       }
       return [];
     } catch (e) {
-      print("Error fetching images: $e");
+      // print("Error fetching images: $e");
       return [];
     }
   }
@@ -108,7 +108,7 @@ class HotelService {
     String? paymentId,
   }) async {
     final url = '${ApiConfig.baseUrl}create_booking.php';
-    print("API URL (Create Hotel Booking): $url");
+    // print("API URL (Create Hotel Booking): $url");
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -124,7 +124,7 @@ class HotelService {
           'payment_id': paymentId ?? '',
         },
       );
-      print("Hotel Booking Response: ${response.body}");
+      // print("Hotel Booking Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -132,7 +132,7 @@ class HotelService {
       }
       return false;
     } catch (e) {
-      print("Error creating hotel booking: $e");
+      // print("Error creating hotel booking: $e");
       return false;
     }
   }

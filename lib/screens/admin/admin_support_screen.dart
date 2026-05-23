@@ -10,9 +10,11 @@ class AdminSupportScreen extends StatefulWidget {
 }
 
 class _AdminSupportScreenState extends State<AdminSupportScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   bool _loading = true;
   String? _error;
@@ -105,8 +107,8 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -134,7 +136,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
         child: DataTable(
           headingTextStyle: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            color: _ink,
+            color: _muted,
           ),
           columns: const [
             DataColumn(label: Text('Ticket ID')),
@@ -147,8 +149,8 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
               _data.map((item) {
                 return DataRow(
                   cells: [
-                    DataCell(Text((item['ticketid'] ?? '-').toString())),
-                    DataCell(Text((item['fullname'] ?? '-').toString())),
+                    DataCell(Text((item['ticketid'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text((item['fullname'] ?? '-').toString(), style: TextStyle(color: _ink))),
                     DataCell(
                       SizedBox(
                         width: 300,
@@ -156,11 +158,12 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
                           (item['issue'] ?? '-').toString(),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: _ink),
                         ),
                       ),
                     ),
                     DataCell(_statusChip((item['status'] ?? '').toString())),
-                    DataCell(Text((item['edatetime'] ?? '-').toString())),
+                    DataCell(Text((item['edatetime'] ?? '-').toString(), style: TextStyle(color: _ink))),
                   ],
                 );
               }).toList(),
@@ -179,12 +182,12 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
+            color: _surface,
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -235,8 +238,8 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
   Widget _statusChip(String status) {
     final normalized = status.toUpperCase();
     final isResolved = normalized == 'RESOLVED' || normalized == 'CLOSED';
-    final fg = isResolved ? Colors.green.shade800 : Colors.orange.shade800;
-    final bg = isResolved ? Colors.green.shade50 : Colors.orange.shade50;
+    final fg = isResolved ? Colors.green : Colors.orange;
+    final bg = fg.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25);
     return Chip(
       label: Text(
         normalized.isEmpty ? 'OPEN' : normalized,
@@ -259,7 +262,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           height: 58,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).dividerColor.withAlpha(50),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

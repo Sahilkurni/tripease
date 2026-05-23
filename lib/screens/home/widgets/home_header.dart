@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../main.dart';
 
 class HomeHeaderWidget extends StatelessWidget {
   final String userName;
@@ -142,7 +143,22 @@ class HomeHeaderWidget extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const Spacer(),
+                      Spacer(),
+                      ValueListenableBuilder<ThemeMode>(
+                        valueListenable: themeNotifier,
+                        builder: (context, themeMode, _) {
+                          final isDark = themeMode == ThemeMode.dark;
+                          return IconButton(
+                            icon: Icon(
+                              isDark ? Icons.light_mode : Icons.dark_mode,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                            },
+                          );
+                        },
+                      ),
                       Stack(
                         children: [
                           IconButton(
@@ -222,7 +238,7 @@ class HomeHeaderWidget extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Spacer(),
+                      Spacer(),
                       GestureDetector(
                         onTap: onMapOpen,
                         child: Container(

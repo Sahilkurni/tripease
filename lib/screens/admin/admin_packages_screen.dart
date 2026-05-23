@@ -10,9 +10,11 @@ class AdminPackagesScreen extends StatefulWidget {
 }
 
 class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   bool _loading = true;
   bool _updating = false;
@@ -44,7 +46,7 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
                     .map((e) => e.map((k, v) => MapEntry('$k', v)))
                     .toList()
                 : [];
-        print('Packages count: ${_data.length}');
+        // print('Packages count: ${_data.length}');
         _loading = false;
       });
     } else {
@@ -142,8 +144,8 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -171,7 +173,7 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
         child: DataTable(
           headingTextStyle: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            color: _ink,
+            color: _muted,
           ),
           columns: const [
             DataColumn(label: Text('Package Name')),
@@ -186,10 +188,10 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
                 final id = int.tryParse((item['packageid'] ?? '').toString());
                 return DataRow(
                   cells: [
-                    DataCell(Text((item['packagename'] ?? '-').toString())),
-                    DataCell(Text((item['agentname'] ?? '-').toString())),
-                    DataCell(Text('₹${item['price'] ?? '0'}')),
-                    DataCell(Text('${item['days']}D / ${item['nights']}N')),
+                    DataCell(Text((item['packagename'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text((item['agentname'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text('₹${item['price'] ?? '0'}', style: TextStyle(color: _ink))),
+                    DataCell(Text('${item['days']}D / ${item['nights']}N', style: TextStyle(color: _ink))),
                     DataCell(_statusChip((item['status'] ?? '').toString())),
                     DataCell(
                       id == null
@@ -235,12 +237,12 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
+            color: _surface,
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -309,10 +311,10 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
             : Colors.orange.shade800;
     final bg =
         isApproved
-            ? Colors.green.shade50
+            ? Colors.green.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25)
             : isRejected
-            ? Colors.red.shade50
-            : Colors.orange.shade50;
+            ? Colors.red.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25)
+            : Colors.orange.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25);
     return Chip(
       label: Text(
         normalized.isEmpty ? 'PENDING' : normalized,
@@ -335,7 +337,7 @@ class _AdminPackagesScreenState extends State<AdminPackagesScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           height: 58,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).dividerColor.withAlpha(50),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

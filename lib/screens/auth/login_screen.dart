@@ -8,6 +8,8 @@ import '../../core/utils/responsive.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
+import '../../core/utils/validators.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       _redirectByRole(roleId: user.roleid, roleName: user.rolename);
     } else {
-      print("result $result");
+      // print("result $result");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Login failed'),
@@ -305,10 +307,8 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Icon(Icons.person_outline_rounded),
               hintText: 'Email',
             ),
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Please enter email';
-              return null;
-            },
+            validator: Validators.validateEmail,
+
           ),
           const SizedBox(height: 14),
           TextFormField(

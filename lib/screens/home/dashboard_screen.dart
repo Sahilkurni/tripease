@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
@@ -21,6 +22,12 @@ import '../../widgets/base64_image.dart';
 import '../profile/edit_profile_screen.dart';
 import 'discovery_map_screen.dart';
 import '../../services/location_service.dart';
+import '../../models/offer_model.dart';
+import '../../services/offer_service.dart';
+import '../../services/coupon_service.dart';
+import '../../widgets/offers_carousel.dart';
+import '../../widgets/offer_badge.dart';
+import '../../widgets/travel_image_placeholder.dart';
 
 class ServiceItem {
   final String id;
@@ -247,6 +254,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<CustomerBooking> _recentBookings = [];
   List<QuickSearchChip> _searchChips = [];
   List<FlightModel> _filteredFlights = [];
+  List<OfferModel> _offers = [];
+  bool _offersLoading = true;
 
   bool _homeLoading = true;
   bool _profileLoading = true;
@@ -852,6 +861,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _wishlistLoading = true;
       _bookingsLoading = true;
       _homeError = null;
+      _offersLoading = true;
     });
 
     try {
@@ -862,6 +872,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       
       // Import flight service if not already imported
       final flights = await flightService.getHomeFlights();
+      final offers = await offerService.getOffers(userId: int.tryParse(userId) ?? 0);
 
       final results = await Future.wait<dynamic>([
         userId.isEmpty
@@ -904,6 +915,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _profileLoading = false;
         _wishlistLoading = false;
         _bookingsLoading = false;
+        _offers = offers;
+        _offersLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
@@ -914,6 +927,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _bookingsLoading = false;
         _homeError = 'Failed to load dashboard data';
       });
+    }
+  }
+
+  Future<void> _fetchRecentBookings() async {
+    final user = authService.currentUser;
+    if (user == null || user.userid.isEmpty) return;
+    setState(() => _bookingsLoading = true);
+    try {
+      final list = await customerService.getUserBookings(user.userid);
+      if (mounted) {
+        setState(() {
+          _recentBookings = list;
+          _bookingsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _bookingsLoading = false);
     }
   }
 
@@ -937,6 +967,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SnackBar(content: Text('Could not remove wishlist item')),
       );
     }
+  }
+
+  OfferModel? _getOfferFor(String type, String id) {
+    for (var o in _offers) {
+      if (o.serviceType.toLowerCase() == type.toLowerCase() &&
+          o.serviceId.toString() == id &&
+          o.status.toLowerCase() == 'approved' &&
+          o.isactive == 1) {
+        return o;
+      }
+    }
+    return null;
   }
 
   @override
@@ -995,6 +1037,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             // 2. Search bar + chips (overlaps header by 24px)
             SliverToBoxAdapter(child: _buildSearchSection()),
+            const SliverToBoxAdapter(child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: OffersCarousel(),
+            )),
 
             if (_homeLoading)
               SliverToBoxAdapter(child: _buildHomeLoading())
@@ -1050,6 +1096,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ],
+
               if (_recentBookings.isNotEmpty && _searchQuery.isEmpty) ...[
                 SliverToBoxAdapter(
                   child: _sectionHeader(context, 'Recent Bookings', '/bookings'),
@@ -1058,11 +1105,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ],
 
+            // Spacing before footer
+            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+
             // Footer
             const SliverToBoxAdapter(child: CustomFooter()),
 
             // Bottom padding for nav bar
-            SliverToBoxAdapter(child: SizedBox(height: safeBot + 90)),
+            SliverToBoxAdapter(child: SizedBox(height: safeBot + 120)),
           ],
         );
         break;
@@ -1088,7 +1138,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: CustomBottomNav(
                   currentIndex: _navIndex,
-                  onTap: (i) => setState(() => _navIndex = i),
+                  onTap: (i) {
+                    setState(() => _navIndex = i);
+                    if (i == 1) {
+                      _fetchRecentBookings();
+                    }
+                  },
                 ),
               ),
             ),
@@ -1819,21 +1874,129 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : AppColors.textPrimary,
             ),
           ),
-          const Spacer(),
-          TextButton(
-            onPressed: () {
-              context.push(seeAllRoute);
-            },
-            child: Text(
-              'See All',
-              style: GoogleFonts.poppins(
-                color: AppColors.primary,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+          Spacer(),
+          if (seeAllRoute.isNotEmpty)
+            TextButton(
+              onPressed: () => context.push(seeAllRoute),
+              child: Text(
+                'See All',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
               ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOffersSection() {
+    return Container(
+      height: 220,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: hPad),
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _offers.length,
+        itemBuilder: (context, index) {
+          final offer = _offers[index];
+          return Container(
+            width: 320,
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Theme.of(context).cardColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                if (offer.primaryImage != null)
+                  Image.memory(
+                    base64Decode(offer.primaryImage!),
+                    height: 220,
+                    width: 320,
+                    fit: BoxFit.cover,
+                  )
+                else
+                  Container(
+                    height: 220,
+                    width: 320,
+                    color: AppColors.primary.withOpacity(0.1),
+                    child: const Icon(Icons.local_offer_outlined, size: 40, color: AppColors.primary),
+                  ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.8),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          offer.serviceType.toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        offer.title,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (offer.description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          offer.description!,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -2024,10 +2187,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: SizedBox(
           width: isDesktop ? 330 : 300,
           child: isPackage
-              ? _PremiumPackageCard(item: item, preview: !hasData)
+              ? _PremiumPackageCard(item: item, preview: !hasData, offer: _getOfferFor('package', item.id))
               : type == 'bus'
-              ? _PremiumBusCard(item: item, preview: !hasData)
-              : _PremiumHotelCard(item: item, preview: !hasData),
+              ? _PremiumBusCard(item: item, preview: !hasData, offer: _getOfferFor('bus', item.id))
+              : _PremiumHotelCard(item: item, preview: !hasData, offer: _getOfferFor('hotel', item.id)),
         ),
       );
     }).toList();
@@ -2073,7 +2236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         child: SizedBox(
           width: isDesktop ? 330 : 300,
-          child: _PremiumFlightCard(item: item, preview: !hasData),
+          child: _PremiumFlightCard(item: item, preview: !hasData, offer: _getOfferFor('flight', item.flightId.toString())),
         ),
       );
     }).toList();
@@ -2539,7 +2702,7 @@ class _WishlistCard extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     const Icon(
                       Icons.star_rounded,
                       size: 16,
@@ -2897,8 +3060,9 @@ class _PremiumEmptyState extends StatelessWidget {
 class _PremiumHotelCard extends StatelessWidget {
   final RecommendedItem item;
   final bool preview;
+  final OfferModel? offer;
 
-  const _PremiumHotelCard({required this.item, required this.preview});
+  const _PremiumHotelCard({required this.item, required this.preview, this.offer});
 
   @override
   Widget build(BuildContext context) {
@@ -2947,6 +3111,12 @@ class _PremiumHotelCard extends StatelessWidget {
                     left: 12,
                     bottom: 12,
                     child: _SoftBadge(label: '${item.distance!.toStringAsFixed(1)} km away', color: Colors.blue[700]),
+                  ),
+                if (offer != null)
+                  Positioned(
+                    left: 0,
+                    top: 20,
+                    child: OfferBadge(text: offer!.badgeText ?? 'DEAL'),
                   ),
               ],
             ),
@@ -3016,8 +3186,9 @@ class _PremiumHotelCard extends StatelessWidget {
 class _PremiumPackageCard extends StatelessWidget {
   final RecommendedItem item;
   final bool preview;
+  final OfferModel? offer;
 
-  const _PremiumPackageCard({required this.item, required this.preview});
+  const _PremiumPackageCard({required this.item, required this.preview, this.offer});
 
   @override
   Widget build(BuildContext context) {
@@ -3061,6 +3232,12 @@ class _PremiumPackageCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (offer != null)
+                  Positioned(
+                    left: 0,
+                    top: 20,
+                    child: OfferBadge(text: offer!.badgeText ?? 'DEAL'),
                   ),
                 if (item.distance != null && item.distance! > 0)
                   Positioned(
@@ -3121,106 +3298,6 @@ class _PremiumPackageCard extends StatelessWidget {
   }
 }
 
-class TravelImagePlaceholder extends StatefulWidget {
-  final String imageUrl;
-  final List<String>? images;
-  final IconData icon;
-  final List<Color> colors;
-
-  const TravelImagePlaceholder({
-    required this.imageUrl,
-    this.images,
-    required this.icon,
-    required this.colors,
-  });
-
-  @override
-  State<TravelImagePlaceholder> createState() => TravelImagePlaceholderState();
-}
-
-class TravelImagePlaceholderState extends State<TravelImagePlaceholder> {
-  final PageController _pageController = PageController();
-  int _currentIndex = 0;
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final displayImages = (widget.images != null && widget.images!.isNotEmpty)
-        ? widget.images!
-        : (widget.imageUrl.trim().isNotEmpty ? [widget.imageUrl] : <String>[]);
-
-    if (displayImages.isNotEmpty) {
-      if (displayImages.length == 1) {
-        return Base64Image(
-          base64String: displayImages.first,
-          fit: BoxFit.cover,
-        );
-      }
-
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() => _currentIndex = index);
-            },
-            itemCount: displayImages.length,
-            itemBuilder: (context, index) {
-              return Base64Image(
-                base64String: displayImages[index],
-                fit: BoxFit.cover,
-              );
-            },
-          ),
-          Positioned(
-            bottom: 8,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                displayImages.length,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: _currentIndex == index ? 6 : 4,
-                  height: _currentIndex == index ? 6 : 4,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentIndex == index
-                        ? Colors.white
-                        : Colors.white.withAlpha(128),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    return _fallback();
-  }
-
-  Widget _fallback() {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: widget.colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Icon(widget.icon, color: Colors.white.withAlpha(210), size: 54),
-      ),
-    );
-  }
-}
 
 class _PriceBadge extends StatelessWidget {
   final String label;
@@ -3350,7 +3427,7 @@ class _HomeSkeletonCardState extends State<_HomeSkeletonCard>
                 Row(
                   children: [
                     _SkeletonBar(width: 80, color: _color.value),
-                    const Spacer(),
+                    Spacer(),
                     _SkeletonBar(
                       width: widget.isPackage ? 90 : 58,
                       color: _color.value,
@@ -3386,8 +3463,9 @@ class _SkeletonBar extends StatelessWidget {
 class _PremiumBusCard extends StatelessWidget {
   final RecommendedItem item;
   final bool preview;
+  final OfferModel? offer;
 
-  const _PremiumBusCard({required this.item, required this.preview});
+  const _PremiumBusCard({required this.item, required this.preview, this.offer});
 
   @override
   Widget build(BuildContext context) {
@@ -3429,6 +3507,12 @@ class _PremiumBusCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Demo'),
+                  ),
+                if (offer != null)
+                  Positioned(
+                    left: 0,
+                    top: 20,
+                    child: OfferBadge(text: offer!.badgeText ?? 'DEAL'),
                   ),
               ],
             ),
@@ -3498,8 +3582,13 @@ class _PremiumBusCard extends StatelessWidget {
 class _PremiumFlightCard extends StatelessWidget {
   final FlightModel item;
   final bool preview;
+  final OfferModel? offer;
 
-  const _PremiumFlightCard({required this.item, required this.preview});
+  const _PremiumFlightCard({
+    required this.item,
+    required this.preview,
+    this.offer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3540,7 +3629,8 @@ class _PremiumFlightCard extends StatelessWidget {
                   bottom: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(20),
@@ -3565,7 +3655,16 @@ class _PremiumFlightCard extends StatelessWidget {
                   Positioned(
                     left: 12,
                     bottom: 12,
-                    child: _SoftBadge(label: '${item.distance!.toStringAsFixed(1)} km away', color: Colors.blue[700]),
+                    child: _SoftBadge(
+                      label: '${item.distance!.toStringAsFixed(1)} km away',
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                if (offer != null)
+                  Positioned(
+                    left: 0,
+                    top: 20,
+                    child: OfferBadge(text: offer!.badgeText ?? 'DEAL'),
                   ),
               ],
             ),
@@ -3597,11 +3696,14 @@ class _PremiumFlightCard extends StatelessWidget {
                     Text(
                       item.departureTime.split(' ').last.substring(0, 5),
                       style: GoogleFonts.poppins(
-                        color: isDark ? AppColors.darkSubtext : AppColors.textSecondary,
+                        color:
+                            isDark
+                                ? AppColors.darkSubtext
+                                : AppColors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     Text(
                       item.duration,
                       style: GoogleFonts.poppins(

@@ -32,9 +32,93 @@ import '../screens/info/contact_us_screen.dart';
 import '../screens/info/privacy_policy_screen.dart';
 import '../screens/info/refund_policy_screen.dart';
 import '../screens/info/terms_conditions_screen.dart';
+import '../services/auth_service.dart';
+import '../core/constants/role_constants.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
+  refreshListenable: authService,
+  redirect: (context, state) {
+    final loggedIn = authService.currentUser != null;
+    final isLoggingIn = state.uri.path == '/login' || 
+                        state.uri.path == '/register' ||
+                        state.uri.path == '/onboarding' ||
+                        state.uri.path == '/';
+
+    // If not logged in and trying to access protected route, go to login
+    // List of protected routes (can be expanded)
+    final protectedRoutes = [
+      '/home',
+      '/hotel_dashboard',
+
+      '/agent_dashboard',
+      '/admin_dashboard',
+      '/role_selection',
+      '/passenger_details',
+      '/flight_bookings',
+      '/agent_add_flight',
+      '/admin_flights',
+    ];
+
+    final isProtectedRoute = protectedRoutes.any((route) => state.uri.path.startsWith(route)) ||
+                             state.uri.path.startsWith('/owner/') ||
+                             state.uri.path.startsWith('/agent/');
+
+    if (!loggedIn && isProtectedRoute) {
+      return '/login';
+    }
+
+    // If logged in and trying to go to login/register, go home (or dashboard)
+    if (loggedIn && isLoggingIn) {
+      final user = authService.currentUser!;
+      return routeByRole(roleId: user.roleid, roleName: user.rolename);
+    }
+
+    // Strict role-based route guarding for direct URL navigation
+    if (loggedIn && !isLoggingIn) {
+      final user = authService.currentUser!;
+      final parsedRoleId = int.tryParse((user.roleid ?? '').trim());
+      final normalizedRoleName = (user.rolename ?? '').toUpperCase().trim();
+      
+      final isHotelOwner = parsedRoleId == RoleConstants.hotelOwner || 
+                           normalizedRoleName == 'HOTEL_OWNER' || 
+                           normalizedRoleName == 'HOTEL_PARTNER';
+                           
+      final isAgent = parsedRoleId == RoleConstants.travelAgent || 
+                      normalizedRoleName == 'TRAVEL_AGENT' || 
+                      normalizedRoleName == 'AGENT' || 
+                      normalizedRoleName == 'BUS_PARTNER' || 
+                      normalizedRoleName == 'BUS_OWNER';
+                      
+      final isAdmin = parsedRoleId == RoleConstants.admin || 
+                      normalizedRoleName == 'ADMIN';
+
+      final targetPath = state.uri.path;
+      // debugPrint('GoRouter Redirecting: targetPath=$targetPath, roleid=${user.roleid}, rolename=${user.rolename}, parsedRoleId=$parsedRoleId');
+      // debugPrint('isHotelOwner=$isHotelOwner, isAdmin=$isAdmin, isAgent=$isAgent');
+
+      // Prevent non-owners from accessing owner routes
+      if ((targetPath.startsWith('/hotel_dashboard') || targetPath.startsWith('/owner/')) && !isHotelOwner && !isAdmin) {
+        // debugPrint('GUARD: Redirecting non-owner away from hotel_dashboard to routeByRole');
+        return routeByRole(roleId: user.roleid, roleName: user.rolename);
+      }
+
+      // Prevent non-agents from accessing agent routes
+      if ((targetPath.startsWith('/agent_dashboard') || targetPath.startsWith('/agent/')) && !isAgent && !isAdmin) {
+        // debugPrint('GUARD: Redirecting non-agent away from agent_dashboard to routeByRole');
+        return routeByRole(roleId: user.roleid, roleName: user.rolename);
+      }
+
+      // Prevent non-admins from accessing admin routes
+      if ((targetPath.startsWith('/admin_dashboard') || targetPath.startsWith('/admin_flights')) && !isAdmin) {
+        // debugPrint('GUARD: Redirecting non-admin away from admin_dashboard to routeByRole');
+        return routeByRole(roleId: user.roleid, roleName: user.rolename);
+      }
+    }
+
+    return null;
+  },
+
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(

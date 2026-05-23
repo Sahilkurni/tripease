@@ -44,11 +44,11 @@ class CustomBottomNav extends StatelessWidget {
         bottom: safeBottom + 12,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha((0.12 * 255).round()),
+            color: Colors.black.withAlpha(isDark ? (0.3 * 255).round() : (0.12 * 255).round()),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -80,7 +80,7 @@ class CustomBottomNav extends StatelessWidget {
                 children: [
                   Icon(
                     item.icon,
-                    color: isActive ? Colors.white : AppColors.lightSubtext,
+                    color: isActive ? Colors.white : (isDark ? AppColors.darkSubtext : AppColors.lightSubtext),
                     size: 22,
                   ),
                   if (isActive) ...[

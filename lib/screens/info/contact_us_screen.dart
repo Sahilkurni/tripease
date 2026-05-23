@@ -2,9 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/custom_footer.dart';
+import '../../core/utils/validators.dart';
 
-class ContactUsScreen extends StatelessWidget {
+class ContactUsScreen extends StatefulWidget {
   const ContactUsScreen({super.key});
+
+  @override
+  State<ContactUsScreen> createState() => _ContactUsScreenState();
+}
+
+class _ContactUsScreenState extends State<ContactUsScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _subjectCtrl = TextEditingController();
+  final _messageCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _subjectCtrl.dispose();
+    _messageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _sendMessage() {
+    if (_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message sent successfully!')),
+      );
+      _nameCtrl.clear();
+      _emailCtrl.clear();
+      _subjectCtrl.clear();
+      _messageCtrl.clear();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,52 +141,51 @@ class ContactUsScreen extends StatelessWidget {
                           ),
                       ],
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Send us a Message',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildTextField('Full Name', Icons.person_rounded, isDark),
-                        const SizedBox(height: 16),
-                        _buildTextField('Email Address', Icons.email_rounded, isDark),
-                        const SizedBox(height: 16),
-                        _buildTextField('Subject', Icons.subject_rounded, isDark),
-                        const SizedBox(height: 16),
-                        _buildTextField('Message', Icons.message_rounded, isDark, maxLines: 4),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Message sent successfully!')),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Send Message',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Send us a Message',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : AppColors.textPrimary,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          _buildTextFormField(_nameCtrl, 'Full Name', Icons.person_rounded, isDark, validator: (v) => Validators.validateRequired(v, 'name')),
+                          const SizedBox(height: 16),
+                          _buildTextFormField(_emailCtrl, 'Email Address', Icons.email_rounded, isDark, validator: Validators.validateEmail, keyboardType: TextInputType.emailAddress),
+                          const SizedBox(height: 16),
+                          _buildTextFormField(_subjectCtrl, 'Subject', Icons.subject_rounded, isDark, validator: (v) => Validators.validateRequired(v, 'subject')),
+                          const SizedBox(height: 16),
+                          _buildTextFormField(_messageCtrl, 'Message', Icons.message_rounded, isDark, maxLines: 4, validator: (v) => Validators.validateRequired(v, 'message')),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _sendMessage,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Send Message',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -225,9 +257,20 @@ class ContactUsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String hint, IconData icon, bool isDark, {int maxLines = 1}) {
-    return TextField(
+  Widget _buildTextFormField(
+    TextEditingController controller,
+    String hint,
+    IconData icon,
+    bool isDark, {
+    int maxLines = 1,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
       maxLines: maxLines,
+      validator: validator,
+      keyboardType: keyboardType,
       style: GoogleFonts.poppins(
         color: isDark ? Colors.white : AppColors.textPrimary,
       ),
@@ -243,8 +286,17 @@ class ContactUsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
 }
+

@@ -41,7 +41,7 @@ class _FlightPassengerDetailsScreenState extends State<FlightPassengerDetailsScr
       onSuccess: (paymentId) => _processBooking(paymentId),
       onError: (error) {
         // FOR TESTING: Proceed with booking even if payment fails (consistent with Hotel/Bus flow)
-        print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
+        // print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
         _processBooking("TEST_PAYMENT_BYPASS");
       },
     );

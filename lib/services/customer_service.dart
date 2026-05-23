@@ -106,7 +106,7 @@ class CustomerService {
 
   List<Map<String, dynamic>> _listFromResponse(http.Response response) {
     if (response.body.isEmpty) {
-      debugPrint("Warning: Empty response body");
+      // debugPrint("Warning: Empty response body");
       return [];
     }
     final decoded = jsonDecode(response.body);
@@ -124,7 +124,7 @@ class CustomerService {
 
   Map<String, dynamic> _mapFromResponse(http.Response response) {
     if (response.body.isEmpty) {
-      debugPrint("Warning: Empty response body");
+      // debugPrint("Warning: Empty response body");
       return {};
     }
     final decoded = jsonDecode(response.body);
@@ -139,33 +139,33 @@ class CustomerService {
 
   Future<CustomerProfile?> getUserProfile(String userid) async {
     final url = '${baseUrl}get_user_profile.php?userid=$userid';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
       final data = _mapFromResponse(response);
       return data.isEmpty ? null : CustomerProfile.fromJson(data);
     } catch (e, st) {
-      print("Error: $e");
-      debugPrint('$st');
+      // print("Error: $e");
+      // debugPrint('$st');
       return null;
     }
   }
 
   Future<List<WishlistItem>> getWishlist(String userid) async {
     final url = '${baseUrl}get_wishlist.php?userid=$userid';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
       return _listFromResponse(response).map(WishlistItem.fromJson).toList();
     } catch (e, st) {
-      print("Error: $e");
-      debugPrint('$st');
+      // print("Error: $e");
+      // debugPrint('$st');
       return [];
     }
   }
@@ -176,7 +176,7 @@ class CustomerService {
     required int itemId,
   }) async {
     final url = '${baseUrl}add_to_wishlist.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http
           .post(
@@ -188,12 +188,12 @@ class CustomerService {
             },
           )
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
       final decoded = jsonDecode(response.body);
       return decoded is Map && decoded['status'] == 'success';
     } catch (e, st) {
-      print("Error: $e");
-      debugPrint('$st');
+      // print("Error: $e");
+      // debugPrint('$st');
       return false;
     }
   }
@@ -203,7 +203,7 @@ class CustomerService {
     required int id,
   }) async {
     final url = '${baseUrl}remove_from_wishlist.php';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http
           .post(
@@ -211,28 +211,28 @@ class CustomerService {
             body: {'userid': userid, 'id': id.toString()},
           )
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
       final decoded = jsonDecode(response.body);
       return decoded is Map && decoded['status'] == 'success';
     } catch (e, st) {
-      print("Error: $e");
-      debugPrint('$st');
+      // print("Error: $e");
+      // debugPrint('$st');
       return false;
     }
   }
 
   Future<List<CustomerBooking>> getUserBookings(String userid) async {
     final url = '${baseUrl}get_user_bookings.php?userid=$userid';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 12));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
       return _listFromResponse(response).map(CustomerBooking.fromJson).toList();
     } catch (e, st) {
-      print("Error: $e");
-      debugPrint('$st');
+      // print("Error: $e");
+      // debugPrint('$st');
       return [];
     }
   }

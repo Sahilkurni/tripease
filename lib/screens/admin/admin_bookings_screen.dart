@@ -10,9 +10,11 @@ class AdminBookingsScreen extends StatefulWidget {
 }
 
 class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   bool _loading = true;
   String? _error;
@@ -105,8 +107,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -136,21 +138,21 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             fontWeight: FontWeight.w700,
             color: _ink,
           ),
-          columns: const [
-            DataColumn(label: Text('Booking ID')),
-            DataColumn(label: Text('User')),
-            DataColumn(label: Text('Type')),
-            DataColumn(label: Text('Amount')),
-            DataColumn(label: Text('Status')),
+          columns: [
+            DataColumn(label: Text('Booking ID', style: TextStyle(color: _muted))),
+            DataColumn(label: Text('User', style: TextStyle(color: _muted))),
+            DataColumn(label: Text('Type', style: TextStyle(color: _muted))),
+            DataColumn(label: Text('Amount', style: TextStyle(color: _muted))),
+            DataColumn(label: Text('Status', style: TextStyle(color: _muted))),
           ],
           rows:
               _data.map((item) {
                 return DataRow(
                   cells: [
-                    DataCell(Text((item['bookingid'] ?? '-').toString())),
-                    DataCell(Text((item['fullname'] ?? '-').toString())),
-                    DataCell(Text((item['bookingtype'] ?? '-').toString())),
-                    DataCell(Text('₹${item['totalamount'] ?? '0'}')),
+                    DataCell(Text((item['bookingid'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text((item['fullname'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text((item['bookingtype'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text('₹${item['totalamount'] ?? '0'}', style: TextStyle(color: _ink))),
                     DataCell(
                       _statusChip((item['bookingstatus'] ?? '').toString()),
                     ),
@@ -171,18 +173,18 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
         final item = _data[i];
         return Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+            decoration: BoxDecoration(
+              color: _surface,
+              border: Border.all(color: Theme.of(context).dividerColor),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -224,10 +226,10 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             : Colors.orange.shade800;
     final bg =
         isSuccess
-            ? Colors.green.shade50
+            ? Colors.green.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25)
             : isFailed
-            ? Colors.red.shade50
-            : Colors.orange.shade50;
+            ? Colors.red.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25)
+            : Colors.orange.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25);
     return Chip(
       label: Text(
         normalized.isEmpty ? 'PENDING' : normalized,
@@ -250,7 +252,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           height: 58,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).dividerColor.withAlpha(50),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

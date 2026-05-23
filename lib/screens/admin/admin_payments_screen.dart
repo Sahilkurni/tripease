@@ -10,9 +10,11 @@ class AdminPaymentsScreen extends StatefulWidget {
 }
 
 class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   bool _loading = true;
   String? _error;
@@ -105,8 +107,8 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -134,7 +136,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
         child: DataTable(
           headingTextStyle: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            color: _ink,
+            color: _muted,
           ),
           columns: const [
             DataColumn(label: Text('Payment ID')),
@@ -147,13 +149,13 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
               _data.map((item) {
                 return DataRow(
                   cells: [
-                    DataCell(Text((item['paymentid'] ?? '-').toString())),
-                    DataCell(Text((item['bookingid'] ?? '-').toString())),
-                    DataCell(Text('₹${item['amount'] ?? '0'}')),
+                    DataCell(Text((item['paymentid'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text((item['bookingid'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text('₹${item['amount'] ?? '0'}', style: TextStyle(color: _ink))),
                     DataCell(
                       _statusChip((item['paymentstatus'] ?? '').toString()),
                     ),
-                    DataCell(Text((item['edatetime'] ?? '-').toString())),
+                    DataCell(Text((item['edatetime'] ?? '-').toString(), style: TextStyle(color: _ink))),
                   ],
                 );
               }).toList(),
@@ -172,12 +174,12 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200),
+            color: _surface,
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -224,10 +226,10 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
             : Colors.orange.shade800;
     final bg =
         isSuccess
-            ? Colors.green.shade50
+            ? Colors.green.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25)
             : isFailed
-            ? Colors.red.shade50
-            : Colors.orange.shade50;
+            ? Colors.red.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25)
+            : Colors.orange.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25);
     return Chip(
       label: Text(
         normalized.isEmpty ? 'PENDING' : normalized,
@@ -250,7 +252,7 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           height: 58,
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).dividerColor.withAlpha(50),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

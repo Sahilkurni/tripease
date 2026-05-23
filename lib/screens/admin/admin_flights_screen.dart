@@ -12,6 +12,12 @@ class AdminFlightsScreen extends StatefulWidget {
 }
 
 class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
+
   List<FlightModel> _flights = [];
   bool _isLoading = true;
 
@@ -49,7 +55,7 @@ class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkScaffold : AppColors.lightScaffold,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Manage Flights',
@@ -96,11 +102,11 @@ class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
           padding: const EdgeInsets.all(20),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
+              color: _surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -109,7 +115,7 @@ class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
             child: DataTable(
               columnSpacing: 30,
               headingRowColor: MaterialStateProperty.all(
-                AppColors.primary.withOpacity(0.1),
+                _primary.withAlpha(30),
               ),
               columns: [
                 _buildColumn('Airline'),
@@ -121,10 +127,10 @@ class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
               ],
               rows: _flights.map((flight) {
                 return DataRow(cells: [
-                  DataCell(Text(flight.airline, style: _cellStyle())),
-                  DataCell(Text(flight.flightNumber, style: _cellStyle())),
-                  DataCell(Text('${flight.fromCityName} -> ${flight.toCityName}', style: _cellStyle())),
-                  DataCell(Text('₹${flight.price}', style: _cellStyle())),
+                  DataCell(Text(flight.airline, style: _cellStyle().copyWith(color: _ink))),
+                  DataCell(Text(flight.flightNumber, style: _cellStyle().copyWith(color: _ink))),
+                  DataCell(Text('${flight.fromCityName} -> ${flight.toCityName}', style: _cellStyle().copyWith(color: _ink))),
+                  DataCell(Text('₹${flight.price}', style: _cellStyle().copyWith(color: _ink))),
                   DataCell(_buildStatusBadge(flight.status)),
                   DataCell(_buildActions(flight)),
                 ]);
@@ -140,7 +146,7 @@ class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
     return DataColumn(
       label: Text(
         label,
-        style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.primary),
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: _primary),
       ),
     );
   }
@@ -159,7 +165,7 @@ class _AdminFlightsScreenState extends State<AdminFlightsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

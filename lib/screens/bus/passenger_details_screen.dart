@@ -4,6 +4,11 @@ import '../../models/bus_model.dart';
 import '../../services/bus_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_service.dart';
+import '../../services/coupon_service.dart';
+import '../../models/coupon_model.dart';
+import '../../core/utils/validators.dart';
+import '../../widgets/coupon_selector.dart';
+
 
 class PassengerDetailsScreen extends StatefulWidget {
   final BusModel bus;
@@ -24,6 +29,17 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   final List<TextEditingController> _nameControllers = [];
   final List<TextEditingController> _ageControllers = [];
   final List<TextEditingController> _genderControllers = [];
+  final _contactEmailCtrl = TextEditingController();
+  final _contactMobileCtrl = TextEditingController();
+  final _couponController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  double _discountAmount = 0.0;
+  CouponModel? _appliedCoupon;
+  CouponModel? _bestCoupon;
+  bool _isApplyingCoupon = false;
+
+  double get _finalAmount => _totalAmount - _discountAmount;
+
 
   @override
   void initState() {
@@ -37,6 +53,23 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       onSuccess: _onPaymentSuccess,
       onError: _onPaymentError,
     );
+    final user = authService.currentUser;
+    if (user != null) {
+      _contactEmailCtrl.text = user.email;
+      _fetchBestCoupon(user.userid);
+    }
+  }
+
+  Future<void> _fetchBestCoupon(String userId) async {
+    final best = await couponService.getBestCoupon(
+      userId: int.parse(userId),
+      amount: _totalAmount,
+      serviceType: 'bus',
+      serviceId: widget.bus.busid,
+    );
+    if (mounted) {
+      setState(() => _bestCoupon = best);
+    }
   }
 
   void _onPaymentSuccess(String paymentId) {
@@ -45,7 +78,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
   void _onPaymentError(String error) {
     // FOR TESTING: Proceed with booking even if payment fails
-    print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
+    // print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
     _createBookings("TEST_PAYMENT_BYPASS");
   }
 
@@ -62,8 +95,51 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     for (var c in _nameControllers) c.dispose();
     for (var c in _ageControllers) c.dispose();
     for (var c in _genderControllers) c.dispose();
+    _contactEmailCtrl.dispose();
+    _contactMobileCtrl.dispose();
+    _couponController.dispose();
     paymentService.dispose();
+
     super.dispose();
+  }
+
+  Future<void> _applyCoupon() async {
+    final code = _couponController.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+
+    final user = authService.currentUser;
+    if (user == null || user.userid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to apply coupon')),
+      );
+      return;
+    }
+
+    setState(() => _isApplyingCoupon = true);
+    
+    final result = await couponService.applyCoupon(
+      couponCode: code,
+      userId: int.parse(user.userid),
+      serviceType: 'bus',
+      serviceId: widget.bus.busid,
+      amount: _totalAmount,
+    );
+
+    setState(() => _isApplyingCoupon = false);
+
+    if (result != null && result['status'] == 'success') {
+      setState(() {
+        _appliedCoupon = CouponModel.fromJson(result['data']);
+        _discountAmount = double.tryParse(result['data']['discount_amount'].toString()) ?? 0.0;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Coupon applied! You saved ₹$_discountAmount')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result?['message'] ?? 'Invalid coupon')),
+      );
+    }
   }
 
   Future<void> _handleBooking() async {
@@ -75,24 +151,18 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       return;
     }
 
-    // Validate names
-    for (int i = 0; i < _nameControllers.length; i++) {
-      if (_nameControllers[i].text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please enter name for Seat ${widget.selectedSeats[i].seatNo}')),
-        );
-        return;
-      }
-    }
+    if (!_formKey.currentState!.validate()) return;
+
 
     setState(() => _isLoading = true);
 
     paymentService.openPayment(
-      amount: _totalAmount,
+      amount: _finalAmount,
       name: "TripEase Bus",
       description: "Booking for ${widget.bus.busName}",
-      email: user.email,
+      email: _contactEmailCtrl.text.trim(),
     );
+
   }
 
   Future<void> _createBookings(String paymentId) async {
@@ -110,6 +180,18 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           age: _ageControllers[i].text,
           gender: _genderControllers[i].text,
           paymentId: paymentId,
+        );
+      }
+
+      if (_appliedCoupon != null) {
+        // Record coupon usage
+        await couponService.recordCouponUsage(
+          couponId: _appliedCoupon!.couponid,
+          userId: int.parse(user.userid),
+          bookingId: 0,
+          serviceType: 'bus',
+          serviceId: widget.bus.busid,
+          discountAmount: _discountAmount,
         );
       }
 
@@ -181,15 +263,19 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+
                 padding: const EdgeInsets.all(20),
                 children: [
                   _buildSummaryCard(isDark),
                   const SizedBox(height: 32),
                   _buildContactSection(isDark),
+                  const SizedBox(height: 32),
+                  _buildCouponSection(isDark),
                   const SizedBox(height: 32),
                   Text(
                     'Passenger Details (${widget.selectedSeats.length})',
@@ -210,6 +296,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                   const SizedBox(height: 120),
                 ],
               ),
+            ),
+
       bottomSheet: _buildBottomBar(isDark),
     );
   }
@@ -289,20 +377,27 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         ),
         const SizedBox(height: 16),
         TextFormField(
+          controller: _contactEmailCtrl,
+          keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'Email Address',
             prefixIcon: const Icon(Icons.email_outlined),
             fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           ),
+          validator: Validators.validateEmail,
         ),
         const SizedBox(height: 16),
         TextFormField(
+          controller: _contactMobileCtrl,
+          keyboardType: TextInputType.phone,
           decoration: InputDecoration(
             labelText: 'Mobile Number',
             prefixIcon: const Icon(Icons.phone_outlined),
             fillColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           ),
+          validator: Validators.validatePhone,
         ),
+
       ],
     );
   }
@@ -341,13 +436,15 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          TextFormField(
-            controller: _nameControllers[index],
-            decoration: const InputDecoration(
-              labelText: 'Full Name',
-              prefixIcon: Icon(Icons.person_outline),
+            TextFormField(
+              controller: _nameControllers[index],
+              decoration: const InputDecoration(
+                labelText: 'Full Name',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              validator: (v) => Validators.validateRequired(v, 'name'),
             ),
-          ),
+
           const SizedBox(height: 16),
           Row(
             children: [
@@ -363,12 +460,15 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: TextFormField(
-                  controller: _genderControllers[index],
+                child: DropdownButtonFormField<String>(
+                  value: _genderControllers[index].text.isEmpty ? null : _genderControllers[index].text,
+                  items: ['Male', 'Female', 'Other'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                  onChanged: (v) => _genderControllers[index].text = v ?? '',
                   decoration: const InputDecoration(
                     labelText: 'Gender',
                     prefixIcon: Icon(Icons.wc_outlined),
                   ),
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
               ),
             ],
@@ -379,11 +479,6 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   }
 
   Widget _buildBottomBar(bool isDark) {
-    double totalFare = 0;
-    for (var seat in widget.selectedSeats) {
-      totalFare += widget.bus.baseFare + seat.extraFare;
-    }
-
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -400,7 +495,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           ),
         ],
       ),
-      child: SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -413,13 +509,18 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                   style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
                 ),
                 Text(
-                  '₹${totalFare.toStringAsFixed(0)}',
+                  '₹${_finalAmount.toStringAsFixed(0)}',
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF2563EB),
                   ),
                 ),
+                if (_discountAmount > 0)
+                  Text(
+                    'Saved ₹${_discountAmount.toStringAsFixed(0)}',
+                    style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
               ],
             ),
             ElevatedButton(
@@ -445,6 +546,151 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCouponSection(bool isDark) {
+    return Column(
+      children: [
+        if (_bestCoupon != null && _appliedCoupon == null)
+          GestureDetector(
+            onTap: () {
+              _couponController.text = _bestCoupon!.couponcode;
+              _applyCoupon();
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withAlpha(50)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.stars_rounded, color: Colors.green, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Save ₹${_bestCoupon!.calculateSavings(_totalAmount).toStringAsFixed(0)} more with "${_bestCoupon!.couponcode}"!',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'APPLY',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Have a Coupon?', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+                  TextButton.icon(
+                    onPressed: () => CouponSelector.show(
+                      context: context,
+                      serviceType: 'bus',
+                      serviceId: widget.bus.busid,
+                      amount: _totalAmount,
+                      onSelect: (c) {
+                        _couponController.text = c.couponcode;
+                        _applyCoupon();
+                      },
+                    ),
+                    icon: const Icon(Icons.local_offer_rounded, size: 18),
+                    label: const Text('View Offers'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF2563EB),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _couponController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter code',
+                        prefixIcon: const Icon(Icons.local_offer_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Material(
+                    color: const Color(0xFF2563EB),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: _isApplyingCoupon ? null : _applyCoupon,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 90,
+                        height: 50,
+                        alignment: Alignment.center,
+                        child: _isApplyingCoupon
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : Text(
+                                'Apply',
+                                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (_appliedCoupon != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.green.withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.withAlpha(50)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Coupon "${_appliedCoupon!.couponcode}" applied! Saved ₹${_discountAmount.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

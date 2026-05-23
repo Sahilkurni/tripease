@@ -21,6 +21,8 @@ class ApiConfig {
   // Common endpoints
   static String get login => '${baseUrl}login.php';
   static String get register => '${baseUrl}register.php';
+  static String get sendOtp => '${baseUrl}send_otp.php';
+  static String get verifyOtp => '${baseUrl}verify_otp.php';
 
   // Hotel endpoints
   static String get hotels => '${baseUrl}get_hotels.php';
@@ -51,4 +53,22 @@ class ApiConfig {
   static String get updateFlight => '${baseUrl}update_flight.php';
   static String get deleteFlight => '${baseUrl}delete_flight.php';
   static String get nearbyItems => '${baseUrl}get_nearby_items.php';
+
+  // Coupon endpoints
+  static String get createCoupon => '${baseUrl}create_coupon.php';
+  static String get updateCoupon => '${baseUrl}update_coupon.php';
+  static String get deleteCoupon => '${baseUrl}delete_coupon.php';
+  static String get getCoupons => '${baseUrl}get_coupons.php';
+  static String get applyCoupon => '${baseUrl}apply_coupon.php';
+  static String get recordCouponUsage => '${baseUrl}record_coupon_usage.php';
+  static String get approveCoupon => '${baseUrl}admin/approve_coupon.php';
+  static String get getCouponUsage => '${baseUrl}get_coupon_usage.php';
+
+  // Offer endpoints
+  static String get createOffer => '${baseUrl}create_offer.php';
+  static String get updateOffer => '${baseUrl}update_offer.php';
+  static String get deleteOffer => '${baseUrl}delete_offer.php';
+  static String get getOffers => '${baseUrl}get_offers.php';
+  static String get offerDetails => '${baseUrl}get_offer_details.php';
+  static String get approveOffer => '${baseUrl}admin/approve_offer.php';
 }

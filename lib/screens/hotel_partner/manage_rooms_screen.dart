@@ -29,6 +29,12 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
   bool _isLoading = true;
   List<RoomItem> _rooms = [];
   List<RoomTypeItem> _roomTypes = [];
+  
+  // Theme aware color getters
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   @override
   void initState() {
@@ -130,7 +136,7 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
         children: [
           Text(
             title,
-            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+            style: GoogleFonts.poppins(color: Colors.white.withAlpha(200), fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
@@ -155,10 +161,14 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
             : _rooms.fold(0.0, (sum, r) => sum + r.price) / _rooms.length;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: _surface,
+        elevation: 0,
+        iconTheme: IconThemeData(color: _ink),
         title: Text(
           'Rooms — ${widget.hotelname}',
-          style: GoogleFonts.poppins(),
+          style: GoogleFonts.poppins(color: _ink, fontWeight: FontWeight.w600),
         ),
       ),
       body:
@@ -168,11 +178,13 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.blue, Colors.blueAccent],
+                        colors: [_primary, _primary.withAlpha(200)],
                       ),
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                    margin: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         _buildStat(
@@ -190,7 +202,7 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
                   Expanded(
                     child:
                         _rooms.isEmpty
-                            ? const Center(child: Text('No rooms added yet.'))
+                            ? Center(child: Text('No rooms added yet.', style: GoogleFonts.poppins(color: _muted)))
                             : ListView.builder(
                               padding: const EdgeInsets.all(16),
                               itemCount: _rooms.length,
@@ -224,6 +236,7 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .bold,
+                                                              color: _ink,
                                                             ),
                                                       ),
                                                     ),
@@ -257,16 +270,16 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
                                                 const SizedBox(height: 12),
                                                 Row(
                                                   children: [
-                                                    const Icon(
+                                                    Icon(
                                                       Icons.people,
                                                       size: 16,
-                                                      color: Colors.grey,
+                                                      color: _muted,
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Text(
                                                       'Max ${r.capacity} guests',
-                                                      style: const TextStyle(
-                                                        color: Colors.grey,
+                                                      style: TextStyle(
+                                                        color: _muted,
                                                       ),
                                                     ),
                                                   ],
@@ -274,16 +287,16 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
                                                 const SizedBox(height: 4),
                                                 Row(
                                                   children: [
-                                                    const Icon(
+                                                    Icon(
                                                       Icons.meeting_room,
                                                       size: 16,
-                                                      color: Colors.grey,
+                                                      color: _muted,
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Text(
                                                       '${r.totalrooms} rooms available',
-                                                      style: const TextStyle(
-                                                        color: Colors.grey,
+                                                      style: TextStyle(
+                                                        color: _muted,
                                                       ),
                                                     ),
                                                   ],
@@ -303,9 +316,9 @@ class _ManageRoomsScreenState extends State<ManageRoomsScreen> {
                                                     const Spacer(),
                                                     Text(
                                                       '+ ₹${r.extraBedPrice} extra bed',
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 12,
-                                                        color: Colors.grey,
+                                                        color: _muted,
                                                       ),
                                                     ),
                                                   ],
@@ -385,6 +398,12 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
   final _priceCtrl = TextEditingController();
   final _extraCtrl = TextEditingController();
   bool _isSaving = false;
+  
+  // Theme aware color getters
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   // ── Image handling ──
   final ImagePicker _picker = ImagePicker();
@@ -501,7 +520,7 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
       await HotelPartnerService.saveRoom(payload);
       widget.onSaved();
     } catch (e) {
-      print('Error: $e');
+      // print('Error: $e');
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(
@@ -520,7 +539,7 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
           style: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF1E293B),
+            color: _ink,
           ),
         ),
         const SizedBox(height: 12),
@@ -552,11 +571,11 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isPrimary
-                                  ? const Color(0xFF2563EB)
+                                  ? _primary
                                   : Colors.transparent,
                               width: 2,
                             ),
-                            color: Colors.grey[200],
+                            color: Theme.of(context).dividerColor.withAlpha(20),
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: Image.memory(
@@ -574,8 +593,8 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                           onTap: () => _removeExistingImage(idx),
                           child: Container(
                             padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                                color: Colors.white, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                                color: _surface, shape: BoxShape.circle),
                             child: const Icon(Icons.close,
                                 size: 16, color: Colors.red),
                           ),
@@ -589,7 +608,7 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withAlpha(200),
+                              color: _primary.withAlpha(200),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text('Primary',
@@ -616,11 +635,11 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: isPrimary
-                                ? const Color(0xFF2563EB)
+                                ? _primary
                                 : const Color(0xFF10B981),
                             width: 2,
                           ),
-                          color: Colors.grey[200],
+                          color: Theme.of(context).dividerColor.withAlpha(20),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: FutureBuilder<Uint8List>(
@@ -643,8 +662,8 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                           onTap: () => _removeNewImage(idx),
                           child: Container(
                             padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                                color: Colors.white, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                                color: _surface, shape: BoxShape.circle),
                             child: const Icon(Icons.close,
                                 size: 16, color: Colors.red),
                           ),
@@ -658,7 +677,7 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: isPrimary
-                                ? const Color(0xFF2563EB).withAlpha(200)
+                                ? _primary.withAlpha(200)
                                 : const Color(0xFF10B981).withAlpha(200),
                             borderRadius: BorderRadius.circular(4),
                           ),
@@ -700,9 +719,9 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
       initialChildSize: 0.9,
       builder:
           (ctx, scrollController) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: _surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             padding: const EdgeInsets.all(24),
             child: Form(
@@ -715,6 +734,7 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      color: _ink,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -835,6 +855,7 @@ class _RoomBottomSheetState extends State<_RoomBottomSheet> {
                   ElevatedButton(
                     onPressed: _isSaving ? null : _save,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: _primary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child:

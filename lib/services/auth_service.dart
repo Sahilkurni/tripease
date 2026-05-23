@@ -7,7 +7,8 @@ import '../models/user_model.dart';
 import 'google_auth_service.dart';
 import '../core/api_config.dart';
 
-class AuthService {
+class AuthService extends ChangeNotifier {
+
   // Use centralized baseUrl from ApiConfig
   static String get baseUrl => ApiConfig.baseUrl;
 
@@ -19,7 +20,9 @@ class AuthService {
     final userJson = prefs.getString('user_session');
     if (userJson != null) {
       currentUser = UserModel.fromJson(jsonDecode(userJson));
+      notifyListeners();
     }
+
   }
 
   Future<void> saveSession(UserModel user) async {
@@ -32,7 +35,11 @@ class AuthService {
     }
     if (user.partnerid != null) {
       await prefs.setInt('partnerid', user.partnerid!);
+    } else {
+      await prefs.remove('partnerid');
     }
+    notifyListeners();
+
   }
 
   Future<void> clearSession() async {
@@ -45,19 +52,21 @@ class AuthService {
       await GoogleAuthService.signOut();
     } catch (e) {
       // Log and ignore sign-out errors (plugin may be missing on some platforms)
-      debugPrint('Google sign-out ignored: $e');
+      // debugPrint('Google sign-out ignored: $e');
     }
+    notifyListeners();
+
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = ApiConfig.login;
-    debugPrint("API POST -> $url | Body: {email: $email}");
+    // debugPrint("API POST -> $url | Body: {email: $email}");
     try {
       final response = await http.post(
         Uri.parse(url),
         body: {'email': email, 'password': password},
       );
-      debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
+      // debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -78,7 +87,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      debugPrint("API ERROR -> $e");
+      // debugPrint("API ERROR -> $e");
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -90,7 +99,7 @@ class AuthService {
     String roleId,
   ) async {
     final url = ApiConfig.register;
-    debugPrint("API POST -> $url | Body: {email: $email, roleid: $roleId}");
+    // debugPrint("API POST -> $url | Body: {email: $email, roleid: $roleId}");
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -101,7 +110,7 @@ class AuthService {
           'roleid': roleId,
         },
       );
-      debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
+      // debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -122,7 +131,43 @@ class AuthService {
         };
       }
     } catch (e) {
-      debugPrint("API ERROR -> $e");
+      // debugPrint("API ERROR -> $e");
+      return {'success': false, 'message': 'Connection error: $e'};
+    }
+  }
+  Future<Map<String, dynamic>> sendOtp(String email) async {
+    final url = ApiConfig.sendOtp;
+    try {
+      final response = await http.post(Uri.parse(url), body: {'email': email});
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['status'] == 'success',
+          'message': data['message'] ?? (data['status'] == 'success' ? 'OTP sent successfully' : 'Failed to send OTP'),
+        };
+      }
+      return {'success': false, 'message': 'Server error: ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': 'Connection error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    final url = ApiConfig.verifyOtp;
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        body: {'email': email, 'otp_code': otp},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['status'] == 'success',
+          'message': data['message'] ?? (data['status'] == 'success' ? 'OTP verified successfully' : 'Invalid OTP'),
+        };
+      }
+      return {'success': false, 'message': 'Server error: ${response.statusCode}'};
+    } catch (e) {
       return {'success': false, 'message': 'Connection error: $e'};
     }
   }
@@ -134,7 +179,7 @@ class AuthService {
     String firebaseUid,
   ) async {
     final url = '${ApiConfig.baseUrl}google_auth_sync.php';
-    debugPrint("API POST -> $url | Body: {email: $email}");
+    // debugPrint("API POST -> $url | Body: {email: $email}");
     try {
       final response = await _dio.post(
         url,
@@ -147,7 +192,7 @@ class AuthService {
       );
 
       final data = response.data is String ? jsonDecode(response.data) : response.data;
-      debugPrint("API RESPONSE -> $data");
+      // debugPrint("API RESPONSE -> $data");
 
       if (data != null && data['status'] == 'success') {
         final user = UserModel.fromJson(data['data'] ?? data);
@@ -158,14 +203,14 @@ class AuthService {
         return {'success': false, 'message': data?['message'] ?? 'Sync failed'};
       }
     } catch (e) {
-      debugPrint("API ERROR -> $e");
+      // debugPrint("API ERROR -> $e");
       return {'success': false, 'message': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> updateRole(String userId, String roleId) async {
     final url = '${ApiConfig.baseUrl}update_role.php';
-    debugPrint("API POST -> $url | Body: {userid: $userId, roleid: $roleId}");
+    // debugPrint("API POST -> $url | Body: {userid: $userId, roleid: $roleId}");
     try {
       final response = await _dio.post(
         url,
@@ -173,7 +218,7 @@ class AuthService {
       );
 
       final data = response.data is String ? jsonDecode(response.data) : response.data;
-      debugPrint("API RESPONSE -> $data");
+      // debugPrint("API RESPONSE -> $data");
 
       if (data != null && data['status'] == 'success') {
         if (currentUser != null) {
@@ -191,7 +236,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      debugPrint("API ERROR -> $e");
+      // debugPrint("API ERROR -> $e");
       return {'success': false, 'message': e.toString()};
     }
   }

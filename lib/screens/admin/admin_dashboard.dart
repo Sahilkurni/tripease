@@ -27,11 +27,13 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  static const Color _primary = Color(0xFF2563EB);
-  static const Color _accent = Color(0xFF8B5CF6);
-  static const Color _bg = Color(0xFFF8FAFC);
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
+  // Colors will be derived from theme in build() or getters
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _accent => Theme.of(context).colorScheme.secondary;
+  Color get _bg => Theme.of(context).scaffoldBackgroundColor;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
 
   int _selectedIndex = 0;
   bool _isLoading = true;
@@ -117,9 +119,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               isDesktop
                   ? null
                   : AppBar(
-                    backgroundColor: Colors.white,
+                    backgroundColor: _surface,
                     elevation: 0,
-                    iconTheme: const IconThemeData(color: _ink),
+                    iconTheme: IconThemeData(color: _ink),
                     title: Text(
                       'Admin Panel',
                       style: GoogleFonts.poppins(
@@ -154,10 +156,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       width: isDesktop ? 260 : null,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surface,
         border:
             isDesktop
-                ? Border(right: BorderSide(color: Colors.grey.shade200))
+                ? Border(right: BorderSide(color: Theme.of(context).dividerColor))
                 : null,
       ),
       child: Column(
@@ -172,7 +174,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     color: _primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.shield_rounded, color: _primary),
+                  child: Icon(Icons.shield_rounded, color: _primary),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -257,9 +259,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 40, width: 250, color: Colors.grey.shade200),
+          Container(height: 40, width: 250, color: Theme.of(context).dividerColor.withAlpha(50)),
           const SizedBox(height: 8),
-          Container(height: 20, width: 350, color: Colors.grey.shade200),
+          Container(height: 20, width: 350, color: Theme.of(context).dividerColor.withAlpha(50)),
           const SizedBox(height: 32),
           GridView.builder(
             shrinkWrap: true,
@@ -274,7 +276,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             itemBuilder:
                 (_, __) => Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Theme.of(context).dividerColor.withAlpha(50),
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
@@ -283,7 +285,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Container(
             height: 400,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: Theme.of(context).dividerColor.withAlpha(50),
               borderRadius: BorderRadius.circular(20),
             ),
           ),
@@ -558,7 +560,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         mName,
-                        style: const TextStyle(fontSize: 12, color: _muted),
+                        style: TextStyle(fontSize: 12, color: _muted),
                       ),
                     );
                   }
@@ -670,7 +672,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         mName,
-                        style: const TextStyle(fontSize: 12, color: _muted),
+                        style: TextStyle(fontSize: 12, color: _muted),
                       ),
                     );
                   }
@@ -696,16 +698,17 @@ class _ChartContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 380,
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -826,18 +829,22 @@ class _SidebarItemState extends State<_SidebarItem> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = Theme.of(context).colorScheme.primary;
+    final muted = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     final color =
         widget.isDestructive
             ? Colors.redAccent
             : widget.isActive
-            ? const Color(0xFF2563EB)
-            : const Color(0xFF64748B);
+            ? primary
+            : muted;
 
     final bgColor =
         widget.isActive
-            ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+            ? primary.withAlpha(isDark ? 40 : 25)
             : _isHovered
-            ? Colors.grey.shade100
+            ? (isDark ? Colors.white10 : Colors.grey.shade100)
             : Colors.transparent;
 
     return Padding(

@@ -7,10 +7,10 @@ class PackageService {
   // Fetch packages for a specific agent
   Future<List<PackageModel>> getAgentPackages(int partnerId) async {
     final url = '${ApiConfig.baseUrl}agent/packages.php?partnerid=$partnerId';
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -23,7 +23,7 @@ class PackageService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }
@@ -31,10 +31,10 @@ class PackageService {
   // Fetch all approved packages for home
   Future<List<PackageModel>> getHomePackages() async {
     final url = ApiConfig.searchPackages;
-    print("API URL: $url");
+    // print("API URL: $url");
     try {
       final response = await http.get(Uri.parse(url));
-      print("Response: ${response.body}");
+      // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -47,7 +47,7 @@ class PackageService {
         throw Exception("API failed with status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       rethrow;
     }
   }

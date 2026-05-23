@@ -78,7 +78,7 @@ class LocationService {
       }
       return location;
     } catch (e) {
-      debugPrint("Location refresh error: $e");
+      // debugPrint("Location refresh error: $e");
       return null;
     }
   }
@@ -106,7 +106,7 @@ class LocationService {
         );
       }
     } catch (e) {
-      debugPrint("Reverse geocoding error: $e");
+      // debugPrint("Reverse geocoding error: $e");
     }
     return null;
   }

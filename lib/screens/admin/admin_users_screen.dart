@@ -12,9 +12,11 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
-  static const Color _ink = Color(0xFF0F172A);
-  static const Color _muted = Color(0xFF64748B);
-  static const Color _primary = Color(0xFF2563EB);
+  // Colors will be derived from theme in build()
+  Color get _primary => Theme.of(context).colorScheme.primary;
+  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
+  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _surface => Theme.of(context).cardColor;
   static const String _allRoles = 'ALL';
 
   bool _loading = true;
@@ -145,8 +147,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _surface,
+                border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -251,7 +253,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         child: DataTable(
           headingTextStyle: GoogleFonts.poppins(
             fontWeight: FontWeight.w700,
-            color: _ink,
+            color: _muted,
           ),
           columns: const [
             DataColumn(label: Text('User ID')),
@@ -266,12 +268,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 final isActive = (u['isactive'] ?? '0').toString() == '1';
                 return DataRow(
                   cells: [
-                    DataCell(Text('${u['userid'] ?? '-'}')),
+                    DataCell(Text('${u['userid'] ?? '-'}', style: TextStyle(color: _ink))),
                     DataCell(
-                      Text((u['fullname'] ?? u['name'] ?? '-').toString()),
+                      Text((u['fullname'] ?? u['name'] ?? '-').toString(), style: TextStyle(color: _ink)),
                     ),
-                    DataCell(Text((u['email'] ?? '-').toString())),
-                    DataCell(Text(_roleLabel((u['roleid'] ?? '').toString()))),
+                    DataCell(Text((u['email'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text(_roleLabel((u['roleid'] ?? '').toString()), style: TextStyle(color: _ink))),
                     DataCell(_statusChip(isActive)),
                     DataCell(
                       Switch(
@@ -297,19 +299,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         final u = users[index];
         final isActive = (u['isactive'] ?? '0').toString() == '1';
         return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).dividerColor),
+              borderRadius: BorderRadius.circular(20),
+              color: _surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -379,7 +381,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor: isActive ? Colors.green.shade50 : Colors.red.shade50,
+      backgroundColor: isActive 
+          ? Colors.green.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25) 
+          : Colors.red.withAlpha(Theme.of(context).brightness == Brightness.dark ? 40 : 25),
     );
   }
 
@@ -407,13 +411,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       itemCount: 5,
       itemBuilder:
           (_, __) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(20),
-            ),
+          margin: const EdgeInsets.only(bottom: 10),
+          height: 140,
+          decoration: BoxDecoration(
+            color: Theme.of(context).dividerColor.withAlpha(50),
+            borderRadius: BorderRadius.circular(20),
           ),
+        ),
     );
   }
 

@@ -55,14 +55,14 @@ class AgentService {
     try {
       final uri = Uri.parse('$_base/agent/getCategories.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      print('API Response (getCategories): ${res.body}');
+      // print('API Response (getCategories): ${res.body}');
       final data = jsonDecode(res.body)['data'];
       if (data is List) {
         return data.map((e) => CategoryItem.fromJson(e)).toList();
       }
       return [];
     } catch (e) {
-      print('getCategories failed: $e');
+      // print('getCategories failed: $e');
       return [];
     }
   }
@@ -72,14 +72,14 @@ class AgentService {
     try {
       final uri = Uri.parse('$_base/agent/getCities.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      print('API Response (getCities): ${res.body}');
+      // print('API Response (getCities): ${res.body}');
       final data = jsonDecode(res.body)['data'];
       if (data is List) {
         return data.map((e) => CityItem.fromJson(e)).toList();
       }
       return [];
     } catch (e) {
-      print('getCities failed: $e');
+      // print('getCities failed: $e');
       return [];
     }
   }
@@ -94,14 +94,14 @@ class AgentService {
             body: jsonEncode({'cityname': cityName, 'uid': uid}),
           )
           .timeout(const Duration(seconds: 10));
-      print('API Response (addCity): ${res.body}');
+      // print('API Response (addCity): ${res.body}');
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
         return CityItem.fromJson(json['data']);
       }
       throw Exception(json['message']);
     } catch (e) {
-      print('addCity failed: $e');
+      // print('addCity failed: $e');
       throw Exception('addCity failed: $e');
     }
   }
@@ -120,7 +120,7 @@ class AgentService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
-      print('API Response (savePackageRaw): ${res.body}');
+      // print('API Response (savePackageRaw): ${res.body}');
 
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
@@ -128,7 +128,7 @@ class AgentService {
       }
       throw Exception(json['message']);
     } catch (e) {
-      print('savePackageRaw failed: $e');
+      // print('savePackageRaw failed: $e');
       throw Exception('savePackageRaw failed: $e');
     }
   }
@@ -174,7 +174,7 @@ class AgentService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
-      print('API Response (savePackage): ${res.body}');
+      // print('API Response (savePackage): ${res.body}');
 
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
@@ -182,7 +182,7 @@ class AgentService {
       }
       throw Exception(json['message']);
     } catch (e) {
-      print('savePackage failed: $e');
+      // print('savePackage failed: $e');
       throw Exception('savePackage failed: $e');
     }
   }
@@ -198,14 +198,14 @@ class AgentService {
         '?packageid=$packageid&partnerid=$partnerid',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      print('API Response (getPackageDetail): ${res.body}');
+      // print('API Response (getPackageDetail): ${res.body}');
       final json = jsonDecode(res.body);
       if (json['status'] == 'success') {
         return json['data'] as Map<String, dynamic>;
       }
       throw Exception(json['message']);
     } catch (e) {
-      print('getPackageDetail failed: $e');
+      // print('getPackageDetail failed: $e');
       throw Exception('getPackageDetail failed: $e');
     }
   }
