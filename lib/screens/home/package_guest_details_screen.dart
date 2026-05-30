@@ -1,30 +1,34 @@
 import 'package:flutter/material.dart';
-import '../../models/room_model.dart';
-import '../../services/hotel_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/coupon_service.dart';
 import '../../models/coupon_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/coupon_selector.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../core/api_config.dart';
+import '../../core/constants/app_colors.dart';
 
-class GuestDetailsScreen extends StatefulWidget {
-  final String hotelId;
-  final String hotelName;
-  final RoomModel room;
+class PackageGuestDetailsScreen extends StatefulWidget {
+  final String packageId;
+  final String packageName;
+  final double price;
+  final String? imageUrl;
 
-  const GuestDetailsScreen({
+  const PackageGuestDetailsScreen({
     super.key,
-    required this.hotelId,
-    required this.hotelName,
-    required this.room,
+    required this.packageId,
+    required this.packageName,
+    required this.price,
+    this.imageUrl,
   });
 
   @override
-  State<GuestDetailsScreen> createState() => _GuestDetailsScreenState();
+  State<PackageGuestDetailsScreen> createState() => _PackageGuestDetailsScreenState();
 }
 
-class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
+class _PackageGuestDetailsScreenState extends State<PackageGuestDetailsScreen> {
   bool _isLoading = false;
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
@@ -32,13 +36,13 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
   final _paxController = TextEditingController(text: '1');
   final _couponController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   double _discountAmount = 0.0;
   CouponModel? _appliedCoupon;
   CouponModel? _bestCoupon;
   bool _isApplyingCoupon = false;
 
-  double get _finalAmount => widget.room.price - _discountAmount;
+  double get _finalAmount => widget.price - _discountAmount;
   String get _formattedAmount => _finalAmount.toStringAsFixed(0);
 
   @override
@@ -61,9 +65,9 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
   Future<void> _fetchBestCoupon(String userId) async {
     final best = await couponService.getBestCoupon(
       userId: int.parse(userId),
-      amount: widget.room.price,
-      serviceType: 'hotel',
-      serviceId: int.tryParse(widget.hotelId),
+      amount: widget.price,
+      serviceType: 'package',
+      serviceId: int.tryParse(widget.packageId),
     );
     if (mounted) {
       setState(() => _bestCoupon = best);
@@ -106,14 +110,14 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
     setState(() => _isApplyingCoupon = true);
     final user = authService.currentUser;
     if (user == null) return;
-    
+
     try {
       final result = await couponService.applyCoupon(
         couponCode: code,
         userId: int.tryParse(user.userid) ?? 0,
-        serviceType: 'hotel',
-        serviceId: int.tryParse(widget.hotelId) ?? 0,
-        amount: widget.room.price,
+        serviceType: 'package',
+        serviceId: int.tryParse(widget.packageId) ?? 0,
+        amount: widget.price,
       );
 
       if (mounted) setState(() => _isApplyingCoupon = false);
@@ -151,8 +155,8 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
     try {
       paymentService.openPayment(
         amount: _finalAmount,
-        name: "TripEase Hotel",
-        description: "Booking for ${widget.hotelName} - ${widget.room.roomtype}",
+        name: "TripEase Package",
+        description: "Booking for ${widget.packageName}",
         email: user.email,
       );
     } catch (e) {
@@ -164,28 +168,32 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
   Future<void> _createBooking(String paymentId) async {
     final user = authService.currentUser;
     if (user == null) return;
-    
+
     try {
-      final bookingId = await hotelService.createBooking(
-        userId: int.tryParse(user.userid) ?? 0,
-        hotelId: int.tryParse(widget.hotelId) ?? 0,
-        roomId: widget.room.roomid,
-        amount: _finalAmount,
-        guestName: _nameController.text,
-        age: _ageController.text,
-        gender: _genderController.text,
-        paymentId: paymentId,
+      final response = await http.post(
+        Uri.parse(ApiConfig.createPackageBooking),
+        body: {
+          'userid': user.userid.toString(),
+          'packageid': widget.packageId,
+          'amount': _finalAmount.toString(),
+          'payment_id': paymentId,
+          'guest_name': _nameController.text,
+          'guest_age': _ageController.text,
+          'guest_gender': _genderController.text,
+        },
       );
 
-      final success = bookingId != null && bookingId > 0;
+      final data = jsonDecode(response.body);
+      final success = data['status'] == 'success';
+      final bookingId = int.tryParse(data['data']?['bookingid']?.toString() ?? '') ?? 0;
 
-      if (success && _appliedCoupon != null) {
+      if (success && _appliedCoupon != null && bookingId > 0) {
         await couponService.recordCouponUsage(
           couponId: _appliedCoupon!.couponid,
           userId: int.tryParse(user.userid) ?? 0,
           bookingId: bookingId,
-          serviceType: 'hotel',
-          serviceId: int.tryParse(widget.hotelId) ?? 0,
+          serviceType: 'package',
+          serviceId: int.tryParse(widget.packageId) ?? 0,
           discountAmount: _discountAmount,
         );
       }
@@ -205,7 +213,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
                 Text('Booking Confirmed'),
               ],
             ),
-            content: const Text('Your hotel room has been booked successfully!'),
+            content: const Text('Your travel package has been booked successfully!'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -218,7 +226,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking failed. Please try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? 'Booking failed. Please try again.')));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -267,7 +275,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -276,17 +284,15 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.hotelName.trim().isNotEmpty) ...[
-            Text(widget.hotelName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
-            const SizedBox(height: 4),
-          ],
-          Text(widget.room.roomtype, style: TextStyle(color: Colors.white, fontWeight: widget.hotelName.trim().isEmpty ? FontWeight.w700 : FontWeight.normal, fontSize: widget.hotelName.trim().isEmpty ? 18 : 14)),
+          Text(widget.packageName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+          const SizedBox(height: 4),
+          const Text('Travel Package Tour', style: TextStyle(color: Colors.white70, fontSize: 14)),
           const Divider(color: Colors.white24, height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Original Amount:', style: TextStyle(color: Colors.white70)),
-              Text('₹${widget.room.price}', style: const TextStyle(color: Colors.white, decoration: TextDecoration.lineThrough)),
+              Text('₹${widget.price.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, decoration: TextDecoration.lineThrough)),
             ],
           ),
           if (_discountAmount > 0) ...[
@@ -386,7 +392,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Save ₹${_bestCoupon!.calculateSavings(widget.room.price).toStringAsFixed(0)} more with "${_bestCoupon!.couponcode}"!',
+                      'Save ₹${_bestCoupon!.calculateSavings(widget.price).toStringAsFixed(0)} more with "${_bestCoupon!.couponcode}"!',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -423,9 +429,9 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
                   TextButton.icon(
                     onPressed: () => CouponSelector.show(
                       context: context,
-                      serviceType: 'hotel',
-                      serviceId: int.tryParse(widget.hotelId),
-                      amount: widget.room.price,
+                      serviceType: 'package',
+                      serviceId: int.tryParse(widget.packageId),
+                      amount: widget.price,
                       onSelect: (c) {
                         _couponController.text = c.couponcode;
                         _applyCoupon();
@@ -456,7 +462,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
                   ),
                   const SizedBox(width: 12),
                   Material(
-                    color: const Color(0xFF2563EB),
+                    color: const Color(0xFF8B5CF6),
                     borderRadius: BorderRadius.circular(12),
                     child: InkWell(
                       onTap: _isApplyingCoupon ? null : _applyCoupon,
@@ -514,7 +520,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleBooking,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
+          backgroundColor: const Color(0xFF8B5CF6),
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 60),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

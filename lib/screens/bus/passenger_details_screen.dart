@@ -77,9 +77,15 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   }
 
   void _onPaymentError(String error) {
-    // FOR TESTING: Proceed with booking even if payment fails
-    // print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
-    _createBookings("TEST_PAYMENT_BYPASS");
+    if (mounted) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment failed or cancelled: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   double get _totalAmount {
@@ -168,10 +174,11 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   Future<void> _createBookings(String paymentId) async {
     final user = authService.currentUser!;
     try {
+      int? firstBookingId;
       // Loop through each selected seat and book it
       for (var i = 0; i < widget.selectedSeats.length; i++) {
         final seat = widget.selectedSeats[i];
-        await busService.bookBus(
+        final bookingId = await busService.bookBus(
           userId: int.parse(user.userid),
           tripId: widget.bus.busid,
           seatId: seat.seatid,
@@ -181,14 +188,17 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           gender: _genderControllers[i].text,
           paymentId: paymentId,
         );
+        if (i == 0) {
+          firstBookingId = bookingId;
+        }
       }
 
-      if (_appliedCoupon != null) {
+      if (_appliedCoupon != null && firstBookingId != null && firstBookingId > 0) {
         // Record coupon usage
         await couponService.recordCouponUsage(
           couponId: _appliedCoupon!.couponid,
           userId: int.parse(user.userid),
-          bookingId: 0,
+          bookingId: firstBookingId,
           serviceType: 'bus',
           serviceId: widget.bus.busid,
           discountAmount: _discountAmount,

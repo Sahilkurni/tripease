@@ -237,7 +237,8 @@ class BookingItem {
 }
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final int initialIndex;
+  const DashboardScreen({super.key, this.initialIndex = 0});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -407,6 +408,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _navIndex = widget.initialIndex;
     _selectedLocation = _userLocation;
     _initLocation();
     _loadHomeData();
@@ -947,6 +949,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _fetchWishlist() async {
+    final user = authService.currentUser;
+    if (user == null || user.userid.isEmpty) return;
+    setState(() => _wishlistLoading = true);
+    try {
+      final list = await customerService.getWishlist(user.userid);
+      if (mounted) {
+        setState(() {
+          _wishlist = list;
+          _wishlistLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _wishlistLoading = false);
+    }
+  }
+
   Future<void> _removeWishlistItem(WishlistItem item) async {
     final userId = authService.currentUser?.userid ?? '';
     if (userId.isEmpty) return;
@@ -966,6 +985,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not remove wishlist item')),
       );
+    }
+  }
+
+  Future<void> _handleWishlistItemTap(WishlistItem item) async {
+    if (item.itemType == 'package') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PackageDetailsScreen(
+            packageId: item.itemId.toString(),
+            packageName: item.name,
+            price: item.price,
+            imageUrl: item.imageUrl,
+          ),
+        ),
+      );
+    } else if (item.itemType == 'bus') {
+      final recommended = RecommendedItem(
+        id: item.itemId.toString(),
+        name: item.name,
+        location: 'Bus Trip',
+        rating: item.rating,
+        price: item.price,
+        type: 'bus',
+        imageUrl: item.imageUrl,
+      );
+      await context.push('/bus/seats', extra: recommended);
+    } else if (item.itemType == 'flight') {
+      // Fetch the full FlightModel then navigate
+      final flight = await flightService.getFlightById(item.itemId);
+      if (!mounted) return;
+      if (flight != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FlightDetailsScreen(flight: flight),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load flight details')),
+        );
+      }
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HotelDetailsScreen(
+            hotelId: item.itemId.toString(),
+            hotelName: item.name,
+            imageUrl: item.imageUrl,
+          ),
+        ),
+      );
+    }
+    _fetchWishlist();
+  }
+
+  Future<void> _toggleWishlistItem(String type, String id) async {
+    final user = authService.currentUser;
+    if (user == null || user.userid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to update wishlist')),
+      );
+      return;
+    }
+
+    final intId = int.tryParse(id) ?? 0;
+    if (intId <= 0) return;
+
+    final existingIndex = _wishlist.indexWhere((w) =>
+        w.itemType.toLowerCase() == type.toLowerCase() &&
+        w.itemId == intId);
+
+    bool success;
+    final oldItems = List<WishlistItem>.from(_wishlist);
+
+    if (existingIndex >= 0) {
+      final item = _wishlist[existingIndex];
+      setState(() {
+        _wishlist.removeAt(existingIndex);
+      });
+      success = await customerService.removeFromWishlist(
+        userid: user.userid,
+        id: item.id,
+      );
+      if (!success) {
+        setState(() => _wishlist = oldItems);
+      }
+    } else {
+      // Optimistic update for adding
+      setState(() {
+        _wishlist.add(WishlistItem(
+          id: -1, // Temporary indicator ID
+          itemType: type,
+          itemId: intId,
+          name: '',
+          price: 0,
+          rating: 0,
+          imageUrl: '',
+        ));
+      });
+      success = await customerService.addToWishlist(
+        userid: user.userid,
+        itemType: type,
+        itemId: intId,
+      );
+      if (success) {
+        final list = await customerService.getWishlist(user.userid);
+        setState(() {
+          _wishlist = list;
+        });
+      } else {
+        setState(() => _wishlist = oldItems);
+      }
+    }
+
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update wishlist')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(existingIndex >= 0
+                ? 'Removed from wishlist'
+                : 'Added to wishlist'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
     }
   }
 
@@ -1160,71 +1313,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: () => _openLocationPicker(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha((0.03 * 255).round()),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        _selectedLocation,
-                        style: GoogleFonts.poppins(fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha((0.03 * 255).round()),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _openLocationPicker(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              _selectedLocation,
+                              style: GoogleFonts.poppins(fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Current location button
-                    GestureDetector(
-                      onTap: () async {
-                        await _getCurrentLocation();
-                      },
-                      child: const Icon(
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 1,
+                    height: 16,
+                    color: Colors.grey.withAlpha(80),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                      await _getCurrentLocation();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Icon(
                         Icons.my_location,
                         size: 18,
                         color: Colors.grey,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Open maps button
-                    GestureDetector(
-                      onTap: () async {
-                        await _openMaps();
-                      },
-                      child: const Icon(
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DiscoveryMapScreen(),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Icon(
                         Icons.map_outlined,
                         size: 18,
                         color: Colors.grey,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1520,16 +1698,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.map_outlined),
-                          label: const Text('Open in Maps'),
+                          label: const Text('Explore Map'),
                           onPressed: () {
                             Navigator.of(ctx).pop();
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              _openMaps().catchError((e) {
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Maps error: $e')),
-                                );
-                              });
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const DiscoveryMapScreen(),
+                                ),
+                              );
                             });
                           },
                         ),
@@ -1582,13 +1760,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return;
       }
 
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Detecting your location name...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
       );
+      _currentPosition = pos;
+
+      final userLoc = await locationService.reverseGeocode(pos.latitude, pos.longitude);
+
       setState(() {
-        _currentPosition = pos;
-        _selectedLocation =
-            '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}';
+        if (userLoc != null) {
+          locationService.setManualLocation(userLoc);
+          if (userLoc.city.isNotEmpty && userLoc.city != "Unknown City") {
+            _selectedLocation = userLoc.city;
+          } else {
+            _selectedLocation = userLoc.state != "Unknown State" ? userLoc.state : "My Location";
+          }
+        } else {
+          _selectedLocation = "My Location";
+        }
         _applyFilters();
       });
     } catch (e) {
@@ -1599,45 +1797,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _openMaps() async {
-    try {
-      if (_currentPosition != null) {
-        final lat = _currentPosition!.latitude;
-        final lng = _currentPosition!.longitude;
-        final uri = Uri.parse(
-          'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-        );
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Could not open maps.')));
-        }
-        return;
-      }
 
-      // If we don't have coordinates, open maps with the selected location string
-      final query = Uri.encodeComponent(_selectedLocation);
-      final uri = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=$query',
-      );
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open maps.')));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Maps error: $e')));
-    }
-  }
 
   Widget _buildBookingsView(double safeBot) {
     return SafeArea(
@@ -1785,6 +1945,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             (_, i) => _WishlistCard(
               item: _wishlist[i],
               onRemove: () => _removeWishlistItem(_wishlist[i]),
+              onTap: () => _handleWishlistItemTap(_wishlist[i]),
             ),
       );
     }
@@ -1803,6 +1964,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: _WishlistCard(
                         item: item,
                         onRemove: () => _removeWishlistItem(item),
+                        onTap: () => _handleWishlistItemTap(item),
                       ),
                     ),
                   ),
@@ -1877,7 +2039,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Spacer(),
           if (seeAllRoute.isNotEmpty)
             TextButton(
-              onPressed: () => context.push(seeAllRoute),
+              onPressed: () {
+                if (seeAllRoute == '/bookings') {
+                  setState(() {
+                    _navIndex = 1;
+                  });
+                  _fetchRecentBookings();
+                } else {
+                  context.push(seeAllRoute);
+                }
+              },
               child: Text(
                 'See All',
                 style: GoogleFonts.poppins(
@@ -2153,9 +2324,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     final cards = displayItems.map((item) {
       return GestureDetector(
-        onTap: () {
+        onTap: () async {
           if (isPackage) {
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => PackageDetailsScreen(
@@ -2169,9 +2340,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           } else if (type == 'bus') {
             // Navigate to seat selection for the selected bus trip
-            context.push('/bus/seats', extra: item);
+            await context.push('/bus/seats', extra: item);
           } else {
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => HotelDetailsScreen(
@@ -2183,14 +2354,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             );
           }
+          _fetchWishlist();
         },
         child: SizedBox(
           width: isDesktop ? 330 : 300,
-          child: isPackage
-              ? _PremiumPackageCard(item: item, preview: !hasData, offer: _getOfferFor('package', item.id))
-              : type == 'bus'
-              ? _PremiumBusCard(item: item, preview: !hasData, offer: _getOfferFor('bus', item.id))
-              : _PremiumHotelCard(item: item, preview: !hasData, offer: _getOfferFor('hotel', item.id)),
+          child: () {
+            final isWishlisted = _wishlist.any((w) =>
+                w.itemType.toLowerCase() == type.toLowerCase() &&
+                w.itemId.toString() == item.id.toString());
+            final toggleCallback = () => _toggleWishlistItem(type, item.id);
+            return isPackage
+                ? _PremiumPackageCard(
+                    item: item,
+                    preview: !hasData,
+                    offer: _getOfferFor('package', item.id),
+                    isWishlisted: isWishlisted,
+                    onWishlistToggle: toggleCallback,
+                  )
+                : type == 'bus'
+                ? _PremiumBusCard(
+                    item: item,
+                    preview: !hasData,
+                    offer: _getOfferFor('bus', item.id),
+                    isWishlisted: isWishlisted,
+                    onWishlistToggle: toggleCallback,
+                  )
+                : _PremiumHotelCard(
+                    item: item,
+                    preview: !hasData,
+                    offer: _getOfferFor('hotel', item.id),
+                    isWishlisted: isWishlisted,
+                    onWishlistToggle: toggleCallback,
+                  );
+          }(),
         ),
       );
     }).toList();
@@ -2225,18 +2421,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final displayItems = hasData ? items : _flightPreviews;
 
     final cards = displayItems.map((item) {
+      final flightId = item.flightId.toString();
+      final isWishlisted = _wishlist.any((w) =>
+          w.itemType.toLowerCase() == 'flight' &&
+          w.itemId.toString() == flightId);
       return GestureDetector(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => FlightDetailsScreen(flight: item),
             ),
           );
+          _fetchWishlist();
         },
         child: SizedBox(
           width: isDesktop ? 330 : 300,
-          child: _PremiumFlightCard(item: item, preview: !hasData, offer: _getOfferFor('flight', item.flightId.toString())),
+          child: _PremiumFlightCard(
+            item: item,
+            preview: !hasData,
+            offer: _getOfferFor('flight', flightId),
+            isWishlisted: isWishlisted,
+            onWishlistToggle: hasData ? () => _toggleWishlistItem('flight', flightId) : null,
+          ),
         ),
       );
     }).toList();
@@ -2620,14 +2827,21 @@ class _RoleBadge extends StatelessWidget {
 class _WishlistCard extends StatelessWidget {
   final WishlistItem item;
   final VoidCallback onRemove;
+  final VoidCallback onTap;
 
-  const _WishlistCard({required this.item, required this.onRemove});
+  const _WishlistCard({
+    required this.item,
+    required this.onRemove,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      height: 250,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 250,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -2652,11 +2866,15 @@ class _WishlistCard extends StatelessWidget {
                   icon:
                       item.itemType == 'package'
                           ? Icons.flight_takeoff_rounded
-                          : item.itemType.toLowerCase().contains('flight') ? Icons.flight_takeoff_rounded : Icons.hotel_rounded,
+                          : item.itemType == 'bus'
+                              ? Icons.directions_bus_rounded
+                              : item.itemType.toLowerCase().contains('flight') ? Icons.flight_takeoff_rounded : Icons.hotel_rounded,
                   colors:
                       item.itemType == 'package'
                           ? const [Color(0xFFDB2777), Color(0xFFF59E0B)]
-                          : const [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                          : item.itemType == 'bus'
+                              ? const [Color(0xFF10B981), Color(0xFF059669)]
+                              : const [Color(0xFF2563EB), Color(0xFF14B8A6)],
                 ),
                 Positioned(
                   top: 12,
@@ -2720,7 +2938,7 @@ class _WishlistCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -3061,8 +3279,16 @@ class _PremiumHotelCard extends StatelessWidget {
   final RecommendedItem item;
   final bool preview;
   final OfferModel? offer;
+  final bool isWishlisted;
+  final VoidCallback? onWishlistToggle;
 
-  const _PremiumHotelCard({required this.item, required this.preview, this.offer});
+  const _PremiumHotelCard({
+    required this.item,
+    required this.preview,
+    this.offer,
+    this.isWishlisted = false,
+    this.onWishlistToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3105,6 +3331,33 @@ class _PremiumHotelCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (!preview && onWishlistToggle != null)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: GestureDetector(
+                      onTap: onWishlistToggle,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite : Icons.favorite_border_rounded,
+                          color: isWishlisted ? Colors.red : const Color(0xFF64748B),
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
                 if (item.distance != null && item.distance! > 0)
                   Positioned(
@@ -3187,8 +3440,16 @@ class _PremiumPackageCard extends StatelessWidget {
   final RecommendedItem item;
   final bool preview;
   final OfferModel? offer;
+  final bool isWishlisted;
+  final VoidCallback? onWishlistToggle;
 
-  const _PremiumPackageCard({required this.item, required this.preview, this.offer});
+  const _PremiumPackageCard({
+    required this.item,
+    required this.preview,
+    this.offer,
+    this.isWishlisted = false,
+    this.onWishlistToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3232,6 +3493,33 @@ class _PremiumPackageCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (!preview && onWishlistToggle != null)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: GestureDetector(
+                      onTap: onWishlistToggle,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite : Icons.favorite_border_rounded,
+                          color: isWishlisted ? Colors.red : const Color(0xFF64748B),
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
                 if (offer != null)
                   Positioned(
@@ -3464,8 +3752,16 @@ class _PremiumBusCard extends StatelessWidget {
   final RecommendedItem item;
   final bool preview;
   final OfferModel? offer;
+  final bool isWishlisted;
+  final VoidCallback? onWishlistToggle;
 
-  const _PremiumBusCard({required this.item, required this.preview, this.offer});
+  const _PremiumBusCard({
+    required this.item,
+    required this.preview,
+    this.offer,
+    this.isWishlisted = false,
+    this.onWishlistToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3507,6 +3803,33 @@ class _PremiumBusCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Demo'),
+                  ),
+                if (!preview && onWishlistToggle != null)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: GestureDetector(
+                      onTap: onWishlistToggle,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite : Icons.favorite_border_rounded,
+                          color: isWishlisted ? Colors.red : const Color(0xFF64748B),
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
                 if (offer != null)
                   Positioned(
@@ -3583,11 +3906,15 @@ class _PremiumFlightCard extends StatelessWidget {
   final FlightModel item;
   final bool preview;
   final OfferModel? offer;
+  final bool isWishlisted;
+  final VoidCallback? onWishlistToggle;
 
   const _PremiumFlightCard({
     required this.item,
     required this.preview,
     this.offer,
+    this.isWishlisted = false,
+    this.onWishlistToggle,
   });
 
   @override
@@ -3650,6 +3977,33 @@ class _PremiumFlightCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _SoftBadge(label: 'Preview'),
+                  ),
+                if (!preview && onWishlistToggle != null)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: GestureDetector(
+                      onTap: onWishlistToggle,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          isWishlisted ? Icons.favorite : Icons.favorite_border_rounded,
+                          color: isWishlisted ? Colors.red : const Color(0xFF64748B),
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   ),
                 if (item.distance != null && item.distance! > 0)
                   Positioned(

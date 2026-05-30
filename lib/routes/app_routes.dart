@@ -58,6 +58,7 @@ final appRouter = GoRouter(
       '/flight_bookings',
       '/agent_add_flight',
       '/admin_flights',
+      '/bookings',
     ];
 
     final isProtectedRoute = protectedRoutes.any((route) => state.uri.path.startsWith(route)) ||
@@ -158,6 +159,10 @@ final appRouter = GoRouter(
       builder: (context, state) => const DashboardScreen(),
     ),
     GoRoute(
+      path: '/bookings',
+      builder: (context, state) => const DashboardScreen(initialIndex: 1),
+    ),
+    GoRoute(
       path: '/hotels',
       builder: (context, state) => const HotelListScreen(),
     ),
@@ -194,9 +199,9 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final Map<String, dynamic>? args = state.extra as Map<String, dynamic>?;
         return BusListScreen(
-          source: args?['source'] ?? 'Source',
-          destination: args?['destination'] ?? 'Destination',
-          date: args?['date'] ?? DateTime.now().toIso8601String(),
+          source: args?['source'],
+          destination: args?['destination'],
+          date: args?['date'],
         );
       },
     ),

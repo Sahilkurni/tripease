@@ -29,6 +29,26 @@ class FlightService {
     }
   }
 
+  Future<FlightModel?> getFlightById(int flightId) async {
+    final url = '${ApiConfig.flightHome}?flightid=$flightId';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['status'] == 'success') {
+          final data = decoded['data'];
+          if (data is List && data.isNotEmpty) {
+            return FlightModel.fromJson(data.first);
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+
   Future<List<SeatModel>> getFlightSeats(int flightId) async {
     final url = '${ApiConfig.flightSeats}?flightid=$flightId';
     // print("API URL (Flight Seats): $url");

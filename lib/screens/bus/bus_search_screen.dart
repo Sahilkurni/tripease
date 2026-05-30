@@ -34,7 +34,7 @@ class _BusSearchScreenState extends State<BusSearchScreen> {
     }
     
     // Pass parameters via route state (using extra or path params)
-    context.push('/bus/list', extra: {
+    context.push('/bus_list', extra: {
       'source': _sourceController.text,
       'destination': _destController.text,
       'date': _selectedDate.toIso8601String(),

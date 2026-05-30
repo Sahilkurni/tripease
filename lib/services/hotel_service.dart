@@ -97,7 +97,7 @@ class HotelService {
       return [];
     }
   }
-  Future<bool> createBooking({
+  Future<int?> createBooking({
     required int userId,
     required int hotelId,
     required int roomId,
@@ -128,12 +128,14 @@ class HotelService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['status'] == 'success';
+        if (data['status'] == 'success') {
+          return int.tryParse(data['data']?['bookingid']?.toString() ?? '');
+        }
       }
-      return false;
+      return null;
     } catch (e) {
       // print("Error creating hotel booking: $e");
-      return false;
+      return null;
     }
   }
 }

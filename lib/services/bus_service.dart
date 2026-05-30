@@ -222,7 +222,7 @@ class BusService {
     }
   }
 
-  Future<bool> bookBus({
+  Future<int?> bookBus({
     required int userId,
     required int tripId,
     required int seatId,
@@ -252,13 +252,14 @@ class BusService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['status'] == 'success';
-      } else {
-        throw Exception("API failed with status: ${response.statusCode}");
+        if (data['status'] == 'success') {
+          return int.tryParse(data['data']?['bookingid']?.toString() ?? '');
+        }
       }
+      return null;
     } catch (e) {
       // print("Error: $e");
-      rethrow;
+      return null;
     }
   }
 }

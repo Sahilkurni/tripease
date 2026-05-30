@@ -12,6 +12,7 @@ import 'guest_details_screen.dart';
 import '../../widgets/base64_image.dart';
 import '../../services/hotel_partner_service.dart';
 import '../../widgets/fullscreen_gallery.dart';
+import '../../services/customer_service.dart';
 
 class HotelDetailsScreen extends StatefulWidget {
   final String hotelId;
@@ -38,6 +39,7 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
   HotelModel? _hotelModel;
   bool _isLoading = true;
   String? _error;
+  bool _isWishlisted = false;
 
   final PageController _heroCtrl = PageController();
   int _heroIndex = 0;
@@ -56,6 +58,74 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
     _loadData();
     if (_heroImages.isEmpty) _fetchHeroImages();
     _startAutoSlide();
+    _checkWishlistStatus();
+  }
+
+  Future<void> _checkWishlistStatus() async {
+    final user = _authService.currentUser;
+    if (user == null || user.userid.isEmpty) return;
+    try {
+      final list = await customerService.getWishlist(user.userid);
+      if (mounted) {
+        setState(() {
+          _isWishlisted = list.any((item) =>
+              item.itemType.toLowerCase() == 'hotel' &&
+              item.itemId.toString() == widget.hotelId);
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleWishlist() async {
+    final user = _authService.currentUser;
+    if (user == null || user.userid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to wishlist hotels')),
+      );
+      return;
+    }
+
+    final oldState = _isWishlisted;
+    setState(() {
+      _isWishlisted = !_isWishlisted;
+    });
+
+    bool success;
+    if (oldState) {
+      success = await customerService.removeFromWishlist(
+        userid: user.userid,
+        itemType: 'hotel',
+        itemId: int.parse(widget.hotelId),
+      );
+    } else {
+      success = await customerService.addToWishlist(
+        userid: user.userid,
+        itemType: 'hotel',
+        itemId: int.parse(widget.hotelId),
+      );
+    }
+
+    if (!success) {
+      if (mounted) {
+        setState(() {
+          _isWishlisted = oldState;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update wishlist')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(oldState
+                ? 'Removed from wishlist'
+                : 'Added to wishlist'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -183,6 +253,22 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
                 ),
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: CircleAvatar(
+                  backgroundColor: Colors.black38,
+                  child: IconButton(
+                    icon: Icon(
+                      _isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                      color: _isWishlisted ? const Color(0xFFEF4444) : Colors.white,
+                      size: 18,
+                    ),
+                    onPressed: _toggleWishlist,
+                  ),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
               background: _buildHero(),

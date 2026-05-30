@@ -40,9 +40,15 @@ class _FlightPassengerDetailsScreenState extends State<FlightPassengerDetailsScr
     paymentService.init(
       onSuccess: (paymentId) => _processBooking(paymentId),
       onError: (error) {
-        // FOR TESTING: Proceed with booking even if payment fails (consistent with Hotel/Bus flow)
-        // print("Payment Failed/Cancelled: $error. Proceeding with test booking...");
-        _processBooking("TEST_PAYMENT_BYPASS");
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Payment failed or cancelled: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
     );
   }

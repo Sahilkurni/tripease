@@ -200,23 +200,26 @@ class CustomerService {
 
   Future<bool> removeFromWishlist({
     required String userid,
-    required int id,
+    int? id,
+    String? itemType,
+    int? itemId,
   }) async {
     final url = '${baseUrl}remove_from_wishlist.php';
-    // print("API URL: $url");
     try {
+      final Map<String, String> body = {'userid': userid};
+      if (id != null) body['id'] = id.toString();
+      if (itemType != null) body['item_type'] = itemType;
+      if (itemId != null) body['item_id'] = itemId.toString();
+
       final response = await http
           .post(
             Uri.parse(url),
-            body: {'userid': userid, 'id': id.toString()},
+            body: body,
           )
           .timeout(const Duration(seconds: 12));
-      // print("Response: ${response.body}");
       final decoded = jsonDecode(response.body);
       return decoded is Map && decoded['status'] == 'success';
     } catch (e, st) {
-      // print("Error: $e");
-      // debugPrint('$st');
       return false;
     }
   }
