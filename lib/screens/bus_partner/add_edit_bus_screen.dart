@@ -370,7 +370,6 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF1E293B),
           ),
         ),
         const SizedBox(height: 12),
@@ -546,7 +545,7 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.isEdit ? 'Edit Bus' : 'Add Bus',
@@ -566,7 +565,7 @@ class _AddEditBusScreenState extends State<AddEditBusScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(

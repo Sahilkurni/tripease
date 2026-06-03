@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/booking_success_screen.dart';
 import '../../models/room_model.dart';
 import '../../services/hotel_service.dart';
 import '../../services/auth_service.dart';
@@ -193,28 +194,16 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
       if (!mounted) return;
 
       if (success) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 28),
-                SizedBox(width: 10),
-                Text('Booking Confirmed'),
-              ],
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => BookingSuccessScreen(
+              title: 'Hotel Booked! 🏨',
+              subtitle: 'Your hotel room has been\nbooked successfully!',
+              bookingType: 'hotel',
+              savedAmount: _discountAmount > 0
+                  ? _discountAmount.toStringAsFixed(0)
+                  : null,
             ),
-            content: const Text('Your hotel room has been booked successfully!'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                child: const Text('Great!', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
           ),
         );
       } else {

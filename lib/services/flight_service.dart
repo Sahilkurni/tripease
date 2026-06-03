@@ -14,7 +14,7 @@ class FlightService {
       // print("Flights Home Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded['status'] == 'success') {
           final data = decoded['data'];
           if (data is List) {
@@ -34,7 +34,7 @@ class FlightService {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded['status'] == 'success') {
           final data = decoded['data'];
           if (data is List && data.isNotEmpty) {
@@ -57,7 +57,7 @@ class FlightService {
       // print("Flight Seats Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded['status'] == 'success') {
           final data = decoded['data'];
           if (data is List) {
@@ -96,7 +96,7 @@ class FlightService {
       // print("Create Flight Booking Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return jsonDecode(utf8.decode(response.bodyBytes));
       } else {
         return {
           'status': 'error',
@@ -116,7 +116,7 @@ class FlightService {
       );
       // print("User Flight Bookings Response: ${response.body}");
 
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       if (data['status'] == 'success') {
         return List<Map<String, dynamic>>.from(data['data']);
       }
@@ -132,7 +132,7 @@ class FlightService {
       final prefs = await SharedPreferences.getInstance();
       final userid = prefs.getInt('userid') ?? 0;
       final response = await http.get(Uri.parse('${ApiConfig.adminFlights}?userid=$userid'));
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       if (data['status'] == 'success') {
         return (data['data'] as List)
             .map((e) => FlightModel.fromJson(e))
@@ -148,7 +148,7 @@ class FlightService {
   Future<List<FlightModel>> getAgentFlights(int creatorId) async {
     try {
       final response = await http.get(Uri.parse('${ApiConfig.adminFlights}?userid=$creatorId&created_by=$creatorId'));
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       if (data['status'] == 'success') {
         return (data['data'] as List)
             .map((e) => FlightModel.fromJson(e))
@@ -173,7 +173,7 @@ class FlightService {
           'status': status,
         },
       );
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       return data['status'] == 'success';
     } catch (e) {
       // print("Error updating flight status: $e");
@@ -188,7 +188,7 @@ class FlightService {
         body: flightData,
       );
       // print("Create Flight Response: ${response.body}");
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       return data['status'] == 'success';
     } catch (e) {
       // print("Error creating flight: $e");
@@ -203,7 +203,7 @@ class FlightService {
         body: flightData,
       );
       // print("Update Flight Response: ${response.body}");
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       return data['status'] == 'success';
     } catch (e) {
       // print("Error updating flight: $e");
@@ -221,7 +221,7 @@ class FlightService {
         },
       );
       // print("Delete Flight Response: ${response.body}");
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       return data['status'] == 'success';
     } catch (e) {
       // print("Error deleting flight: $e");

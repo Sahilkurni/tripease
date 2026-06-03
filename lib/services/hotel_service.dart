@@ -14,7 +14,7 @@ class HotelService {
       // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)['data'];
+        final data = jsonDecode(utf8.decode(response.bodyBytes))['data'];
         if (data is List) {
           return data.map((e) => HotelModel.fromJson(e)).toList();
         }
@@ -35,7 +35,7 @@ class HotelService {
       // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         final data = decoded['data'];
         if (data is List) {
           return data.map((e) => HotelModel.fromJson(e)).toList();
@@ -59,7 +59,7 @@ class HotelService {
       // print("Hotel Rooms Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded['status'] == 'success') {
           final data = decoded['data'];
           if (data is List) {
@@ -83,7 +83,7 @@ class HotelService {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded['status'] == 'success') {
           final data = decoded['data'];
           if (data is List) {
@@ -127,7 +127,7 @@ class HotelService {
       // print("Hotel Booking Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return int.tryParse(data['data']?['bookingid']?.toString() ?? '');
         }

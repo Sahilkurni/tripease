@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/booking_success_screen.dart';
 import '../../models/bus_model.dart';
 import '../../services/bus_service.dart';
 import '../../services/auth_service.dart';
@@ -207,44 +209,17 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
       if (!mounted) return;
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder:
-            (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 28),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Success',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              content: Text(
-                'Successfully booked ${widget.selectedSeats.length} seats!',
-                style: GoogleFonts.poppins(),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  child: Text(
-                    'Great!',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2563EB),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BookingSuccessScreen(
+            title: 'Bus Booked! 🚌',
+            subtitle: 'Successfully booked ${widget.selectedSeats.length} seat(s)\non ${widget.bus.busName}!',
+            bookingType: 'bus',
+            savedAmount: _discountAmount > 0
+                ? _discountAmount.toStringAsFixed(0)
+                : null,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -399,7 +374,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _contactMobileCtrl,
-          keyboardType: TextInputType.phone,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             labelText: 'Mobile Number',
             prefixIcon: const Icon(Icons.phone_outlined),

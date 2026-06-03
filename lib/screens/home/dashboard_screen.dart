@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
@@ -28,6 +29,7 @@ import '../../services/coupon_service.dart';
 import '../../widgets/offers_carousel.dart';
 import '../../widgets/offer_badge.dart';
 import '../../widgets/travel_image_placeholder.dart';
+import '../../widgets/shimmer_card.dart';
 
 class ServiceItem {
   final String id;
@@ -412,6 +414,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _selectedLocation = _userLocation;
     _initLocation();
     _loadHomeData();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIndex != widget.initialIndex) {
+      setState(() {
+        _navIndex = widget.initialIndex;
+      });
+    }
+    if (_navIndex == 1) {
+      _fetchRecentBookings();
+    }
   }
 
   Future<void> _initLocation() async {
@@ -865,6 +880,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _homeError = null;
       _offersLoading = true;
     });
+
+    // Also fetch bookings in parallel or sequentially
+    _fetchRecentBookings();
 
     try {
       final userId = authService.currentUser?.userid ?? '';
@@ -2397,7 +2415,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Wrap(
           spacing: 16,
           runSpacing: 16,
-          children: cards,
+          children: List.generate(cards.length, (i) => _StaggeredCard(
+            delay: Duration(milliseconds: 80 * i),
+            child: cards[i],
+          )),
         ),
       );
     }
@@ -2406,10 +2427,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: hPad),
       child: Row(
-        children: cards.map((card) => Padding(
+        children: List.generate(cards.length, (i) => Padding(
           padding: const EdgeInsets.only(right: 14),
-          child: card,
-        )).toList(),
+          child: _StaggeredCard(
+            delay: Duration(milliseconds: 80 * i),
+            child: cards[i],
+          ),
+        )),
       ),
     );
   }
@@ -2454,7 +2478,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Wrap(
           spacing: 16,
           runSpacing: 16,
-          children: cards,
+          children: List.generate(cards.length, (i) => _StaggeredCard(
+            delay: Duration(milliseconds: 80 * i),
+            child: cards[i],
+          )),
         ),
       );
     }
@@ -2463,10 +2490,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: hPad),
       child: Row(
-        children: cards.map((card) => Padding(
+        children: List.generate(cards.length, (i) => Padding(
           padding: const EdgeInsets.only(right: 14),
-          child: card,
-        )).toList(),
+          child: _StaggeredCard(
+            delay: Duration(milliseconds: 80 * i),
+            child: cards[i],
+          ),
+        )),
       ),
     );
   }
@@ -3096,78 +3126,73 @@ class _ProfileSkeletonCard extends StatelessWidget {
   }
 }
 
-class _ListSkeletonTile extends StatefulWidget {
+class _ListSkeletonTile extends StatelessWidget {
   final double height;
 
   const _ListSkeletonTile({this.height = 132});
 
   @override
-  State<_ListSkeletonTile> createState() => _ListSkeletonTileState();
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final base = isDark ? const Color(0xFF1E293B) : Colors.grey.shade300;
+    final highlight = isDark ? const Color(0xFF334155) : Colors.grey.shade100;
+
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: highlight,
+      child: Container(
+        height: height,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: base,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: base,
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkeletonBar(width: 180, color: base),
+                  const SizedBox(height: 12),
+                  _SkeletonBar(width: 130, color: base),
+                  const SizedBox(height: 12),
+                  _SkeletonBar(width: 90, color: base),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _ListSkeletonTileState extends State<_ListSkeletonTile>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<Color?> _color;
+class _SkeletonBar extends StatelessWidget {
+  final double width;
+  final Color? color;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    )..repeat(reverse: true);
-    _color = ColorTween(
-      begin: Colors.grey.shade200,
-      end: Colors.grey.shade100,
-    ).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const _SkeletonBar({required this.width, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _color,
-      builder:
-          (_, __) => Container(
-            height: widget.height,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: _color.value,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SkeletonBar(width: 180, color: _color.value),
-                      const SizedBox(height: 12),
-                      _SkeletonBar(width: 130, color: _color.value),
-                      const SizedBox(height: 12),
-                      _SkeletonBar(width: 90, color: _color.value),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return Container(
+      width: width,
+      height: 14,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+      ),
     );
   }
 }
@@ -3315,11 +3340,14 @@ class _PremiumHotelCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                TravelImagePlaceholder(
-                  imageUrl: item.imageUrl,
-                  images: item.images,
-                  icon: Icons.hotel_rounded,
-                  colors: const [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                Hero(
+                  tag: 'hotel_image_${item.id}',
+                  child: TravelImagePlaceholder(
+                    imageUrl: item.imageUrl,
+                    images: item.images,
+                    icon: Icons.hotel_rounded,
+                    colors: const [Color(0xFF2563EB), Color(0xFF14B8A6)],
+                  ),
                 ),
                 Positioned(
                   top: 12,
@@ -3477,11 +3505,14 @@ class _PremiumPackageCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                TravelImagePlaceholder(
-                  imageUrl: item.imageUrl,
-                  images: item.images,
-                  icon: Icons.map_rounded,
-                  colors: const [Color(0xFFF59E0B), Color(0xFFEF4444)],
+                Hero(
+                  tag: 'package_image_${item.id}',
+                  child: TravelImagePlaceholder(
+                    imageUrl: item.imageUrl,
+                    images: item.images,
+                    icon: Icons.map_rounded,
+                    colors: const [Color(0xFFF59E0B), Color(0xFFEF4444)],
+                  ),
                 ),
                 Positioned(
                   top: 12,
@@ -3651,99 +3682,15 @@ class _GradientBadge extends StatelessWidget {
   }
 }
 
-class _HomeSkeletonCard extends StatefulWidget {
+class _HomeSkeletonCard extends StatelessWidget {
   final bool isPackage;
 
   const _HomeSkeletonCard({required this.isPackage});
 
   @override
-  State<_HomeSkeletonCard> createState() => _HomeSkeletonCardState();
-}
-
-class _HomeSkeletonCardState extends State<_HomeSkeletonCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<Color?> _color;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    )..repeat(reverse: true);
-    _color = ColorTween(
-      begin: Colors.grey.shade200,
-      end: Colors.grey.shade100,
-    ).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _color,
-      builder:
-          (_, __) => Container(
-            height: 252,
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: _color.value,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _SkeletonBar(width: 180, color: _color.value),
-                const SizedBox(height: 10),
-                _SkeletonBar(width: 120, color: _color.value),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _SkeletonBar(width: 80, color: _color.value),
-                    Spacer(),
-                    _SkeletonBar(
-                      width: widget.isPackage ? 90 : 58,
-                      color: _color.value,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-}
-
-class _SkeletonBar extends StatelessWidget {
-  final double width;
-  final Color? color;
-
-  const _SkeletonBar({required this.width, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: 14,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(999),
-      ),
+    return ShimmerCard(
+      height: 252,
     );
   }
 }
@@ -4073,6 +4020,57 @@ class _PremiumFlightCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A widget that animates its child in with a fade + slide-up effect
+/// after an optional delay. Used for staggered card entrance on dashboard.
+class _StaggeredCard extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+
+  const _StaggeredCard({required this.child, this.delay = Duration.zero});
+
+  @override
+  State<_StaggeredCard> createState() => _StaggeredCardState();
+}
+
+class _StaggeredCardState extends State<_StaggeredCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+
+    Future.delayed(widget.delay, () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }

@@ -19,7 +19,7 @@ class OfferService {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return (data['data'] as List).map((e) => OfferModel.fromJson(e)).toList();
         }
@@ -35,7 +35,7 @@ class OfferService {
     try {
       final response = await http.get(Uri.parse('${ApiConfig.offerDetails}?offerid=$offerId'));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return OfferModel.fromJson(data['data']);
         }
@@ -50,7 +50,7 @@ class OfferService {
   Future<bool> createOffer(Map<String, String> data) async {
     try {
       final response = await http.post(Uri.parse(ApiConfig.createOffer), body: data);
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error creating offer: $e");
@@ -61,7 +61,7 @@ class OfferService {
   Future<bool> updateOffer(Map<String, String> data) async {
     try {
       final response = await http.post(Uri.parse(ApiConfig.updateOffer), body: data);
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error updating offer: $e");
@@ -75,7 +75,7 @@ class OfferService {
         Uri.parse(ApiConfig.deleteOffer),
         body: {'offerid': offerId.toString(), 'userid': userId.toString()},
       );
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error deleting offer: $e");
@@ -89,7 +89,7 @@ class OfferService {
         Uri.parse(ApiConfig.approveOffer),
         body: {'offerid': offerId.toString(), 'userid': adminId.toString(), 'status': status},
       );
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error approving offer: $e");

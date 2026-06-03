@@ -118,7 +118,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
       if (response.statusCode == 200) {
         setState(() {
-          _searchResults = json.decode(response.body);
+          _searchResults = json.decode(utf8.decode(response.bodyBytes));
           _isSearching = false;
         });
       }
@@ -140,7 +140,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       });
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(utf8.decode(response.bodyBytes));
         final addressMap = data['address'] as Map<String, dynamic>?;
         
         setState(() {

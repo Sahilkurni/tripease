@@ -271,7 +271,10 @@ class _HotelDetailsScreenState extends State<HotelDetailsScreen> {
             ],
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
-              background: _buildHero(),
+              background: Hero(
+                tag: 'hotel_image_${widget.hotelId}',
+                child: _buildHero(),
+              ),
             ),
           ),
           SliverToBoxAdapter(

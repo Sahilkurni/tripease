@@ -17,6 +17,7 @@ import '../../widgets/base64_image.dart';
 import '../profile/edit_profile_screen.dart';
 import '../admin/coupon_management_screen.dart';
 import '../admin/offer_management_screen.dart';
+import '../../widgets/earnings_tab.dart';
 import '../../main.dart';
 
 class AgentDashboard extends StatefulWidget {
@@ -33,7 +34,17 @@ class _AgentDashboardState extends State<AgentDashboard>
   Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B);
   Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
   Color get _surface => Theme.of(context).cardColor;
-  late TabController _tabController;
+  int _selectedIndex = 0;
+  final List<String> _menu = [
+    'Tour Packages',
+    'Bus Inventory',
+    'Flight Inventory',
+    'Earnings & Taxes',
+    'Coupons',
+    'Offers',
+  ];
+  Map<String, dynamic> _earnings = {};
+  String _earningsPeriod = 'month';
   bool _isLoading = true;
   String? _errorMessage;
   int _partnerid = 0;
@@ -48,7 +59,6 @@ class _AgentDashboardState extends State<AgentDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _fetchDashboardData();
   }
 
@@ -80,6 +90,9 @@ class _AgentDashboardState extends State<AgentDashboard>
       final packages = await packageService.getAgentPackages(_partnerid);
       final buses = await busService.getAgentBuses(_partnerid);
       final flights = await flightService.getAgentFlights(_userid);
+      if (_selectedIndex == 3) {
+        _earnings = await AgentService.getEarnings(_partnerid, _earningsPeriod);
+      }
 
       if (mounted) {
         setState(() {
@@ -208,67 +221,141 @@ class _AgentDashboardState extends State<AgentDashboard>
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Row(
+    Widget _buildDesktopHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (MediaQuery.of(context).size.width > 800) _buildSidebar(context),
-          Expanded(
-            child: NestedScrollView(
-              headerSliverBuilder:
-                  (context, innerBoxIsScrolled) => [_buildAppBar(context)],
-              body:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _errorMessage != null
-                      ? _buildErrorState()
-                      : TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildPackagesTab(),
-                          _buildBusesTab(),
-                          _buildFlightsTab()
-                        ],
-                      ),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, themeMode, _) {
+              final isDark = themeMode == ThemeMode.dark;
+              return IconButton(
+                icon: Icon(
+                  isDark ? Icons.light_mode : Icons.dark_mode,
+                  color: _ink,
+                ),
+                onPressed: () {
+                  themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                },
+              );
+            },
+          ),
+          const SizedBox(width: 16),
+          CircleAvatar(
+            backgroundColor: _primary,
+            child: Text(
+              _fullname.isNotEmpty ? _fullname[0].toUpperCase() : 'A',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         ],
       ),
-      floatingActionButton:
-          MediaQuery.of(context).size.width <= 800
-              ? FloatingActionButton(
-                onPressed: () async {
-                  if (_tabController.index == 0) {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AddEditPackageScreen(
-                          isEdit: false,
-                          partnerid: _partnerid,
-                          userid: _userid,
-                        ),
-                      ),
-                    );
-                    if (result == true) {
-                      setState(() => _isLoading = true);
-                      await _fetchDashboardData();
-                    }
-                  } else if (_tabController.index == 1) {
-                    _openBusForm();
-                  } else {
-                    _openFlightForm();
-                  }
-                },
-                backgroundColor: Theme.of(context).primaryColor,
-                child: const Icon(Icons.add),
-              )
-              : null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final isDesktop = w >= 1024;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: isDesktop ? null : AppBar(
+        title: Text('Agent Panel', style: GoogleFonts.poppins(color: _ink)),
+        backgroundColor: _surface,
+        iconTheme: IconThemeData(color: _ink),
+        elevation: 1,
+      ),
+      drawer: isDesktop ? null : Drawer(child: _buildSidebar(false)),
+            body: Row(
+        children: [
+          if (isDesktop) _buildSidebar(true),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (isDesktop) _buildDesktopHeader(context),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _errorMessage != null
+                          ? _buildErrorState()
+                          : _buildCurrentScreen(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: isDesktop ? null : _buildBottomNav(),
+      floatingActionButton: !isDesktop && _selectedIndex < 3 ? FloatingActionButton(
+        onPressed: () async {
+          if (_selectedIndex == 0) {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddEditPackageScreen(isEdit: false, partnerid: _partnerid, userid: _userid)),
+            );
+            if (result == true) {
+              setState(() => _isLoading = true);
+              await _fetchDashboardData();
+            }
+          } else if (_selectedIndex == 1) {
+            _openBusForm();
+          } else if (_selectedIndex == 2) {
+            _openFlightForm();
+          }
+        },
+        backgroundColor: _primary,
+        child: const Icon(Icons.add),
+      ) : null,
+    );
+  }
+
+  Widget _buildCurrentScreen() {
+    switch (_selectedIndex) {
+      case 0: return _buildPackagesTab();
+      case 1: return _buildBusesTab();
+      case 2: return _buildFlightsTab();
+      case 3: return _buildEarningsTab();
+      case 4: return const CouponManagementScreen(roleView: 'agent');
+      case 5: return const OfferManagementScreen(roleView: 'agent');
+      default: return _buildPackagesTab();
+    }
+  }
+
+  Widget _buildEarningsTab() => EarningsTab(
+        earningsData: _earnings,
+        isLoading: _isLoading,
+        selectedPeriod: _earningsPeriod,
+        onPeriodChanged: (val) {
+          setState(() => _earningsPeriod = val);
+          _fetchDashboardData();
+        },
+      );
+
+  Widget _buildBottomNav() {
+    return NavigationBar(
+      selectedIndex: _selectedIndex > 3 ? 0 : _selectedIndex,
+      onDestinationSelected: (i) {
+        setState(() {
+          _selectedIndex = i;
+          _isLoading = true;
+        });
+        _fetchDashboardData();
+      },
+      backgroundColor: _surface,
+      indicatorColor: _primary.withAlpha(30),
+      destinations: [
+        NavigationDestination(icon: Icon(Icons.map, color: _selectedIndex == 0 ? _primary : _muted), label: 'Packages'),
+        NavigationDestination(icon: Icon(Icons.directions_bus, color: _selectedIndex == 1 ? _primary : _muted), label: 'Buses'),
+        NavigationDestination(icon: Icon(Icons.flight, color: _selectedIndex == 2 ? _primary : _muted), label: 'Flights'),
+        NavigationDestination(icon: Icon(Icons.account_balance_wallet, color: _selectedIndex == 3 ? _primary : _muted), label: 'Earnings'),
+      ],
     );
   }
 
@@ -303,162 +390,94 @@ class _AgentDashboardState extends State<AgentDashboard>
     );
   }
 
-  Widget _buildSidebar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildSidebar(bool isDesktop) {
     return Container(
-      width: 250,
-      color: Theme.of(context).cardColor,
+      width: isDesktop ? 260 : null,
+      decoration: BoxDecoration(
+        color: _surface,
+        border: isDesktop ? Border(right: BorderSide(color: Theme.of(context).dividerColor)) : null,
+      ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              children: [
-                Icon(Icons.flight_takeoff, color: _primary, size: 28),
-                const SizedBox(width: 12),
-                Text(
-                  'Agent Panel',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _ink,
+          if (isDesktop)
+            Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: _primary.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.flight_takeoff, color: _primary, size: 24),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Text('TripEase', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: _ink)),
+                ],
+              ),
             ),
-          ),
-          ListTile(
-            leading: Icon(Icons.dashboard, color: _primary),
-            title: Text('Dashboard', style: GoogleFonts.poppins(color: _ink)),
-            selected: true,
-            onTap: () {},
-          ),
-          ListTile(
-            leading: Icon(Icons.map, color: _muted),
-            title: Text('Tour Packages', style: GoogleFonts.poppins(color: _ink)),
-            onTap: () => _tabController.animateTo(0),
-          ),
-          ListTile(
-            leading: Icon(Icons.directions_bus, color: _muted),
-            title: Text('Bus Inventory', style: GoogleFonts.poppins(color: _ink)),
-            onTap: () => _tabController.animateTo(1),
-          ),
-          ListTile(
-            leading: Icon(Icons.flight_takeoff, color: _muted),
-            title: Text('Flight Inventory', style: GoogleFonts.poppins(color: _ink)),
-            onTap: () => _tabController.animateTo(2),
-          ),
-          ListTile(
-            leading: Icon(Icons.monetization_on, color: _muted),
-            title: Text('Earnings & Taxes', style: GoogleFonts.poppins(color: _ink)),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: Icon(Icons.local_offer, color: _muted),
-            title: Text('My Coupons', style: GoogleFonts.poppins(color: _ink)),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const CouponManagementScreen(roleView: 'agent')));
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.card_giftcard, color: _muted),
-            title: Text('My Offers', style: GoogleFonts.poppins(color: _ink)),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const OfferManagementScreen(roleView: 'agent')));
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Edit Profile'),
-            onTap: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditProfileScreen(
-                    userData: {
-                      'userid': _userid,
-                      'fullname': _fullname,
-                      'email': _email,
-                      'photo': _photo,
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _menu.length,
+              itemBuilder: (context, i) {
+                final active = _selectedIndex == i;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    leading: Icon(
+                      i == 0 ? Icons.map : i == 1 ? Icons.directions_bus : i == 2 ? Icons.flight : i == 3 ? Icons.account_balance_wallet : i == 4 ? Icons.local_offer : Icons.card_giftcard,
+                      color: active ? _primary : _muted,
+                    ),
+                    title: Text(_menu[i], style: GoogleFonts.poppins(fontWeight: active ? FontWeight.w600 : FontWeight.w500, color: active ? _primary : _muted)),
+                    selected: active,
+                    selectedTileColor: _primary.withAlpha(20),
+                    onTap: () {
+                      setState(() {
+                        _selectedIndex = i;
+                        _isLoading = true;
+                      });
+                      _fetchDashboardData();
+                      if (!isDesktop) Navigator.pop(context);
                     },
                   ),
-                ),
-              );
-              if (result == true) {
-                _fetchDashboardData();
-              }
-            },
-          ),
-          const Spacer(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () async {
-              await authService.clearSession();
-              if (context.mounted) context.go('/login');
-            },
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  SliverAppBar _buildAppBar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SliverAppBar(
-      expandedHeight: 180,
-      floating: true,
-      pinned: true,
-      backgroundColor: Theme.of(context).cardColor,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-        title: Text(
-          'Welcome, ${authService.currentUser?.rolename?.replaceAll('_', ' ').toLowerCase().split(' ').map((s) => s[0].toUpperCase() + s.substring(1)).join(' ') ?? 'Partner'}',
-          style: GoogleFonts.poppins(
-            color: _ink,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-      ),
-      bottom: TabBar(
-        controller: _tabController,
-        labelColor: _primary,
-        unselectedLabelColor: _muted,
-        indicatorColor: _primary,
-        tabs: [
-          Tab(child: Text('Packages', style: GoogleFonts.poppins())),
-          Tab(child: Text('Buses', style: GoogleFonts.poppins())),
-          Tab(child: Text('Flights', style: GoogleFonts.poppins())),
-        ],
-      ),
-      actions: [
-        ValueListenableBuilder<ThemeMode>(
-          valueListenable: themeNotifier,
-          builder: (context, themeMode, _) {
-            final isDark = themeMode == ThemeMode.dark;
-            return IconButton(
-              icon: Icon(
-                isDark ? Icons.light_mode : Icons.dark_mode,
-                color: _ink,
-              ),
-              onPressed: () {
-                themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                );
               },
-            );
-          },
-        ),
-        if (MediaQuery.of(context).size.width <= 800)
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: () async {
-              await authService.clearSession();
-              if (context.mounted) context.go('/login');
-            },
+            ),
           ),
-      ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              leading: Icon(Icons.person_outline_rounded, color: _muted),
+              title: Text('Edit Profile', style: GoogleFonts.poppins(color: _muted, fontWeight: FontWeight.w500)),
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileScreen(
+                      userData: {'userid': _userid, 'fullname': _fullname, 'email': _email, 'photo': _photo},
+                    ),
+                  ),
+                );
+                if (result == true) _fetchDashboardData();
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0).copyWith(top: 0),
+            child: ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+              title: Text('Logout', style: GoogleFonts.poppins(color: Colors.redAccent, fontWeight: FontWeight.w500)),
+              onTap: () async {
+                await authService.clearSession();
+                if (mounted) context.go('/login');
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -895,3 +914,4 @@ class _AgentDashboardState extends State<AgentDashboard>
     );
   }
 }
+

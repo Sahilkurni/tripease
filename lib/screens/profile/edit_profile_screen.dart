@@ -78,7 +78,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         },
       );
 
-      final result = jsonDecode(response.body);
+      final result = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (result['status'] == 'success') {
         final newData = result['data'];

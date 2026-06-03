@@ -35,15 +35,24 @@ import '../screens/info/terms_conditions_screen.dart';
 import '../services/auth_service.dart';
 import '../core/constants/role_constants.dart';
 
+bool _hasShownSplash = false;
+
 final appRouter = GoRouter(
   initialLocation: '/',
   refreshListenable: authService,
   redirect: (context, state) {
+    if (!_hasShownSplash && state.uri.path != '/') {
+      _hasShownSplash = true;
+      return '/?target=${Uri.encodeComponent(state.uri.toString())}';
+    }
+    if (state.uri.path == '/') {
+      _hasShownSplash = true;
+    }
+
     final loggedIn = authService.currentUser != null;
     final isLoggingIn = state.uri.path == '/login' || 
                         state.uri.path == '/register' ||
-                        state.uri.path == '/onboarding' ||
-                        state.uri.path == '/';
+                        state.uri.path == '/onboarding';
 
     // If not logged in and trying to access protected route, go to login
     // List of protected routes (can be expanded)
@@ -120,8 +129,14 @@ final appRouter = GoRouter(
     return null;
   },
 
-  routes: [
-    GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+    routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) {
+        final target = state.uri.queryParameters['target'];
+        return SplashScreen(targetPath: target);
+      },
+    ),
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),

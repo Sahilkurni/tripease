@@ -497,28 +497,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildRevenueChart(List<dynamic>? monthlyRevenue) {
     if (monthlyRevenue == null || monthlyRevenue.isEmpty) {
       return _ChartContainer(
-        title: 'Monthly Revenue',
+        title: 'Daily Revenue',
         child: const Center(child: Text('No revenue data available')),
       );
     }
 
     final spots = <FlSpot>[];
     double maxRev = 0;
-
-    final monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
 
     for (int i = 0; i < monthlyRevenue.length; i++) {
       final rev = double.tryParse(monthlyRevenue[i]['revenue'].toString()) ?? 0;
@@ -532,7 +517,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     return _ChartContainer(
-      title: 'Monthly Revenue',
+      title: 'Daily Revenue',
       child: LineChart(
         LineChartData(
           gridData: FlGridData(
@@ -550,16 +535,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < monthlyRevenue.length) {
-                    final mIdx =
+                    final dIdx =
                         int.tryParse(
-                          monthlyRevenue[index]['month'].toString(),
+                          monthlyRevenue[index]['day'].toString(),
                         ) ??
                         1;
-                    final mName = monthNames[(mIdx - 1).clamp(0, 11)];
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        mName,
+                        dIdx.toString(),
                         style: TextStyle(fontSize: 12, color: _muted),
                       ),
                     );
@@ -605,20 +589,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     final barGroups = <BarChartGroupData>[];
     double maxBookings = 0;
-    final monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
 
     for (int i = 0; i < bookingTrends.length; i++) {
       final count =
@@ -662,16 +632,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < bookingTrends.length) {
-                    final mIdx =
+                    final dIdx =
                         int.tryParse(
-                          bookingTrends[index]['month'].toString(),
+                          bookingTrends[index]['day'].toString(),
                         ) ??
                         1;
-                    final mName = monthNames[(mIdx - 1).clamp(0, 11)];
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        mName,
+                        dIdx.toString(),
                         style: TextStyle(fontSize: 12, color: _muted),
                       ),
                     );

@@ -109,7 +109,7 @@ class CustomerService {
       // debugPrint("Warning: Empty response body");
       return [];
     }
-    final decoded = jsonDecode(response.body);
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
       final data = decoded['data'];
       if (data is List) {
@@ -127,7 +127,7 @@ class CustomerService {
       // debugPrint("Warning: Empty response body");
       return {};
     }
-    final decoded = jsonDecode(response.body);
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
       final data = decoded['data'];
       if (data is Map) {
@@ -189,7 +189,7 @@ class CustomerService {
           )
           .timeout(const Duration(seconds: 12));
       // print("Response: ${response.body}");
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded is Map && decoded['status'] == 'success';
     } catch (e, st) {
       // print("Error: $e");
@@ -217,7 +217,7 @@ class CustomerService {
             body: body,
           )
           .timeout(const Duration(seconds: 12));
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded is Map && decoded['status'] == 'success';
     } catch (e, st) {
       return false;
@@ -225,7 +225,7 @@ class CustomerService {
   }
 
   Future<List<CustomerBooking>> getUserBookings(String userid) async {
-    final url = '${baseUrl}get_user_bookings.php?userid=$userid';
+    final url = '${baseUrl}get_bookings.php?userid=$userid';
     // print("API URL: $url");
     try {
       final response = await http

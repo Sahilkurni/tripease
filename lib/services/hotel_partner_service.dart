@@ -101,7 +101,7 @@ class HotelPartnerService {
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
+        final json = jsonDecode(utf8.decode(response.bodyBytes));
         if (json['status'] == 'success') {
           return json['data'] as Map<String, dynamic>;
         }
@@ -162,7 +162,7 @@ class HotelPartnerService {
           continue;
         }
         final hotels =
-            _hotelListFromJson(jsonDecode(res.body))
+            _hotelListFromJson(jsonDecode(utf8.decode(res.bodyBytes)))
                 .where((h) => _asInt(h['partnerid'], partnerid) == partnerid)
                 .toList();
         if (hotels.isNotEmpty) {
@@ -207,7 +207,7 @@ class HotelPartnerService {
     try {
       final uri = Uri.parse('$_base/owner/getStates.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return (json['data'] as List)
             .map((e) => StateItem.fromJson(e))
@@ -223,7 +223,7 @@ class HotelPartnerService {
     try {
       final uri = Uri.parse('$_base/owner/getCities.php?stateid=$stateid');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return (json['data'] as List).map((e) => CityItem.fromJson(e)).toList();
       }
@@ -245,7 +245,7 @@ class HotelPartnerService {
             body: jsonEncode(safePayload),
           )
           .timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') return json['data']['hotelid'];
       throw Exception(json['message']);
     } catch (e) {
@@ -257,7 +257,7 @@ class HotelPartnerService {
     try {
       final uri = Uri.parse('$_base/owner/getHotel.php?hotelid=$hotelid');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return json['data'] as Map<String, dynamic>;
       }
@@ -282,7 +282,7 @@ class HotelPartnerService {
     try {
       final uri = Uri.parse('$_base/get_images.php?entity_type=hotel&entity_id=$hotelid');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         final data = json['data'] as List<dynamic>;
         return data
@@ -315,7 +315,7 @@ class HotelPartnerService {
     try {
       final uri = Uri.parse('$_base/get_images.php?entity_type=room&entity_id=$roomid');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         final data = json['data'] as List<dynamic>;
         return data
@@ -342,7 +342,7 @@ class HotelPartnerService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'imageid': imageid}))
           .timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] != 'success') {
         throw Exception(json['message'] ?? 'Delete failed');
       }
@@ -362,7 +362,7 @@ class HotelPartnerService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] != 'success') throw Exception(json['message']);
     } catch (e) {
       throw Exception('editHotel failed: $e');
@@ -373,7 +373,7 @@ class HotelPartnerService {
     try {
       final uri = Uri.parse('$_base/owner/getRoomTypes.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         final types =
             (json['data'] as List)
@@ -394,7 +394,7 @@ class HotelPartnerService {
         '$_base/owner/getRooms.php?hotelid=$hotelid&partnerid=$partnerid',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return (json['data'] as List).map((e) => RoomItem.fromJson(e)).toList();
       }
@@ -414,7 +414,7 @@ class HotelPartnerService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] != 'success') throw Exception(json['message']);
     } catch (e) {
       throw Exception('saveRoom failed: $e');
@@ -435,7 +435,7 @@ class HotelPartnerService {
             }),
           )
           .timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] != 'success') throw Exception(json['message']);
     } catch (e) {
       throw Exception('deleteRoom failed: $e');
@@ -451,7 +451,7 @@ class HotelPartnerService {
         '$_base/owner/getRoomInventory.php?partnerid=$partnerid&hotelid=$hotelid',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return json['data'] as List<dynamic>;
       }
@@ -470,7 +470,7 @@ class HotelPartnerService {
         '$_base/owner/getEarnings.php?partnerid=$partnerid&period=$period',
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return json['data'] as Map<String, dynamic>;
       }
@@ -494,7 +494,7 @@ class HotelPartnerService {
             }),
           )
           .timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return CityItem.fromJson(json['data']);
       }

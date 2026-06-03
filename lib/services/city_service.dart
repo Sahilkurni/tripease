@@ -20,7 +20,7 @@ class CityService {
   Future<List<CityModel>> getCities() async {
     try {
       final response = await http.get(Uri.parse('${ApiConfig.baseUrl}owner/getCities.php'));
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       if (data['status'] == 'success') {
         return (data['data'] as List).map((e) => CityModel.fromJson(e)).toList();
       }
@@ -38,7 +38,7 @@ class CityService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'cityname': cityName, 'uid': uid}),
       );
-      final data = json.decode(response.body);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       if (data['status'] == 'success') {
         return CityModel.fromJson(data['data']);
       }

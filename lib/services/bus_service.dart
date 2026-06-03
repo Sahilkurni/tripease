@@ -13,7 +13,7 @@ class BusService {
       // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return (data['data'] as List)
               .map((e) => BusModel.fromJson(e))
@@ -43,7 +43,7 @@ class BusService {
           .timeout(const Duration(seconds: 12));
       // print("Response: ${response.body}");
 
-      final Map<String, dynamic> data = json.decode(response.body);
+      final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
       if (response.statusCode == 200 && data['status'] == 'success') {
         return int.parse(data['data']['busid'].toString());
       }
@@ -70,7 +70,7 @@ class BusService {
       final uri = Uri.parse(
           '${ApiConfig.baseUrl}get_images.php?entity_type=bus&entity_id=$busid');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         final data = json['data'] as List<dynamic>;
         return data
@@ -97,7 +97,7 @@ class BusService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'imageid': imageid}))
           .timeout(const Duration(seconds: 10));
-      final data = jsonDecode(res.body);
+      final data = jsonDecode(utf8.decode(res.bodyBytes));
       if (data['status'] != 'success') {
         throw Exception(data['message'] ?? 'Delete failed');
       }
@@ -128,7 +128,7 @@ class BusService {
           .timeout(const Duration(seconds: 12));
       // print("Response: ${response.body}");
 
-      final Map<String, dynamic> data = json.decode(response.body);
+      final Map<String, dynamic> data = json.decode(utf8.decode(response.bodyBytes));
       if (response.statusCode != 200 || data['status'] != 'success') {
         throw Exception(data['message'] ?? 'Failed to delete bus');
       }
@@ -158,7 +158,7 @@ class BusService {
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         final data = decoded['data'];
         if (data is List) {
           return data.map((e) => BusModel.fromJson(e)).toList();
@@ -183,7 +183,7 @@ class BusService {
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         final data = decoded['data'];
         if (data is List) {
           return data.map((e) => BusModel.fromJson(e)).toList();
@@ -207,7 +207,7 @@ class BusService {
 
       if (response.statusCode == 200) {
         if (response.body.isEmpty) return [];
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         final data = decoded['data'];
         if (data is List) {
           return data.cast<Map<String, dynamic>>();
@@ -251,7 +251,7 @@ class BusService {
       // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return int.tryParse(data['data']?['bookingid']?.toString() ?? '');
         }

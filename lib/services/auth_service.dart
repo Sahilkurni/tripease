@@ -69,7 +69,7 @@ class AuthService extends ChangeNotifier {
       // debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           final user = UserModel.fromJson(data['data'] ?? data);
           await saveSession(user);
@@ -113,7 +113,7 @@ class AuthService extends ChangeNotifier {
       // debugPrint("API RESPONSE [${response.statusCode}] -> ${response.body}");
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           final user = UserModel.fromJson(data['data'] ?? data);
           await saveSession(user);
@@ -140,7 +140,7 @@ class AuthService extends ChangeNotifier {
     try {
       final response = await http.post(Uri.parse(url), body: {'email': email});
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         return {
           'success': data['status'] == 'success',
           'message': data['message'] ?? (data['status'] == 'success' ? 'OTP sent successfully' : 'Failed to send OTP'),
@@ -160,7 +160,7 @@ class AuthService extends ChangeNotifier {
         body: {'email': email, 'otp_code': otp},
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         return {
           'success': data['status'] == 'success',
           'message': data['message'] ?? (data['status'] == 'success' ? 'OTP verified successfully' : 'Invalid OTP'),

@@ -71,12 +71,13 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
   static const _primary    = Color(0xFF2563EB);
   static const _error      = Color(0xFFEF4444);
   static const _success    = Color(0xFF10B981);
-  static const _bgLight    = Color(0xFFEFF6FF);
-  static const _cardLight  = Color(0xFFFFFFFF);
-  static const _textPri    = Color(0xFF1E293B);
-  static const _textSub    = Color(0xFF64748B);
-  static const _inputBorder= Color(0xFFE2E8F0);
-  static const _inputFill  = Color(0xFFF8FAFC);
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _bgLight    => _isDark ? const Color(0xFF0A1628) : const Color(0xFFEFF6FF);
+  Color get _cardLight  => _isDark ? const Color(0xFF142035) : const Color(0xFFFFFFFF);
+  Color get _textPri    => _isDark ? Colors.white : const Color(0xFF1E293B);
+  Color get _textSub    => _isDark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _inputBorder=> _isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+  Color get _inputFill  => _isDark ? const Color(0xFF1E3A5F) : const Color(0xFFF8FAFC);
   // Itinerary day accent colors (cycles)
   static const _dayColors  = [
     Color(0xFF2563EB), Color(0xFF059669), Color(0xFF7C3AED),
@@ -145,9 +146,9 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
       // If edit mode, match the IDs to dropdown items
       if (widget.isEdit && widget.packageData != null) {
         final catId  = int.tryParse(
-            widget.packageData!['categoryid'].toString()) ?? 0;
+            widget.packageData!['categoryid']?.toString() ?? '') ?? 0;
         final cityId = int.tryParse(
-            widget.packageData!['cityid'].toString()) ?? 0;
+            widget.packageData!['cityid']?.toString() ?? '') ?? 0;
         setState(() {
           _selectedCategory = _categories
               .where((c) => c.categoryid == catId)
@@ -287,18 +288,18 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
         'partnerid':   widget.partnerid,
         'uid':         widget.userid,
         'packageid':   widget.isEdit
-            ? int.parse(widget.packageData!['packageid'].toString())
+            ? int.tryParse(widget.packageData!['packageid']?.toString() ?? '0') ?? 0
             : 0,
         'categoryid':  _selectedCategory!.categoryid,
         'packagename': _nameCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
         'cityid':      _selectedCity!.cityid,
-        'days':        int.parse(_daysCtrl.text.trim()),
-        'nights':      int.parse(_nightsCtrl.text.trim()),
-        'price':       double.parse(_priceCtrl.text.trim()),
-        'maxpersons':  int.parse(_maxPersonsCtrl.text.trim()),
-        'latitude':    double.tryParse(_latCtrl.text),
-        'longitude':   double.tryParse(_lngCtrl.text),
+        'days':        int.tryParse(_daysCtrl.text.trim()) ?? 0,
+        'nights':      int.tryParse(_nightsCtrl.text.trim()) ?? 0,
+        'price':       double.tryParse(_priceCtrl.text.trim()) ?? 0.0,
+        'maxpersons':  int.tryParse(_maxPersonsCtrl.text.trim()) ?? 0,
+        'latitude':    double.tryParse(_latCtrl.text) ?? 0.0,
+        'longitude':   double.tryParse(_lngCtrl.text) ?? 0.0,
         'itinerary':   _itinerary,
         'images':      combinedImages,
       };
@@ -421,7 +422,7 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
       hintStyle:      GoogleFonts.poppins(fontSize: 13, color: _textSub),
       border:         OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _inputBorder)),
+          borderSide: BorderSide(color: _inputBorder)),
       enabledBorder:  OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -461,7 +462,7 @@ class _AddEditPackageScreenState extends State<AddEditPackageScreen> {
           color: _textPri,
         )),
       const SizedBox(width: 12),
-      const Expanded(child: Divider(color: _inputBorder)),
+      Expanded(child: Divider(color: _inputBorder)),
     ]),
   );
 
@@ -1120,6 +1121,7 @@ class _ItineraryDayCardState extends State<_ItineraryDayCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -1128,7 +1130,7 @@ class _ItineraryDayCardState extends State<_ItineraryDayCard> {
         border: Border(left: BorderSide(color: widget.color, width: 4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1157,7 +1159,7 @@ class _ItineraryDayCardState extends State<_ItineraryDayCard> {
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: widget.day.title.isEmpty ? const Color(0xFF64748B) : const Color(0xFF1E293B),
+            color: widget.day.title.isEmpty ? (isDark ? Colors.white54 : const Color(0xFF64748B)) : (isDark ? Colors.white : const Color(0xFF1E293B)),
           ),
         ),
         children: [
@@ -1190,3 +1192,10 @@ class _ItineraryDayCardState extends State<_ItineraryDayCard> {
     );
   }
 }
+
+
+
+
+
+
+

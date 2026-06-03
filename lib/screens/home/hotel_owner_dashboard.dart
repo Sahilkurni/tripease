@@ -10,6 +10,7 @@ import '../../widgets/base64_image.dart';
 import '../profile/edit_profile_screen.dart';
 import '../admin/coupon_management_screen.dart';
 import '../admin/offer_management_screen.dart';
+import '../../widgets/earnings_tab.dart';
 import '../../main.dart';
 
 class HotelOwnerDashboard extends StatefulWidget {
@@ -858,8 +859,15 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
     );
   }
 
-  Widget _buildEarningsTab() =>
-      const Center(child: Text('Earnings Tab Pending Next Phase Design'));
+  Widget _buildEarningsTab() => EarningsTab(
+        earningsData: _earnings,
+        isLoading: _isLoading,
+        selectedPeriod: _earningsPeriod,
+        onPeriodChanged: (val) {
+          setState(() => _earningsPeriod = val);
+          _fetchDashboardData();
+        },
+      );
 }
 
 class _PremiumStatCard extends StatelessWidget {
@@ -1516,3 +1524,4 @@ class _PremiumInventoryCard extends StatelessWidget {
     );
   }
 }
+

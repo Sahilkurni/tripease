@@ -13,7 +13,7 @@ class PackageService {
       // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         final data = decoded['data'];
         if (data is List) {
           return data.map((e) => PackageModel.fromJson(e)).toList();
@@ -37,7 +37,7 @@ class PackageService {
       // print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         final data = decoded['data'];
         if (data is List) {
           return data.map((e) => PackageModel.fromJson(e)).toList();

@@ -9,7 +9,7 @@ class HomeService {
 
   List<Map<String, dynamic>> _dataListFromResponse(http.Response response) {
     // print(response.body);
-    final decoded = jsonDecode(response.body);
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
       final List data = decoded['data'] is List ? decoded['data'] as List : [];
       return data

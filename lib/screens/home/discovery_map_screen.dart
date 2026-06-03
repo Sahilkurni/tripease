@@ -50,7 +50,7 @@ class _DiscoveryMapScreenState extends State<DiscoveryMapScreen> {
       ));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           final items = data['data'];
           setState(() {
@@ -277,21 +277,57 @@ class _DiscoveryMapScreenState extends State<DiscoveryMapScreen> {
   }
 }
 
-class _MarkerWidget extends StatelessWidget {
+class _MarkerWidget extends StatefulWidget {
   final IconData icon;
   final Color color;
   const _MarkerWidget({required this.icon, required this.color});
 
   @override
+  State<_MarkerWidget> createState() => _MarkerWidgetState();
+}
+
+class _MarkerWidgetState extends State<_MarkerWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _bounceAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    
+    _bounceAnim = Tween<double>(begin: 0, end: 10).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-      ),
-      child: Icon(icon, color: Colors.white, size: 20),
+    return AnimatedBuilder(
+      animation: _bounceAnim,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, -_bounceAnim.value),
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+            ),
+            child: Icon(widget.icon, color: Colors.white, size: 20),
+          ),
+        );
+      },
     );
   }
 }

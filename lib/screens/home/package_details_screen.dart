@@ -258,7 +258,10 @@ class _PackageDetailsScreenState extends State<PackageDetailsScreen> {
               ],
               flexibleSpace: FlexibleSpaceBar(
                 stretchModes: const [StretchMode.zoomBackground],
-                background: _buildHero(),
+                background: Hero(
+                  tag: 'package_image_${widget.packageId}',
+                  child: _buildHero(),
+                ),
               ),
             ),
             SliverToBoxAdapter(

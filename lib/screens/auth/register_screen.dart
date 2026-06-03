@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -309,7 +310,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 14),
           TextFormField(
             controller: _mobileCtrl,
-            keyboardType: TextInputType.phone,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.phone_outlined),
               hintText: 'Mobile Number',

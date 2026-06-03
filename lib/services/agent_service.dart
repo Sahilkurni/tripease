@@ -9,8 +9,8 @@ class CategoryItem {
   final String categoryname;
   CategoryItem({required this.categoryid, required this.categoryname});
   factory CategoryItem.fromJson(Map<String, dynamic> j) => CategoryItem(
-    categoryid: int.parse(j['categoryid'].toString()),
-    categoryname: j['categoryname'].toString(),
+    categoryid: int.tryParse(j['categoryid']?.toString() ?? '0') ?? 0,
+    categoryname: j['categoryname']?.toString() ?? '',
   );
 }
 
@@ -19,8 +19,8 @@ class CityItem {
   final String cityname;
   CityItem({required this.cityid, required this.cityname});
   factory CityItem.fromJson(Map<String, dynamic> j) => CityItem(
-    cityid: int.parse(j['cityid'].toString()),
-    cityname: j['cityname'].toString(),
+    cityid: int.tryParse(j['cityid']?.toString() ?? '0') ?? 0,
+    cityname: j['cityname']?.toString() ?? '',
   );
 }
 
@@ -39,8 +39,8 @@ class ItineraryDayItem {
     'description': description,
   };
   factory ItineraryDayItem.fromJson(Map<String, dynamic> j) => ItineraryDayItem(
-    dayno: int.parse(j['dayno'].toString()),
-    title: j['title'].toString(),
+    dayno: int.tryParse(j['dayno']?.toString() ?? '0') ?? 0,
+    title: j['title']?.toString() ?? '',
     description: j['description']?.toString() ?? '',
   );
 }
@@ -56,7 +56,7 @@ class AgentService {
       final uri = Uri.parse('$_base/agent/getCategories.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       // print('API Response (getCategories): ${res.body}');
-      final data = jsonDecode(res.body)['data'];
+      final data = jsonDecode(utf8.decode(res.bodyBytes))['data'];
       if (data is List) {
         return data.map((e) => CategoryItem.fromJson(e)).toList();
       }
@@ -73,7 +73,7 @@ class AgentService {
       final uri = Uri.parse('$_base/agent/getCities.php');
       final res = await http.get(uri).timeout(const Duration(seconds: 10));
       // print('API Response (getCities): ${res.body}');
-      final data = jsonDecode(res.body)['data'];
+      final data = jsonDecode(utf8.decode(res.bodyBytes))['data'];
       if (data is List) {
         return data.map((e) => CityItem.fromJson(e)).toList();
       }
@@ -95,7 +95,7 @@ class AgentService {
           )
           .timeout(const Duration(seconds: 10));
       // print('API Response (addCity): ${res.body}');
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return CityItem.fromJson(json['data']);
       }
@@ -122,9 +122,9 @@ class AgentService {
           .timeout(const Duration(seconds: 15));
       // print('API Response (savePackageRaw): ${res.body}');
 
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
-        return int.parse(json['data']['packageid'].toString());
+        return int.tryParse(json['data']?['packageid']?.toString() ?? '0') ?? 0;
       }
       throw Exception(json['message']);
     } catch (e) {
@@ -176,9 +176,9 @@ class AgentService {
           .timeout(const Duration(seconds: 15));
       // print('API Response (savePackage): ${res.body}');
 
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
-        return int.parse(json['data']['packageid'].toString());
+        return int.tryParse(json['data']?['packageid']?.toString() ?? '0') ?? 0;
       }
       throw Exception(json['message']);
     } catch (e) {
@@ -199,7 +199,7 @@ class AgentService {
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       // print('API Response (getPackageDetail): ${res.body}');
-      final json = jsonDecode(res.body);
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
       if (json['status'] == 'success') {
         return json['data'] as Map<String, dynamic>;
       }
@@ -207,6 +207,26 @@ class AgentService {
     } catch (e) {
       // print('getPackageDetail failed: $e');
       throw Exception('getPackageDetail failed: $e');
+    }
+  }
+
+  // Fetch earnings
+  static Future<Map<String, dynamic>> getEarnings(
+    int partnerid,
+    String period,
+  ) async {
+    try {
+      final uri = Uri.parse(
+        '$_base/agent/getEarnings.php?partnerid=$partnerid&period=$period',
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(res.bodyBytes));
+      if (json['status'] == 'success') {
+        return json['data'] as Map<String, dynamic>;
+      }
+      throw Exception(json['message']);
+    } catch (e) {
+      throw Exception('getEarnings failed: $e');
     }
   }
 }

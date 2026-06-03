@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/booking_success_screen.dart';
 import '../../services/payment_service.dart';
 import '../../services/coupon_service.dart';
 import '../../models/coupon_model.dart';
@@ -183,7 +184,7 @@ class _PackageGuestDetailsScreenState extends State<PackageGuestDetailsScreen> {
         },
       );
 
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
       final success = data['status'] == 'success';
       final bookingId = int.tryParse(data['data']?['bookingid']?.toString() ?? '') ?? 0;
 
@@ -201,28 +202,16 @@ class _PackageGuestDetailsScreenState extends State<PackageGuestDetailsScreen> {
       if (!mounted) return;
 
       if (success) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 28),
-                SizedBox(width: 10),
-                Text('Booking Confirmed'),
-              ],
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => BookingSuccessScreen(
+              title: 'Package Booked! 🎉',
+              subtitle: 'Your travel package has been\nbooked successfully!',
+              bookingType: 'package',
+              savedAmount: _discountAmount > 0
+                  ? _discountAmount.toStringAsFixed(0)
+                  : null,
             ),
-            content: const Text('Your travel package has been booked successfully!'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                child: const Text('Great!', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
           ),
         );
       } else {

@@ -94,7 +94,7 @@ class LocationService {
       });
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(utf8.decode(response.bodyBytes));
         final addressMap = data['address'] as Map<String, dynamic>?;
         
         return UserLocation(

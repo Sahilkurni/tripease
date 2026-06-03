@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/booking_success_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/flight_model.dart';
 import '../../models/seat_model.dart';
@@ -143,28 +144,13 @@ class _FlightPassengerDetailsScreenState extends State<FlightPassengerDetailsScr
   }
 
   void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 28),
-            SizedBox(width: 10),
-            Text('Booking Confirmed'),
-          ],
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BookingSuccessScreen(
+          title: 'Flight Booked! ✈️',
+          subtitle: 'Your flight has been booked\nsuccessfully. Bon voyage!',
+          bookingType: 'flight',
         ),
-        content: const Text('Your flight has been booked successfully!'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: const Text('Great!', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }

@@ -20,7 +20,7 @@ class CouponService {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return (data['data'] as List).map((e) => CouponModel.fromJson(e)).toList();
         }
@@ -44,7 +44,7 @@ class CouponService {
 
     try {
       final response = await http.get(Uri.parse(url));
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
       return data;
     } catch (e) {
       // print("Error applying coupon: $e");
@@ -55,7 +55,7 @@ class CouponService {
   Future<Map<String, dynamic>> createCoupon(Map<String, String> data) async {
     try {
       final response = await http.post(Uri.parse(ApiConfig.createCoupon), body: data);
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded;
     } catch (e) {
       // print("Error creating coupon: $e");
@@ -66,7 +66,7 @@ class CouponService {
   Future<Map<String, dynamic>> updateCoupon(Map<String, String> data) async {
     try {
       final response = await http.post(Uri.parse(ApiConfig.updateCoupon), body: data);
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded;
     } catch (e) {
       // print("Error updating coupon: $e");
@@ -80,7 +80,7 @@ class CouponService {
         Uri.parse(ApiConfig.deleteCoupon),
         body: {'couponid': couponId.toString(), 'userid': userId.toString()},
       );
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error deleting coupon: $e");
@@ -94,7 +94,7 @@ class CouponService {
         Uri.parse(ApiConfig.approveCoupon),
         body: {'couponid': couponId.toString(), 'userid': adminId.toString(), 'status': status},
       );
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error approving coupon: $e");
@@ -109,7 +109,7 @@ class CouponService {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data['status'] == 'success') {
           return (data['data'] as List).map((e) => CouponUsageModel.fromJson(e)).toList();
         }
@@ -141,7 +141,7 @@ class CouponService {
           'discount_amount': discountAmount.toString(),
         },
       );
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       return decoded['status'] == 'success';
     } catch (e) {
       // print("Error recording coupon usage: $e");

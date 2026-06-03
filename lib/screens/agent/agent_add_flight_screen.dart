@@ -46,9 +46,13 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
     _lngController = TextEditingController(text: widget.flight?.longitude?.toString() ?? '');
     
     if (widget.flight != null) {
-      final dep = DateTime.parse(widget.flight!.departureTime);
-      _departureDate = dep;
-      _departureTime = TimeOfDay(hour: dep.hour, minute: dep.minute);
+      try {
+        final dep = DateTime.parse(widget.flight!.departureTime);
+        _departureDate = dep;
+        _departureTime = TimeOfDay(hour: dep.hour, minute: dep.minute);
+      } catch (e) {
+        // Fallback if date is invalid
+      }
     }
     
     _loadCities();
@@ -194,16 +198,19 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
         return StatefulBuilder(
           builder: (ctx, setStateDialog) {
             return AlertDialog(
+              backgroundColor: Theme.of(ctx).brightness == Brightness.dark ? const Color(0xFF142035) : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('Add New City', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              title: Text('Add New City', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Theme.of(ctx).brightness == Brightness.dark ? Colors.white : Colors.black)),
               content: Form(
                 key: formKey,
                 child: TextFormField(
                   controller: ctrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Theme.of(ctx).brightness == Brightness.dark ? Colors.white : Colors.black),
+                  decoration: InputDecoration(
                     labelText: 'City Name *',
-                    prefixIcon: Icon(Icons.location_city_rounded),
+                    labelStyle: TextStyle(color: Theme.of(ctx).brightness == Brightness.dark ? Colors.white70 : Colors.black54),
+                    prefixIcon: const Icon(Icons.location_city_rounded),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'City name is required';
@@ -392,47 +399,55 @@ class _AgentAddFlightScreenState extends State<AgentAddFlightScreen> {
   }
 
   Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool isNumeric = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextFormField(
       controller: controller,
       keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+      style: TextStyle(color: isDark ? Colors.white : Colors.black),
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
         prefixIcon: Icon(icon, color: AppColors.primary),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         filled: true,
-        fillColor: Theme.of(context).cardColor,
+        fillColor: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFF8FAFC),
       ),
       validator: (val) => val == null || val.isEmpty ? 'Required' : null,
     );
   }
 
   Widget _buildCityDropdown(String label, CityModel? value, Function(CityModel?) onChanged) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return DropdownButtonFormField<CityModel>(
       value: value,
-      items: _cities.map((city) => DropdownMenuItem(value: city, child: Text(city.cityName))).toList(),
+      items: _cities.map((city) => DropdownMenuItem(value: city, child: Text(city.cityName, style: TextStyle(color: isDark ? Colors.white : Colors.black)))).toList(),
       onChanged: onChanged,
+      dropdownColor: isDark ? const Color(0xFF1E3A5F) : Colors.white,
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         filled: true,
-        fillColor: Theme.of(context).cardColor,
+        fillColor: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFF8FAFC),
       ),
       validator: (val) => val == null ? 'Required' : null,
     );
   }
 
   Widget _buildDateTimePicker(String label, String value, IconData icon, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
           prefixIcon: Icon(icon, color: AppColors.primary),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           filled: true,
-          fillColor: Theme.of(context).cardColor,
+          fillColor: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFF8FAFC),
         ),
-        child: Text(value, style: GoogleFonts.poppins()),
+        child: Text(value, style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black)),
       ),
     );
   }
