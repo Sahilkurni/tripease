@@ -31,8 +31,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Color get _primary => Theme.of(context).colorScheme.primary;
   Color get _accent => Theme.of(context).colorScheme.secondary;
   Color get _bg => Theme.of(context).scaffoldBackgroundColor;
-  Color get _ink => Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF172033);
-  Color get _muted => Theme.of(context).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF64748B);
+  Color get _ink =>
+      Theme.of(context).brightness == Brightness.dark
+          ? Colors.white
+          : const Color(0xFF172033);
+  Color get _muted =>
+      Theme.of(context).brightness == Brightness.dark
+          ? Colors.white70
+          : const Color(0xFF64748B);
   Color get _surface => Theme.of(context).cardColor;
 
   int _selectedIndex = 0;
@@ -49,11 +55,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     {'title': 'Hotels', 'icon': Icons.apartment_rounded},
     {'title': 'Packages', 'icon': Icons.card_travel_rounded},
     {'title': 'Buses', 'icon': Icons.directions_bus_rounded},
+    {'title': 'Flights', 'icon': Icons.flight_takeoff_rounded},
     {'title': 'Bookings', 'icon': Icons.confirmation_number_rounded},
     {'title': 'Payments', 'icon': Icons.payment_rounded},
     {'title': 'Coupons', 'icon': Icons.local_offer_rounded},
-    {'title': 'Support', 'icon': Icons.support_agent_rounded},
-    {'title': 'Flights', 'icon': Icons.flight_takeoff_rounded},
+    // {'title': 'Support', 'icon': Icons.support_agent_rounded},
   ];
 
   @override
@@ -159,7 +165,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         color: _surface,
         border:
             isDesktop
-                ? Border(right: BorderSide(color: Theme.of(context).dividerColor))
+                ? Border(
+                  right: BorderSide(color: Theme.of(context).dividerColor),
+                )
                 : null,
       ),
       child: Column(
@@ -259,9 +267,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 40, width: 250, color: Theme.of(context).dividerColor.withAlpha(50)),
+          Container(
+            height: 40,
+            width: 250,
+            color: Theme.of(context).dividerColor.withAlpha(50),
+          ),
           const SizedBox(height: 8),
-          Container(height: 20, width: 350, color: Theme.of(context).dividerColor.withAlpha(50)),
+          Container(
+            height: 20,
+            width: 350,
+            color: Theme.of(context).dividerColor.withAlpha(50),
+          ),
           const SizedBox(height: 32),
           GridView.builder(
             shrinkWrap: true,
@@ -536,9 +552,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final index = value.toInt();
                   if (index >= 0 && index < monthlyRevenue.length) {
                     final dIdx =
-                        int.tryParse(
-                          monthlyRevenue[index]['day'].toString(),
-                        ) ??
+                        int.tryParse(monthlyRevenue[index]['day'].toString()) ??
                         1;
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -633,9 +647,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   final index = value.toInt();
                   if (index >= 0 && index < bookingTrends.length) {
                     final dIdx =
-                        int.tryParse(
-                          bookingTrends[index]['day'].toString(),
-                        ) ??
+                        int.tryParse(bookingTrends[index]['day'].toString()) ??
                         1;
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
