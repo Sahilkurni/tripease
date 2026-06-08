@@ -29,11 +29,28 @@ if (!$userid || !$tripid || !$seatid) {
 try {
     $conn->begin_transaction();
 
+    // Fetch commission
+    $commission_pct = 0;
+    $commission_amt = 0;
+    $c_stmt = $conn->prepare("
+        SELECT p.commission 
+        FROM buses b 
+        JOIN partners p ON b.partnerid = p.partnerid 
+        WHERE b.busid = ?
+    ");
+    $c_stmt->bind_param("i", $tripid);
+    $c_stmt->execute();
+    $c_res = $c_stmt->get_result();
+    if ($c_row = $c_res->fetch_assoc()) {
+        $commission_pct = floatval($c_row['commission']);
+        $commission_amt = ($amount * $commission_pct) / 100.0;
+    }
+
     // 1. Create booking
-    $sql = "INSERT INTO bookings (userid, serviceid, amount, status, booking_date, bookingtype) 
-            VALUES (?, ?, ?, 'confirmed', ?, 'bus')";
+    $sql = "INSERT INTO bookings (userid, serviceid, amount, commission_pct, commission_amt, status, booking_date, bookingtype) 
+            VALUES (?, ?, ?, ?, ?, 'confirmed', ?, 'bus')";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iidss", $userid, $tripid, $amount, $booking_date);
+    $stmt->bind_param("iiddds", $userid, $tripid, $amount, $commission_pct, $commission_amt, $booking_date);
     $stmt->execute();
     
     // 2. Mark seat as booked

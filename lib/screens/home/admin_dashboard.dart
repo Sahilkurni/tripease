@@ -324,13 +324,13 @@ class _AdminDashboardState extends State<AdminDashboard>
       case 3:
         return _buildBookingsPanel();
       case 4:
-        return Center(
-          child: Text('Settings', style: GoogleFonts.poppins(fontSize: 20)),
-        );
-      case 4:
         return const CouponManagementScreen(roleView: 'admin');
       case 5:
         return const OfferManagementScreen(roleView: 'admin');
+      case 6:
+        return Center(
+          child: Text('Settings', style: GoogleFonts.poppins(fontSize: 20)),
+        );
       default:
         return _buildOverviewPanel();
     }

@@ -83,6 +83,7 @@ $queries = [
         base_fare DECIMAL(10,2),
         status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
         isactive TINYINT DEFAULT 1,
+        partnerid INT,
         FOREIGN KEY (source_city_id) REFERENCES cities(cityid),
         FOREIGN KEY (destination_city_id) REFERENCES cities(cityid)
     )",
@@ -102,6 +103,8 @@ $queries = [
         service_id INT,
         room_id INT,
         amount DECIMAL(10,2),
+        commission_pct DECIMAL(5,2) DEFAULT 0.0,
+        commission_amt DECIMAL(10,2) DEFAULT 0.0,
         booking_date DATE,
         status ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending',
         FOREIGN KEY (userid) REFERENCES users(userid)

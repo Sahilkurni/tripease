@@ -122,7 +122,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   }
 
   double get _totalFare => _selectedSeats.fold(
-      0, (sum, s) => sum + widget.bus.baseFare + s.extraFare);
+      0, (sum, s) => sum + 0 + s.extraFare);
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +238,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.bus.busName,
+                  widget.bus.busname,
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 26,
@@ -252,11 +252,11 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                 Row(
                   children: [
                     _heroBadge(
-                      '${widget.bus.sourceCityName ?? 'Source'} → ${widget.bus.destinationCityName ?? 'Dest'}',
+                      '${'Source' ?? 'Source'} → ${'Destination' ?? 'Dest'}',
                       Icons.route_rounded,
                     ),
                     const SizedBox(width: 8),
-                    _heroBadge(widget.bus.busType, Icons.directions_bus_rounded),
+                    _heroBadge(widget.bus.bustype, Icons.directions_bus_rounded),
                     const Spacer(),
                     if (_images.length > 1)
                       Row(
@@ -333,7 +333,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.bus.busName,
+              Text(widget.bus.busname,
                   style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 26,
@@ -341,10 +341,10 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
               const SizedBox(height: 6),
               Row(children: [
                 _heroBadge(
-                    '${widget.bus.sourceCityName ?? 'Source'} → ${widget.bus.destinationCityName ?? 'Dest'}',
+                    '${'Source' ?? 'Source'} → ${'Destination' ?? 'Dest'}',
                     Icons.route_rounded),
                 const SizedBox(width: 8),
-                _heroBadge(widget.bus.busType, Icons.directions_bus_rounded),
+                _heroBadge(widget.bus.bustype, Icons.directions_bus_rounded),
               ]),
             ],
           ),
@@ -374,22 +374,22 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _infoItem(Icons.schedule_rounded,
-              widget.bus.departureTime.length >= 5
-                  ? widget.bus.departureTime.substring(0, 5)
-                  : widget.bus.departureTime,
+              'N/A'.length >= 5
+                  ? 'N/A'.substring(0, 5)
+                  : 'N/A',
               'Departure', isDark),
           _divider(),
           _infoItem(Icons.schedule_rounded,
-              widget.bus.arrivalTime.length >= 5
-                  ? widget.bus.arrivalTime.substring(0, 5)
-                  : widget.bus.arrivalTime,
+              'N/A'.length >= 5
+                  ? 'N/A'.substring(0, 5)
+                  : 'N/A',
               'Arrival', isDark),
           _divider(),
           _infoItem(Icons.event_seat_rounded,
-              '${widget.bus.totalSeats}', 'Total Seats', isDark),
+              '${widget.bus.totalseats}', 'Total Seats', isDark),
           _divider(),
           _infoItem(Icons.currency_rupee_rounded,
-              widget.bus.baseFare.toStringAsFixed(0), 'Base Fare', isDark),
+              0.toStringAsFixed(0), 'Base Fare', isDark),
         ],
       ),
     );

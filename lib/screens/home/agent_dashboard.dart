@@ -74,16 +74,11 @@ class _AgentDashboardState extends State<AgentDashboard>
           prefs.getInt('userid') ??
           int.tryParse(user['userid']?.toString() ?? '') ??
           0;
-      _partnerid =
-          prefs.getInt('partnerid') ??
-          int.tryParse(user['partnerid']?.toString() ?? '') ??
-          _userid;
+      // For the Travel Agent / Bus Partner panel, the partner ID is always identical to their user ID.
+      // We enforce this directly to prevent stale/incorrect session cache from showing blank data.
+      _partnerid = _userid;
 
-      if (_partnerid == 0) {
-        _partnerid = 1; 
-      }
-
-      _fullname = prefs.getString('fullname') ?? user['fullname'] ?? '';
+      _fullname = user['name'] ?? user['fullname'] ?? prefs.getString('fullname') ?? '';
       _email = prefs.getString('email') ?? user['email'] ?? '';
       _photo = prefs.getString('photo') ?? user['photo'] ?? '';
 
@@ -134,7 +129,7 @@ class _AgentDashboardState extends State<AgentDashboard>
           (context) => AlertDialog(
             title: const Text('Delete bus?'),
             content: Text(
-              '${bus.busName} will be removed from active listings.',
+              '${bus.busname} will be removed from active listings.',
             ),
             actions: [
               TextButton(
@@ -741,7 +736,7 @@ class _AgentDashboardState extends State<AgentDashboard>
                             ),
                     ),
                     title: Text(
-                      bus.busName,
+                      bus.busname,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -752,11 +747,11 @@ class _AgentDashboardState extends State<AgentDashboard>
                       children: [
                         const SizedBox(height: 4),
                         Text(
-                          '${bus.sourceCityName ?? 'Src'} -> ${bus.destinationCityName ?? 'Dest'}',
+                          '${bus.sourceCityName.isNotEmpty ? bus.sourceCityName : 'Source'} -> ${bus.destinationCityName.isNotEmpty ? bus.destinationCityName : 'Destination'}',
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${bus.busType} • ${bus.layoutType} • ${bus.totalSeats} Seats',
+                          '${bus.bustype} • ${bus.layoutType} • ${bus.totalseats} Seats',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
@@ -770,7 +765,7 @@ class _AgentDashboardState extends State<AgentDashboard>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '₹${bus.baseFare}',
+                              '₹${bus.baseFare.toStringAsFixed(0)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -779,7 +774,7 @@ class _AgentDashboardState extends State<AgentDashboard>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${bus.departureTime} - ${bus.arrivalTime}',
+                              '${_formatTime(bus.departureTime)} - ${_formatTime(bus.arrivalTime)}',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 12,
@@ -810,6 +805,20 @@ class _AgentDashboardState extends State<AgentDashboard>
         ],
       ),
     );
+  }
+
+  String _formatTime(String timeStr) {
+    if (timeStr.isEmpty) return 'N/A';
+    try {
+      final parts = timeStr.trim().split(' ');
+      final timeOnly = parts.last;
+      if (timeOnly.length >= 5) {
+        return timeOnly.substring(0, 5);
+      }
+      return timeOnly;
+    } catch (_) {
+      return timeStr;
+    }
   }
 
   Widget _buildFlightsTab() {

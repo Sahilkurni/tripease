@@ -93,7 +93,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   double get _totalAmount {
     double total = 0;
     for (var seat in widget.selectedSeats) {
-      total += widget.bus.baseFare + seat.extraFare;
+      total += 0.0 + seat.extraFare;
     }
     return total;
   }
@@ -167,7 +167,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     paymentService.openPayment(
       amount: _finalAmount,
       name: "TripEase Bus",
-      description: "Booking for ${widget.bus.busName}",
+      description: "Booking for ${widget.bus.busname}",
       email: _contactEmailCtrl.text.trim(),
     );
 
@@ -184,7 +184,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           userId: int.parse(user.userid),
           tripId: widget.bus.busid,
           seatId: seat.seatid,
-          amount: widget.bus.baseFare + seat.extraFare,
+          amount: 0.0 + seat.extraFare,
           passengerName: _nameControllers[i].text,
           age: _ageControllers[i].text,
           gender: _genderControllers[i].text,
@@ -213,7 +213,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         MaterialPageRoute(
           builder: (_) => BookingSuccessScreen(
             title: 'Bus Booked! 🚌',
-            subtitle: 'Successfully booked ${widget.selectedSeats.length} seat(s)\non ${widget.bus.busName}!',
+            subtitle: 'Successfully booked ${widget.selectedSeats.length} seat(s)\non ${widget.bus.busname}!',
             bookingType: 'bus',
             savedAmount: _discountAmount > 0
                 ? _discountAmount.toStringAsFixed(0)
@@ -314,7 +314,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${widget.bus.busName} • ${widget.bus.busType}',
+                  '${widget.bus.busname} • ${widget.bus.bustype}',
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

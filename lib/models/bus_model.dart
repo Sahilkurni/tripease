@@ -1,78 +1,72 @@
 class BusModel {
   final int busid;
   final int partnerid;
-  final String busName;
-  final String busType; // e.g., A/C Sleeper, Non-A/C Seater
-  final String layoutType; // e.g., 2x2, 2x1, 1x1
-  final int totalSeats;
-  final int sourceCityId;
-  final int destinationCityId;
-  final String departureTime;
-  final String arrivalTime;
-  final double baseFare;
+  final String busname;
+  final String bustype;
+  final String busnumber;
+  final int totalseats;
+  final String amenities;
   final int? uid;
   final String? edatetime;
   final int isactive;
-  final double? latitude;
-  final double? longitude;
 
   // UI convenience fields
-  final String? sourceCityName;
-  final String? destinationCityName;
   final String? imageUrl;
   final List<String> images; // all images (primary first)
   final List<BusSeatModel> seats;
+  final double baseFare;
+  final String departureTime;
+  final String arrivalTime;
+  final String sourceCityName;
+  final String destinationCityName;
+  final String layoutType;
 
   BusModel({
     required this.busid,
     required this.partnerid,
-    required this.busName,
-    required this.busType,
-    required this.layoutType,
-    required this.totalSeats,
-    required this.sourceCityId,
-    required this.destinationCityId,
-    required this.departureTime,
-    required this.arrivalTime,
-    required this.baseFare,
+    required this.busname,
+    required this.bustype,
+    required this.busnumber,
+    required this.totalseats,
+    required this.amenities,
     this.uid,
     this.edatetime,
     this.isactive = 1,
-    this.sourceCityName,
-    this.destinationCityName,
     this.imageUrl,
     this.images = const [],
     this.seats = const [],
-    this.latitude,
-    this.longitude,
+    this.baseFare = 0.0,
+    this.departureTime = '',
+    this.arrivalTime = '',
+    this.sourceCityName = '',
+    this.destinationCityName = '',
+    this.layoutType = '2x2',
   });
 
   factory BusModel.fromJson(Map<String, dynamic> json) {
     return BusModel(
       busid: int.parse((json['busid'] ?? json['tripid'] ?? '0').toString()),
       partnerid: int.parse((json['partnerid'] ?? '0').toString()),
-      busName: json['bus_name'] ?? json['busname'] ?? '',
-      busType: json['bus_type'] ?? json['bustype'] ?? '',
-      layoutType: json['layout_type'] ?? '2x2',
-      totalSeats: int.parse((json['total_seats'] ?? '0').toString()),
-      sourceCityId: int.parse((json['source_city_id'] ?? '0').toString()),
-      destinationCityId: int.parse((json['destination_city_id'] ?? '0').toString()),
-      departureTime: json['departure_time'] ?? json['departure'] ?? '',
-      arrivalTime: json['arrival_time'] ?? json['arrival'] ?? '',
-      baseFare: double.parse((json['base_fare'] ?? json['price'] ?? '0.0').toString()),
+      busname: json['busname'] ?? '',
+      bustype: json['bustype'] ?? '',
+      busnumber: json['busnumber'] ?? '',
+      totalseats: int.parse((json['totalseats'] ?? '0').toString()),
+      amenities: json['amenities'] ?? '',
       uid: json['uid'] != null ? int.parse(json['uid'].toString()) : null,
       edatetime: json['edatetime'],
       isactive: int.parse((json['isactive'] ?? '1').toString()),
-      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
-      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
-      sourceCityName: json['source_city_name'] ?? json['source'],
-      destinationCityName: json['destination_city_name'] ?? json['destination'],
       imageUrl: json['imageUrl']?.toString() ?? json['image']?.toString(),
       images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       seats: (json['seats'] as List<dynamic>?)
               ?.map((e) => BusSeatModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      baseFare: double.tryParse((json['base_fare'] ?? json['price'] ?? '0.0').toString()) ?? 0.0,
+      departureTime: json['departure_time'] ?? json['departure'] ?? '',
+      arrivalTime: json['arrival_time'] ?? json['arrival'] ?? '',
+      sourceCityName: json['source_city_name'] ?? json['source'] ?? '',
+      destinationCityName: json['destination_city_name'] ?? json['destination'] ?? '',
+      layoutType: json['layout_type'] ?? '2x2',
     );
   }
 
@@ -80,18 +74,20 @@ class BusModel {
     return {
       'busid': busid,
       'partnerid': partnerid,
-      'bus_name': busName,
-      'bus_type': busType,
-      'layout_type': layoutType,
-      'total_seats': totalSeats,
-      'source_city_id': sourceCityId,
-      'destination_city_id': destinationCityId,
-      'departure_time': departureTime,
-      'arrival_time': arrivalTime,
-      'base_fare': baseFare,
+      'busname': busname,
+      'bustype': bustype,
+      'busnumber': busnumber,
+      'totalseats': totalseats,
+      'amenities': amenities,
       'uid': uid,
       'edatetime': edatetime,
       'isactive': isactive,
+      'base_fare': baseFare,
+      'departure_time': departureTime,
+      'arrival_time': arrivalTime,
+      'source_city_name': sourceCityName,
+      'destination_city_name': destinationCityName,
+      'layout_type': layoutType,
     };
   }
 }

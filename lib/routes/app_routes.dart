@@ -231,17 +231,12 @@ final appRouter = GoRouter(
           final bus = BusModel(
             busid: int.tryParse(extra.id) ?? 0,
             partnerid: 0,
-            busName: extra.name,
-            busType: 'Standard',
-            layoutType: '2x2',
-            totalSeats: 40,
-            sourceCityId: 0,
-            destinationCityId: 0,
-            departureTime: '00:00',
-            arrivalTime: '00:00',
-            sourceCityName: extra.location.contains(' to ') ? extra.location.split(' to ').first : 'Source',
-            destinationCityName: extra.location.contains(' to ') ? extra.location.split(' to ').last : 'Destination',
-            baseFare: extra.price,
+            busname: extra.name,
+            busnumber: '',
+            bustype: 'Standard',
+            totalseats: 40,
+            amenities: '',
+            uid: 0,
             seats: [], // Will be loaded by the screen
           );
           return BusSeatSelectionScreen(bus: bus);

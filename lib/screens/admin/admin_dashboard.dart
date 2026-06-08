@@ -16,7 +16,6 @@ import 'admin_buses_screen.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_payments_screen.dart';
 import 'admin_coupons_screen.dart';
-import 'admin_support_screen.dart';
 import 'admin_flights_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -59,7 +58,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     {'title': 'Bookings', 'icon': Icons.confirmation_number_rounded},
     {'title': 'Payments', 'icon': Icons.payment_rounded},
     {'title': 'Coupons', 'icon': Icons.local_offer_rounded},
-    // {'title': 'Support', 'icon': Icons.support_agent_rounded},
   ];
 
   @override
@@ -247,15 +245,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 5:
         return const AdminBusesScreen();
       case 6:
-        return const AdminBookingsScreen();
-      case 7:
-        return const AdminPaymentsScreen();
-      case 8:
-        return const AdminCouponsScreen();
-      case 9:
-        return const AdminSupportScreen();
-      case 10:
         return const AdminFlightsScreen();
+      case 7:
+        return const AdminBookingsScreen();
+      case 8:
+        return const AdminPaymentsScreen();
+      case 9:
+        return const AdminCouponsScreen();
       default:
         return Container();
     }

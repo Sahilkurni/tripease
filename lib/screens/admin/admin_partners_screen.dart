@@ -294,6 +294,7 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
           columns: const [
             DataColumn(label: Text('Company Name')),
             DataColumn(label: Text('Owner Name')),
+            DataColumn(label: Text('Partner Type')),
             DataColumn(label: Text('City')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Commission')),
@@ -308,6 +309,7 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
                   cells: [
                     DataCell(Text((p['companyname'] ?? '-').toString(), style: TextStyle(color: _ink))),
                     DataCell(Text((p['ownername'] ?? '-').toString(), style: TextStyle(color: _ink))),
+                    DataCell(Text((p['partnertype'] ?? '-').toString().replaceAll('_PARTNER', '').replaceAll('HOTEL_OWNER', 'HOTEL'), style: TextStyle(color: _ink))),
                     DataCell(Text((p['city'] ?? '-').toString(), style: TextStyle(color: _ink))),
                     DataCell(_statusChip((p['status'] ?? '').toString())),
                     DataCell(Text('${p['commission'] ?? 0}%', style: TextStyle(color: _ink))),
@@ -395,6 +397,10 @@ class _AdminPartnersScreenState extends State<AdminPartnersScreen> {
               const SizedBox(height: 4),
               Text(
                 'Owner: ${(p['ownername'] ?? '-').toString()}',
+                style: GoogleFonts.poppins(fontSize: 13, color: _muted),
+              ),
+              Text(
+                'Type: ${(p['partnertype'] ?? '-').toString().replaceAll('_PARTNER', '').replaceAll('HOTEL_OWNER', 'HOTEL')}',
                 style: GoogleFonts.poppins(fontSize: 13, color: _muted),
               ),
               Text(

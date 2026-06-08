@@ -23,12 +23,12 @@ class BusCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    bus.busName,
+                    bus.busname,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '\$${bus.baseFare}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                    'No. ${bus.busnumber.isNotEmpty ? bus.busnumber : 'N/A'}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.blue),
                   ),
                 ],
               ),
@@ -36,37 +36,32 @@ class BusCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _TimeLoc(time: bus.departureTime, loc: bus.sourceCityName ?? 'Source'),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(bus.bustype, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('Type', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
                   Column(
                     children: [
                       const Icon(Icons.directions_bus, color: Colors.grey),
-                      Text(bus.busType, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text('${bus.totalseats} Seats', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
-                  _TimeLoc(time: bus.arrivalTime, loc: bus.destinationCityName ?? 'Dest'),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(bus.amenities.isNotEmpty ? 'Has Amenities' : 'Standard', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('Features', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
                 ],
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TimeLoc extends StatelessWidget {
-  final String time;
-  final String loc;
-  const _TimeLoc({required this.time, required this.loc});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(time, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        Text(loc, style: const TextStyle(color: Colors.grey)),
-      ],
     );
   }
 }

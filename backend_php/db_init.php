@@ -84,6 +84,7 @@ try {
             fare REAL DEFAULT 0,
             isactive INTEGER DEFAULT 1,
             status TEXT DEFAULT 'pending',
+            partnerid INTEGER,
             edatetime DATETIME DEFAULT CURRENT_TIMESTAMP
         )"
     );
@@ -107,6 +108,8 @@ try {
             service TEXT,
             serviceid INTEGER,
             amount REAL DEFAULT 0,
+            commission_pct REAL DEFAULT 0.0,
+            commission_amt REAL DEFAULT 0.0,
             status TEXT DEFAULT 'CONFIRMED',
             bookdate DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(userid) REFERENCES users(userid)

@@ -31,17 +31,27 @@ if (!$userid || !$hotelid || !$roomid) {
 try {
     $conn->begin_transaction();
 
-    // 1. Create booking
-    // Using serviceid for hotelid to keep consistency with other bookings if needed,
-    // but the schema might have specific columns. Let's check consistency.
-    // In create_bus_booking, it used serviceid for tripid.
-    // Let's use specific columns if they exist, or serviceid.
-    // Based on previous code, it used hotelid and roomid.
+    // Fetch commission
+    $commission_pct = 0;
+    $commission_amt = 0;
+    $c_stmt = $conn->prepare("
+        SELECT p.commission 
+        FROM hotels h 
+        JOIN partners p ON h.partnerid = p.partnerid 
+        WHERE h.hotelid = ?
+    ");
+    $c_stmt->bind_param("i", $hotelid);
+    $c_stmt->execute();
+    $c_res = $c_stmt->get_result();
+    if ($c_row = $c_res->fetch_assoc()) {
+        $commission_pct = floatval($c_row['commission']);
+        $commission_amt = ($amount * $commission_pct) / 100.0;
+    }
     
-    $sql = "INSERT INTO bookings (userid, serviceid, amount, status, booking_date, bookingtype) 
-            VALUES (?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO bookings (userid, serviceid, amount, commission_pct, commission_amt, status, booking_date, bookingtype) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iidsss", $userid, $hotelid, $amount, $status, $booking_date, $booking_type);
+    $stmt->bind_param("iidddsss", $userid, $hotelid, $amount, $commission_pct, $commission_amt, $status, $booking_date, $booking_type);
     $stmt->execute();
     
     // 2. Update inventory

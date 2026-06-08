@@ -91,6 +91,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           await prefs.setString('photo', newData['photo']);
         }
 
+        // IMPORTANT: Also update user_session JSON so AgentDashboard gets the new name
+        final userJsonStr = prefs.getString('user_session');
+        if (userJsonStr != null) {
+          final userMap = jsonDecode(userJsonStr) as Map<String, dynamic>;
+          userMap['name'] = newData['fullname'];
+          userMap['fullname'] = newData['fullname'];
+          if (newData['photo'] != null) {
+            userMap['photo'] = newData['photo'];
+          }
+          await prefs.setString('user_session', jsonEncode(userMap));
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated successfully!')),

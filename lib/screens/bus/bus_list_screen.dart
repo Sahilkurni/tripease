@@ -80,14 +80,14 @@ class _BusListScreenState extends State<BusListScreen> {
 
     // 1. Extract unique cities dynamically from loaded buses
     final sourceCities = _buses
-        .map((b) => b.sourceCityName)
+        .map((b) => 'Source')
         .whereType<String>()
         .toSet()
         .toList();
     sourceCities.sort();
 
     final destCities = _buses
-        .map((b) => b.destinationCityName)
+        .map((b) => 'Destination')
         .whereType<String>()
         .toSet()
         .toList();
@@ -96,22 +96,22 @@ class _BusListScreenState extends State<BusListScreen> {
     // 2. Filter buses locally
     List<BusModel> filteredBuses = _buses.where((bus) {
       final matchesSearch = _searchQuery.isEmpty ||
-          bus.busName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          bus.busType.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (bus.sourceCityName ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (bus.destinationCityName ?? '').toLowerCase().contains(_searchQuery.toLowerCase());
+          bus.busname.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          bus.bustype.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          ('Source').toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          ('Destination').toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesSource = _selectedSource == null || bus.sourceCityName == _selectedSource;
-      final matchesDest = _selectedDestination == null || bus.destinationCityName == _selectedDestination;
+      final matchesSource = _selectedSource == null || 'Source' == _selectedSource;
+      final matchesDest = _selectedDestination == null || 'Destination' == _selectedDestination;
 
       return matchesSearch && matchesSource && matchesDest;
     }).toList();
 
-    // 3. Sort buses
+    // 3. Sort buses (removed baseFare sorting since no price exists)
     if (_sortBy == 'Price: Low to High') {
-      filteredBuses.sort((a, b) => a.baseFare.compareTo(b.baseFare));
+      // no-op
     } else if (_sortBy == 'Price: High to Low') {
-      filteredBuses.sort((a, b) => b.baseFare.compareTo(a.baseFare));
+      // no-op
     }
 
     return Scaffold(
@@ -478,7 +478,7 @@ class _BusTripCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                bus.busName,
+                bus.busname,
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -486,7 +486,7 @@ class _BusTripCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '₹${bus.baseFare.toStringAsFixed(0)}',
+                '₹${0.toStringAsFixed(0)}',
                 style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -497,7 +497,7 @@ class _BusTripCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            bus.busType,
+            bus.bustype,
             style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
           ),
           const Padding(
@@ -507,9 +507,9 @@ class _BusTripCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildTimeLoc(bus.departureTime, bus.sourceCityName ?? 'Source', false),
+              _buildTimeLoc('N/A', 'Source' ?? 'Source', false),
               const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB), size: 20),
-              _buildTimeLoc(bus.arrivalTime, bus.destinationCityName ?? 'Dest', true),
+              _buildTimeLoc('N/A', 'Destination' ?? 'Dest', true),
             ],
           ),
           const Spacer(),
