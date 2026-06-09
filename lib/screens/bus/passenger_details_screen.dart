@@ -11,7 +11,6 @@ import '../../models/coupon_model.dart';
 import '../../core/utils/validators.dart';
 import '../../widgets/coupon_selector.dart';
 
-
 class PassengerDetailsScreen extends StatefulWidget {
   final BusModel bus;
   final List<BusSeatModel> selectedSeats;
@@ -42,6 +41,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
   double get _finalAmount => _totalAmount - _discountAmount;
 
+  double _seatAmount(BusSeatModel seat) => widget.bus.baseFare + seat.extraFare;
 
   @override
   void initState() {
@@ -51,10 +51,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       _ageControllers.add(TextEditingController());
       _genderControllers.add(TextEditingController());
     }
-    paymentService.init(
-      onSuccess: _onPaymentSuccess,
-      onError: _onPaymentError,
-    );
+    paymentService.init(onSuccess: _onPaymentSuccess, onError: _onPaymentError);
     final user = authService.currentUser;
     if (user != null) {
       _contactEmailCtrl.text = user.email;
@@ -93,7 +90,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   double get _totalAmount {
     double total = 0;
     for (var seat in widget.selectedSeats) {
-      total += 0.0 + seat.extraFare;
+      total += _seatAmount(seat);
     }
     return total;
   }
@@ -124,7 +121,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     }
 
     setState(() => _isApplyingCoupon = true);
-    
+
     final result = await couponService.applyCoupon(
       couponCode: code,
       userId: int.parse(user.userid),
@@ -138,7 +135,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     if (result != null && result['status'] == 'success') {
       setState(() {
         _appliedCoupon = CouponModel.fromJson(result['data']);
-        _discountAmount = double.tryParse(result['data']['discount_amount'].toString()) ?? 0.0;
+        _discountAmount =
+            double.tryParse(result['data']['discount_amount'].toString()) ??
+            0.0;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Coupon applied! You saved ₹$_discountAmount')),
@@ -161,7 +160,6 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-
     setState(() => _isLoading = true);
 
     paymentService.openPayment(
@@ -170,7 +168,6 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       description: "Booking for ${widget.bus.busname}",
       email: _contactEmailCtrl.text.trim(),
     );
-
   }
 
   Future<void> _createBookings(String paymentId) async {
@@ -178,13 +175,20 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     try {
       int? firstBookingId;
       // Loop through each selected seat and book it
+      final perSeatDiscount =
+          widget.selectedSeats.isEmpty
+              ? 0.0
+              : _discountAmount / widget.selectedSeats.length;
       for (var i = 0; i < widget.selectedSeats.length; i++) {
         final seat = widget.selectedSeats[i];
         final bookingId = await busService.bookBus(
           userId: int.parse(user.userid),
           tripId: widget.bus.busid,
           seatId: seat.seatid,
-          amount: 0.0 + seat.extraFare,
+          amount: (_seatAmount(seat) - perSeatDiscount).clamp(
+            0,
+            double.infinity,
+          ),
           passengerName: _nameControllers[i].text,
           age: _ageControllers[i].text,
           gender: _genderControllers[i].text,
@@ -195,7 +199,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         }
       }
 
-      if (_appliedCoupon != null && firstBookingId != null && firstBookingId > 0) {
+      if (_appliedCoupon != null &&
+          firstBookingId != null &&
+          firstBookingId > 0) {
         // Record coupon usage
         await couponService.recordCouponUsage(
           couponId: _appliedCoupon!.couponid,
@@ -211,14 +217,17 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => BookingSuccessScreen(
-            title: 'Bus Booked! 🚌',
-            subtitle: 'Successfully booked ${widget.selectedSeats.length} seat(s)\non ${widget.bus.busname}!',
-            bookingType: 'bus',
-            savedAmount: _discountAmount > 0
-                ? _discountAmount.toStringAsFixed(0)
-                : null,
-          ),
+          builder:
+              (_) => BookingSuccessScreen(
+                title: 'Bus Booked! 🚌',
+                subtitle:
+                    'Successfully booked ${widget.selectedSeats.length} seat(s)\non ${widget.bus.busname}!',
+                bookingType: 'bus',
+                savedAmount:
+                    _discountAmount > 0
+                        ? _discountAmount.toStringAsFixed(0)
+                        : null,
+              ),
         ),
       );
     } catch (e) {
@@ -248,40 +257,40 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildSummaryCard(isDark),
-                  const SizedBox(height: 32),
-                  _buildContactSection(isDark),
-                  const SizedBox(height: 32),
-                  _buildCouponSection(isDark),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Passenger Details (${widget.selectedSeats.length})',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    _buildSummaryCard(isDark),
+                    const SizedBox(height: 32),
+                    _buildContactSection(isDark),
+                    const SizedBox(height: 32),
+                    _buildCouponSection(isDark),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Passenger Details (${widget.selectedSeats.length})',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ...List.generate(widget.selectedSeats.length, (index) {
-                    return _buildPassengerForm(
-                      index,
-                      widget.selectedSeats[index],
-                      isDark,
-                    );
-                  }),
-                  const SizedBox(height: 120),
-                ],
+                    const SizedBox(height: 16),
+                    ...List.generate(widget.selectedSeats.length, (index) {
+                      return _buildPassengerForm(
+                        index,
+                        widget.selectedSeats[index],
+                        isDark,
+                      );
+                    }),
+                    const SizedBox(height: 120),
+                  ],
+                ),
               ),
-            ),
 
       bottomSheet: _buildBottomBar(isDark),
     );
@@ -383,7 +392,6 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           ),
           validator: Validators.validatePhone,
         ),
-
       ],
     );
   }
@@ -422,14 +430,14 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-            TextFormField(
-              controller: _nameControllers[index],
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: Icon(Icons.person_outline),
-              ),
-              validator: (v) => Validators.validateRequired(v, 'name'),
+          TextFormField(
+            controller: _nameControllers[index],
+            decoration: const InputDecoration(
+              labelText: 'Full Name',
+              prefixIcon: Icon(Icons.person_outline),
             ),
+            validator: (v) => Validators.validateRequired(v, 'name'),
+          ),
 
           const SizedBox(height: 16),
           Row(
@@ -447,8 +455,16 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _genderControllers[index].text.isEmpty ? null : _genderControllers[index].text,
-                  items: ['Male', 'Female', 'Other'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                  value:
+                      _genderControllers[index].text.isEmpty
+                          ? null
+                          : _genderControllers[index].text,
+                  items:
+                      ['Male', 'Female', 'Other']
+                          .map(
+                            (g) => DropdownMenuItem(value: g, child: Text(g)),
+                          )
+                          .toList(),
                   onChanged: (v) => _genderControllers[index].text = v ?? '',
                   decoration: const InputDecoration(
                     labelText: 'Gender',
@@ -505,7 +521,11 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 if (_discountAmount > 0)
                   Text(
                     'Saved ₹${_discountAmount.toStringAsFixed(0)}',
-                    style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
               ],
             ),
@@ -554,7 +574,11 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.stars_rounded, color: Colors.green, size: 20),
+                  const Icon(
+                    Icons.stars_rounded,
+                    color: Colors.green,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -583,7 +607,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+            border: Border.all(
+              color: isDark ? Colors.white10 : Colors.grey.shade200,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,18 +617,25 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Have a Coupon?', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
-                  TextButton.icon(
-                    onPressed: () => CouponSelector.show(
-                      context: context,
-                      serviceType: 'bus',
-                      serviceId: widget.bus.busid,
-                      amount: _totalAmount,
-                      onSelect: (c) {
-                        _couponController.text = c.couponcode;
-                        _applyCoupon();
-                      },
+                  Text(
+                    'Have a Coupon?',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
                     ),
+                  ),
+                  TextButton.icon(
+                    onPressed:
+                        () => CouponSelector.show(
+                          context: context,
+                          serviceType: 'bus',
+                          serviceId: widget.bus.busid,
+                          amount: _totalAmount,
+                          onSelect: (c) {
+                            _couponController.text = c.couponcode;
+                            _applyCoupon();
+                          },
+                        ),
                     icon: const Icon(Icons.local_offer_rounded, size: 18),
                     label: const Text('View Offers'),
                     style: TextButton.styleFrom(
@@ -621,8 +654,13 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                       decoration: InputDecoration(
                         hintText: 'Enter code',
                         prefixIcon: const Icon(Icons.local_offer_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -637,12 +675,23 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                         width: 90,
                         height: 50,
                         alignment: Alignment.center,
-                        child: _isApplyingCoupon
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : Text(
-                                'Apply',
-                                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700),
-                              ),
+                        child:
+                            _isApplyingCoupon
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                                : Text(
+                                  'Apply',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                       ),
                     ),
                   ),

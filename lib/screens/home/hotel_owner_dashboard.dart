@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -81,11 +82,24 @@ class _HotelOwnerDashboardState extends State<HotelOwnerDashboard>
 
   Future<void> _initSession() async {
     final prefs = await SharedPreferences.getInstance();
-    _userid = prefs.getInt('userid') ?? 0;
-    _partnerid = prefs.getInt('partnerid') ?? 1;
-    _fullname = prefs.getString('fullname') ?? 'Partner';
-    _email = prefs.getString('email') ?? '';
-    _photo = prefs.getString('photo') ?? '';
+    final userJson = prefs.getString('user_session');
+    Map<String, dynamic> user = {};
+    if (userJson != null) {
+      try {
+        user = jsonDecode(userJson) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+    _userid =
+        prefs.getInt('userid') ??
+        int.tryParse(user['userid']?.toString() ?? '') ??
+        0;
+    // For the Hotel Owner dashboard, the partner ID is always identical to their user ID.
+    // We enforce this directly to prevent stale/incorrect session cache from showing blank data.
+    _partnerid = _userid;
+
+    _fullname = user['name'] ?? user['fullname'] ?? prefs.getString('fullname') ?? 'Partner';
+    _email = prefs.getString('email') ?? user['email'] ?? '';
+    _photo = prefs.getString('photo') ?? user['photo'] ?? '';
     _fetchDashboardData();
   }
 

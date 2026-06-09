@@ -50,9 +50,10 @@ final appRouter = GoRouter(
     }
 
     final loggedIn = authService.currentUser != null;
-    final isLoggingIn = state.uri.path == '/login' || 
-                        state.uri.path == '/register' ||
-                        state.uri.path == '/onboarding';
+    final isLoggingIn =
+        state.uri.path == '/login' ||
+        state.uri.path == '/register' ||
+        state.uri.path == '/onboarding';
 
     // If not logged in and trying to access protected route, go to login
     // List of protected routes (can be expanded)
@@ -70,9 +71,10 @@ final appRouter = GoRouter(
       '/bookings',
     ];
 
-    final isProtectedRoute = protectedRoutes.any((route) => state.uri.path.startsWith(route)) ||
-                             state.uri.path.startsWith('/owner/') ||
-                             state.uri.path.startsWith('/agent/');
+    final isProtectedRoute =
+        protectedRoutes.any((route) => state.uri.path.startsWith(route)) ||
+        state.uri.path.startsWith('/owner/') ||
+        state.uri.path.startsWith('/agent/');
 
     if (!loggedIn && isProtectedRoute) {
       return '/login';
@@ -89,38 +91,48 @@ final appRouter = GoRouter(
       final user = authService.currentUser!;
       final parsedRoleId = int.tryParse((user.roleid ?? '').trim());
       final normalizedRoleName = (user.rolename ?? '').toUpperCase().trim();
-      
-      final isHotelOwner = parsedRoleId == RoleConstants.hotelOwner || 
-                           normalizedRoleName == 'HOTEL_OWNER' || 
-                           normalizedRoleName == 'HOTEL_PARTNER';
-                           
-      final isAgent = parsedRoleId == RoleConstants.travelAgent || 
-                      normalizedRoleName == 'TRAVEL_AGENT' || 
-                      normalizedRoleName == 'AGENT' || 
-                      normalizedRoleName == 'BUS_PARTNER' || 
-                      normalizedRoleName == 'BUS_OWNER';
-                      
-      final isAdmin = parsedRoleId == RoleConstants.admin || 
-                      normalizedRoleName == 'ADMIN';
+
+      final isHotelOwner =
+          parsedRoleId == RoleConstants.hotelOwner ||
+          normalizedRoleName == 'HOTEL_OWNER' ||
+          normalizedRoleName == 'HOTEL_PARTNER';
+
+      final isAgent =
+          parsedRoleId == RoleConstants.travelAgent ||
+          normalizedRoleName == 'TRAVEL_AGENT' ||
+          normalizedRoleName == 'AGENT' ||
+          normalizedRoleName == 'BUS_PARTNER' ||
+          normalizedRoleName == 'BUS_OWNER';
+
+      final isAdmin =
+          parsedRoleId == RoleConstants.admin || normalizedRoleName == 'ADMIN';
 
       final targetPath = state.uri.path;
       // debugPrint('GoRouter Redirecting: targetPath=$targetPath, roleid=${user.roleid}, rolename=${user.rolename}, parsedRoleId=$parsedRoleId');
       // debugPrint('isHotelOwner=$isHotelOwner, isAdmin=$isAdmin, isAgent=$isAgent');
 
       // Prevent non-owners from accessing owner routes
-      if ((targetPath.startsWith('/hotel_dashboard') || targetPath.startsWith('/owner/')) && !isHotelOwner && !isAdmin) {
+      if ((targetPath.startsWith('/hotel_dashboard') ||
+              targetPath.startsWith('/owner/')) &&
+          !isHotelOwner &&
+          !isAdmin) {
         // debugPrint('GUARD: Redirecting non-owner away from hotel_dashboard to routeByRole');
         return routeByRole(roleId: user.roleid, roleName: user.rolename);
       }
 
       // Prevent non-agents from accessing agent routes
-      if ((targetPath.startsWith('/agent_dashboard') || targetPath.startsWith('/agent/')) && !isAgent && !isAdmin) {
+      if ((targetPath.startsWith('/agent_dashboard') ||
+              targetPath.startsWith('/agent/')) &&
+          !isAgent &&
+          !isAdmin) {
         // debugPrint('GUARD: Redirecting non-agent away from agent_dashboard to routeByRole');
         return routeByRole(roleId: user.roleid, roleName: user.rolename);
       }
 
       // Prevent non-admins from accessing admin routes
-      if ((targetPath.startsWith('/admin_dashboard') || targetPath.startsWith('/admin_flights')) && !isAdmin) {
+      if ((targetPath.startsWith('/admin_dashboard') ||
+              targetPath.startsWith('/admin_flights')) &&
+          !isAdmin) {
         // debugPrint('GUARD: Redirecting non-admin away from admin_dashboard to routeByRole');
         return routeByRole(roleId: user.roleid, roleName: user.rolename);
       }
@@ -129,7 +141,7 @@ final appRouter = GoRouter(
     return null;
   },
 
-    routes: [
+  routes: [
     GoRoute(
       path: '/',
       builder: (context, state) {
@@ -233,11 +245,18 @@ final appRouter = GoRouter(
             partnerid: 0,
             busname: extra.name,
             busnumber: '',
-            bustype: 'Standard',
-            totalseats: 40,
+            bustype: extra.subType ?? 'Standard',
+            totalseats: extra.totalSeats > 0 ? extra.totalSeats : 40,
             amenities: '',
             uid: 0,
             seats: [], // Will be loaded by the screen
+            baseFare: extra.price,
+            departureTime: extra.departureTime,
+            arrivalTime: extra.arrivalTime,
+            sourceCityName: extra.source,
+            destinationCityName: extra.destination,
+            imageUrl: extra.imageUrl,
+            images: extra.images,
           );
           return BusSeatSelectionScreen(bus: bus);
         }
@@ -319,22 +338,30 @@ final appRouter = GoRouter(
         if (args is Map<String, dynamic> && args['bus'] is BusModel) {
           final bus = args['bus'] as BusModel;
           final seats = args['seats'];
-          
+
           List<BusSeatModel> selectedSeats = [];
           if (seats is List<BusSeatModel>) {
             selectedSeats = seats;
           } else if (seats is List<String>) {
-            selectedSeats = seats.map((s) => BusSeatModel(
-              seatid: 0,
-              busid: bus.busid,
-              seatNo: s,
-              rowNo: 0,
-              colNo: 0,
-            )).toList();
+            selectedSeats =
+                seats
+                    .map(
+                      (s) => BusSeatModel(
+                        seatid: 0,
+                        busid: bus.busid,
+                        seatNo: s,
+                        rowNo: 0,
+                        colNo: 0,
+                      ),
+                    )
+                    .toList();
           }
 
           if (selectedSeats.isNotEmpty) {
-            return PassengerDetailsScreen(bus: bus, selectedSeats: selectedSeats);
+            return PassengerDetailsScreen(
+              bus: bus,
+              selectedSeats: selectedSeats,
+            );
           }
         }
         return Scaffold(
@@ -343,10 +370,7 @@ final appRouter = GoRouter(
         );
       },
     ),
-    GoRoute(
-      path: '/about',
-      builder: (context, state) => const AboutUsScreen(),
-    ),
+    GoRoute(path: '/about', builder: (context, state) => const AboutUsScreen()),
     GoRoute(
       path: '/contact',
       builder: (context, state) => const ContactUsScreen(),

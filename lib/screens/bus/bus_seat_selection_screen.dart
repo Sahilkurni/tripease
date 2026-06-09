@@ -14,8 +14,7 @@ class BusSeatSelectionScreen extends StatefulWidget {
   const BusSeatSelectionScreen({super.key, required this.bus});
 
   @override
-  State<BusSeatSelectionScreen> createState() =>
-      _BusSeatSelectionScreenState();
+  State<BusSeatSelectionScreen> createState() => _BusSeatSelectionScreenState();
 }
 
 class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
@@ -32,11 +31,12 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _images = widget.bus.images.isNotEmpty
-        ? widget.bus.images
-        : (widget.bus.imageUrl != null && widget.bus.imageUrl!.isNotEmpty
-            ? [widget.bus.imageUrl!]
-            : []);
+    _images =
+        widget.bus.images.isNotEmpty
+            ? widget.bus.images
+            : (widget.bus.imageUrl != null && widget.bus.imageUrl!.isNotEmpty
+                ? [widget.bus.imageUrl!]
+                : []);
     _preDecodeAll();
     _loadSeats();
     if (_images.isEmpty) _fetchImages();
@@ -121,8 +121,10 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
     });
   }
 
-  double get _totalFare => _selectedSeats.fold(
-      0, (sum, s) => sum + 0 + s.extraFare);
+  double get _totalFare => _selectedSeats.fold<double>(
+        0.0,
+        (sum, s) => sum + widget.bus.baseFare + s.extraFare,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -130,44 +132,48 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                SliverAppBar(
-                  expandedHeight: _images.isNotEmpty ? 340 : 140,
-                  pinned: true,
-                  stretch: true,
-                  backgroundColor: const Color(0xFF1E293B),
-                  leading: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black38,
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white, size: 18),
-                        onPressed: () => Navigator.pop(context),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : CustomScrollView(
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: _images.isNotEmpty ? 340 : 140,
+                    pinned: true,
+                    stretch: true,
+                    backgroundColor: const Color(0xFF1E293B),
+                    leading: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: CircleAvatar(
+                        backgroundColor: Colors.black38,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
                     ),
+                    flexibleSpace: FlexibleSpaceBar(
+                      stretchModes: const [StretchMode.zoomBackground],
+                      background: _buildHero(isDark),
+                    ),
                   ),
-                  flexibleSpace: FlexibleSpaceBar(
-                    stretchModes: const [StretchMode.zoomBackground],
-                    background: _buildHero(isDark),
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        _buildInfoStrip(isDark),
+                        _buildLegend(isDark),
+                        _buildSeatLayout(isDark),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
                   ),
-                ),
-                SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      _buildInfoStrip(isDark),
-                      _buildLegend(isDark),
-                      _buildSeatLayout(isDark),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
       bottomSheet: _isLoading ? null : _buildBottomBar(isDark),
     );
   }
@@ -182,14 +188,16 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
       children: [
         if (_images.length == 1)
           GestureDetector(
-            onTap: () => openFullscreenGallery(context, _images, initialIndex: 0),
+            onTap:
+                () => openFullscreenGallery(context, _images, initialIndex: 0),
             child: Base64Image(base64String: _images.first, fit: BoxFit.cover),
           )
         else
           PageView.builder(
             controller: _imgCtrl,
             physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics()),
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             allowImplicitScrolling: true,
             onPageChanged: (i) => setState(() => _imgIndex = i),
             itemCount: _images.length,
@@ -197,19 +205,25 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
               final img = _images[i];
               final bytes = _imgBytes[img];
               return GestureDetector(
-                onTap: () => openFullscreenGallery(context, _images, initialIndex: i),
-                child: bytes != null
-                    ? Image.memory(
-                        bytes,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        cacheWidth: 800,
-                      )
-                    : Base64Image(
-                        base64String: img,
-                        fit: BoxFit.cover,
-                        cacheWidth: 800,
-                      ),
+                onTap:
+                    () => openFullscreenGallery(
+                      context,
+                      _images,
+                      initialIndex: i,
+                    ),
+                child:
+                    bytes != null
+                        ? Image.memory(
+                          bytes,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          cacheWidth: 800,
+                        )
+                        : Base64Image(
+                          base64String: img,
+                          fit: BoxFit.cover,
+                          cacheWidth: 800,
+                        ),
               );
             },
           ),
@@ -244,7 +258,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     shadows: [
-                      Shadow(color: Colors.black.withAlpha(160), blurRadius: 8)
+                      Shadow(color: Colors.black.withAlpha(160), blurRadius: 8),
                     ],
                   ),
                 ),
@@ -252,11 +266,14 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                 Row(
                   children: [
                     _heroBadge(
-                      '${'Source' ?? 'Source'} → ${'Destination' ?? 'Dest'}',
+                      '${_sourceLabel} → $_destinationLabel',
                       Icons.route_rounded,
                     ),
                     const SizedBox(width: 8),
-                    _heroBadge(widget.bus.bustype, Icons.directions_bus_rounded),
+                    _heroBadge(
+                      widget.bus.bustype,
+                      Icons.directions_bus_rounded,
+                    ),
                     const Spacer(),
                     if (_images.length > 1)
                       Row(
@@ -268,9 +285,10 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                             width: _imgIndex == i ? 16 : 5,
                             height: 5,
                             decoration: BoxDecoration(
-                              color: _imgIndex == i
-                                  ? Colors.white
-                                  : Colors.white.withAlpha(110),
+                              color:
+                                  _imgIndex == i
+                                      ? Colors.white
+                                      : Colors.white.withAlpha(110),
                               borderRadius: BorderRadius.circular(99),
                             ),
                           ),
@@ -299,11 +317,14 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
         children: [
           Icon(icon, color: Colors.white70, size: 13),
           const SizedBox(width: 5),
-          Text(label,
-              style: GoogleFonts.poppins(
-                  color: Colors.white70,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -323,8 +344,11 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
           ),
         ),
         Center(
-          child: Icon(Icons.directions_bus_rounded,
-              size: 90, color: Colors.white.withAlpha(60)),
+          child: Icon(
+            Icons.directions_bus_rounded,
+            size: 90,
+            color: Colors.white.withAlpha(60),
+          ),
         ),
         Positioned(
           left: 20,
@@ -333,19 +357,25 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.bus.busname,
-                  style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800)),
+              Text(
+                widget.bus.busname,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 6),
-              Row(children: [
-                _heroBadge(
-                    '${'Source' ?? 'Source'} → ${'Destination' ?? 'Dest'}',
-                    Icons.route_rounded),
-                const SizedBox(width: 8),
-                _heroBadge(widget.bus.bustype, Icons.directions_bus_rounded),
-              ]),
+              Row(
+                children: [
+                  _heroBadge(
+                    '${_sourceLabel} → $_destinationLabel',
+                    Icons.route_rounded,
+                  ),
+                  const SizedBox(width: 8),
+                  _heroBadge(widget.bus.bustype, Icons.directions_bus_rounded),
+                ],
+              ),
             ],
           ),
         ),
@@ -367,48 +397,64 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
             color: Colors.black.withAlpha(10),
             blurRadius: 16,
             offset: const Offset(0, 6),
-          )
+          ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _infoItem(Icons.schedule_rounded,
-              'N/A'.length >= 5
-                  ? 'N/A'.substring(0, 5)
-                  : 'N/A',
-              'Departure', isDark),
+          _infoItem(
+            Icons.schedule_rounded,
+            _formatTime(widget.bus.departureTime),
+            'Departure',
+            isDark,
+          ),
           _divider(),
-          _infoItem(Icons.schedule_rounded,
-              'N/A'.length >= 5
-                  ? 'N/A'.substring(0, 5)
-                  : 'N/A',
-              'Arrival', isDark),
+          _infoItem(
+            Icons.schedule_rounded,
+            _formatTime(widget.bus.arrivalTime),
+            'Arrival',
+            isDark,
+          ),
           _divider(),
-          _infoItem(Icons.event_seat_rounded,
-              '${widget.bus.totalseats}', 'Total Seats', isDark),
+          _infoItem(
+            Icons.event_seat_rounded,
+            '${widget.bus.totalseats}',
+            'Total Seats',
+            isDark,
+          ),
           _divider(),
-          _infoItem(Icons.currency_rupee_rounded,
-              0.toStringAsFixed(0), 'Base Fare', isDark),
+          _infoItem(
+            Icons.currency_rupee_rounded,
+            widget.bus.baseFare.toStringAsFixed(0),
+            'Base Fare',
+            isDark,
+          ),
         ],
       ),
     );
   }
 
-  Widget _infoItem(
-      IconData icon, String value, String label, bool isDark) {
+  Widget _infoItem(IconData icon, String value, String label, bool isDark) {
     return Column(
       children: [
         Icon(icon, size: 18, color: const Color(0xFF8B5CF6)),
         const SizedBox(height: 4),
-        Text(value,
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                color: isDark ? Colors.white : const Color(0xFF1E293B))),
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 10, color: const Color(0xFF94A3B8))),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w800,
+            fontSize: 14,
+            color: isDark ? Colors.white : const Color(0xFF1E293B),
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            color: const Color(0xFF94A3B8),
+          ),
+        ),
       ],
     );
   }
@@ -417,46 +463,64 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
     return Container(width: 1, height: 36, color: const Color(0xFFE2E8F0));
   }
 
+  String get _sourceLabel =>
+      widget.bus.sourceCityName.trim().isEmpty
+          ? 'Source'
+          : widget.bus.sourceCityName;
+
+  String get _destinationLabel =>
+      widget.bus.destinationCityName.trim().isEmpty
+          ? 'Destination'
+          : widget.bus.destinationCityName;
+
+  String _formatTime(String value) {
+    if (value.trim().isEmpty) return 'N/A';
+    final parts = value.split(' ');
+    final time = parts.length > 1 ? parts.last : value;
+    return time.length >= 5 ? time.substring(0, 5) : time;
+  }
+
   // ── Legend ──────────────────────────────────────────────────────────────
 
   Widget _buildLegend(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withAlpha(8),
-                blurRadius: 12,
-                offset: const Offset(0, 4))
+              color: Colors.black.withAlpha(8),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _legendItem(
-                isDark ? Colors.white10 : Colors.white,
-                'Available',
-                true,
-                isDark),
+              isDark ? Colors.white10 : Colors.white,
+              'Available',
+              true,
+              isDark,
+            ),
             _legendItem(const Color(0xFF8B5CF6), 'Selected', false, isDark),
             _legendItem(
-                isDark ? Colors.white24 : Colors.grey[300]!,
-                'Booked',
-                false,
-                isDark),
+              isDark ? Colors.white24 : Colors.grey[300]!,
+              'Booked',
+              false,
+              isDark,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _legendItem(
-      Color color, String text, bool hasBorder, bool isDark) {
+  Widget _legendItem(Color color, String text, bool hasBorder, bool isDark) {
     return Row(
       children: [
         Container(
@@ -465,17 +529,18 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(5),
-            border: hasBorder
-                ? Border.all(color: Colors.grey.shade400)
-                : null,
+            border: hasBorder ? Border.all(color: Colors.grey.shade400) : null,
           ),
         ),
         const SizedBox(width: 8),
-        Text(text,
-            style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white70 : const Color(0xFF475569))),
+        Text(
+          text,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white70 : const Color(0xFF475569),
+          ),
+        ),
       ],
     );
   }
@@ -494,9 +559,10 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withAlpha(10),
-                blurRadius: 20,
-                offset: const Offset(0, 8))
+              color: Colors.black.withAlpha(10),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: Column(
@@ -506,7 +572,9 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
               alignment: Alignment.topRight,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B5CF6).withAlpha(20),
@@ -515,14 +583,20 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.radio_button_checked_rounded,
-                        size: 16, color: Color(0xFF8B5CF6)),
+                    const Icon(
+                      Icons.radio_button_checked_rounded,
+                      size: 16,
+                      color: Color(0xFF8B5CF6),
+                    ),
                     const SizedBox(width: 4),
-                    Text('Driver',
-                        style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8B5CF6))),
+                    Text(
+                      'Driver',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF8B5CF6),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -540,9 +614,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                       child: SizedBox(
                         width: 20,
                         child: Divider(
-                          color: isDark
-                              ? Colors.white12
-                              : Colors.grey.shade200,
+                          color: isDark ? Colors.white12 : Colors.grey.shade200,
                         ),
                       ),
                     ),
@@ -558,8 +630,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   }
 
   Widget _buildSeat(int row, int col, bool isDark) {
-    final idx =
-        _allSeats.indexWhere((s) => s.rowNo == row && s.colNo == col);
+    final idx = _allSeats.indexWhere((s) => s.rowNo == row && s.colNo == col);
     if (idx == -1) {
       return const SizedBox(width: 40, height: 40);
     }
@@ -595,23 +666,25 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
           color: bg,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: border, width: 1.5),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF8B5CF6).withAlpha(80),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  )
-                ]
-              : [],
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withAlpha(80),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                  : [],
         ),
         alignment: Alignment.center,
         child: Text(
           seat.seatNo,
           style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: textColor),
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: textColor,
+          ),
         ),
       ),
     );
@@ -631,7 +704,7 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
             color: Colors.black.withAlpha(25),
             blurRadius: 24,
             offset: const Offset(0, -8),
-          )
+          ),
         ],
       ),
       child: SafeArea(
@@ -646,8 +719,9 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
                 Text(
                   '${_selectedSeats.length} seat${_selectedSeats.length == 1 ? '' : 's'} selected',
                   style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: const Color(0xFF94A3B8)),
+                    fontSize: 12,
+                    color: const Color(0xFF94A3B8),
+                  ),
                 ),
                 Text(
                   '₹${_totalFare.toStringAsFixed(0)}',
@@ -662,40 +736,46 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
             const Spacer(),
             // Confirm button
             GestureDetector(
-              onTap: hasSelection
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PassengerDetailsScreen(
-                            bus: widget.bus,
-                            selectedSeats: _selectedSeats.toList(),
+              onTap:
+                  hasSelection
+                      ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => PassengerDetailsScreen(
+                                  bus: widget.bus,
+                                  selectedSeats: _selectedSeats.toList(),
+                                ),
                           ),
-                        ),
-                      );
-                    }
-                  : null,
+                        );
+                      }
+                      : null,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 30, vertical: 16),
+                  horizontal: 30,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
-                  gradient: hasSelection
-                      ? const LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                        )
-                      : null,
+                  gradient:
+                      hasSelection
+                          ? const LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                          )
+                          : null,
                   color: hasSelection ? null : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: hasSelection
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF8B5CF6).withAlpha(100),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          )
-                        ]
-                      : [],
+                  boxShadow:
+                      hasSelection
+                          ? [
+                            BoxShadow(
+                              color: const Color(0xFF8B5CF6).withAlpha(100),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                          : [],
                 ),
                 child: Text(
                   'Confirm Booking',

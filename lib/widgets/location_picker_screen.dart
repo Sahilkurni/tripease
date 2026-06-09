@@ -159,11 +159,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text('Pick Location', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? (isDark ? Colors.white : Colors.black),
         elevation: 0,
         actions: [
           TextButton(
@@ -176,7 +177,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 'state': _state,
               });
             },
-            child: Text('SKIP', style: GoogleFonts.poppins(color: Colors.grey[600], fontWeight: FontWeight.bold)),
+            child: Text('SKIP', style: GoogleFonts.poppins(color: isDark ? Colors.grey[400] : Colors.grey[600], fontWeight: FontWeight.bold)),
           ),
           if (_selectedLocation != null)
             Padding(
@@ -191,7 +192,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     'state': _state,
                   });
                 },
-                child: Text('CONFIRM', style: GoogleFonts.poppins(color: Colors.blue[700], fontWeight: FontWeight.bold)),
+                child: Text('CONFIRM', style: GoogleFonts.poppins(color: isDark ? Colors.blue[300] : Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
               ),
             ),
         ],
@@ -247,7 +248,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                           decoration: InputDecoration(
                             hintText: 'Search address...',
                             hintStyle: GoogleFonts.poppins(fontSize: 14),
-                            prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                            prefixIcon: Icon(Icons.search, color: isDark ? Colors.blue[300] : Colors.blue),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
@@ -274,21 +275,24 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                           constraints: const BoxConstraints(maxHeight: 250),
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(8),
-                            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                            boxShadow: [BoxShadow(color: isDark ? Colors.black54 : Colors.black26, blurRadius: 4)],
                           ),
                           child: ListView.separated(
                             shrinkWrap: true,
                             itemCount: _searchResults.length,
-                            separatorBuilder: (ctx, i) => const Divider(height: 1),
+                            separatorBuilder: (ctx, i) => Divider(height: 1, color: Theme.of(context).dividerColor),
                             itemBuilder: (ctx, i) {
                               final item = _searchResults[i];
                               return ListTile(
                                 dense: true,
                                 title: Text(
                                   item['display_name'],
-                                  style: GoogleFonts.poppins(fontSize: 13),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -354,7 +358,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                                       _selectedLocation != null
                                           ? "Lat: ${_selectedLocation?.latitude.toStringAsFixed(6)}, Lng: ${_selectedLocation?.longitude.toStringAsFixed(6)}"
                                           : "Location coordinates not set",
-                                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -382,8 +389,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _getCurrentLocation,
-        backgroundColor: Colors.white,
-        child: const Icon(Icons.my_location, color: Colors.blue),
+        backgroundColor: Theme.of(context).cardColor,
+        child: Icon(Icons.my_location, color: isDark ? Colors.blue[300] : Colors.blue),
       ),
     );
   }
