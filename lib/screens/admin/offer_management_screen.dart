@@ -106,114 +106,207 @@ class _OfferManagementScreenState extends State<OfferManagementScreen> {
   }
 
   Widget _buildOfferCard(OfferModel offer, Color primary, Color surface, Color ink, Color muted) {
+    final bool isAdmin = widget.roleView == 'admin';
+    final bool isPending = offer.status.toLowerCase() == 'pending';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
-      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Theme.of(context).dividerColor),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (offer.primaryImage != null)
-            Image.memory(
-              base64Decode(offer.primaryImage!),
-              height: 150,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            )
-          else
-            Container(
-              height: 100,
-              width: double.infinity,
-              color: primary.withOpacity(0.05),
-              child: Icon(Icons.image_outlined, size: 40, color: primary.withOpacity(0.3)),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Top row: thumbnail + details ──────────────────────────────
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildStatusBadge(offer.status),
-                    Text(
-                      offer.serviceType.toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: muted,
-                      ),
-                    ),
-                  ],
+                // Small image thumbnail
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: offer.primaryImage != null
+                      ? Image.memory(
+                          base64Decode(offer.primaryImage!),
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          width: 80,
+                          height: 80,
+                          color: primary.withValues(alpha: 0.08),
+                          child: Icon(
+                            Icons.local_offer_outlined,
+                            size: 32,
+                            color: primary.withValues(alpha: 0.4),
+                          ),
+                        ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  offer.title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: ink,
-                  ),
-                ),
-                if (offer.description != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    offer.description!,
-                    style: GoogleFonts.poppins(color: muted, fontSize: 14),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    Icon(Icons.date_range_outlined, size: 14, color: muted),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${offer.validFrom ?? 'Start'} to ${offer.validTo ?? 'End'}',
-                      style: GoogleFonts.poppins(color: muted, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddEditOfferScreen(
-                              roleView: widget.roleView,
-                              userid: _userid,
-                              offer: offer,
+                const SizedBox(width: 14),
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _buildStatusBadge(offer.status),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              offer.serviceType.toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: primary,
+                              ),
                             ),
                           ),
-                        );
-                        if (result == true) _fetchOffers();
-                      },
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Edit'),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: () => _confirmDelete(offer),
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                      label: const Text('Delete', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        offer.title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: ink,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (offer.description != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          offer.description!,
+                          style: GoogleFonts.poppins(color: muted, fontSize: 12),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.date_range_outlined, size: 12, color: muted),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${offer.validFrom ?? 'Start'} → ${offer.validTo ?? 'End'}',
+                            style: GoogleFonts.poppins(color: muted, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
+            ),
+
+            const Divider(height: 20),
+
+            // ── Action buttons row ─────────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Approve / Reject — admin only, pending only
+                if (isAdmin && isPending) ...[
+                  TextButton.icon(
+                    onPressed: () => _approveOffer(offer, 'approved'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.green),
+                    icon: const Icon(Icons.check_circle_outline, size: 17),
+                    label: Text('Approve', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _approveOffer(offer, 'rejected'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                    icon: const Icon(Icons.cancel_outlined, size: 17),
+                    label: Text('Reject', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(width: 4),
+                  Container(width: 1, height: 20, color: Theme.of(context).dividerColor),
+                  const SizedBox(width: 4),
+                ],
+                TextButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddEditOfferScreen(
+                          roleView: widget.roleView,
+                          userid: _userid,
+                          offer: offer,
+                        ),
+                      ),
+                    );
+                    if (result == true) _fetchOffers();
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 17),
+                  label: Text('Edit', style: GoogleFonts.poppins(fontSize: 13)),
+                ),
+                TextButton.icon(
+                  onPressed: () => _confirmDelete(offer),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  icon: const Icon(Icons.delete_outline, size: 17),
+                  label: Text('Delete', style: GoogleFonts.poppins(fontSize: 13)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _approveOffer(OfferModel offer, String newStatus) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(newStatus == 'approved' ? 'Approve Offer' : 'Reject Offer'),
+        content: Text(
+          newStatus == 'approved'
+              ? 'Approve "${offer.title}"? It will be visible to customers.'
+              : 'Reject "${offer.title}"?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: newStatus == 'approved' ? Colors.green : Colors.orange,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              newStatus == 'approved' ? 'Approve' : 'Reject',
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    final success = await offerService.approveOffer(offer.offerid, _userid, newStatus);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? 'Offer ${newStatus == 'approved' ? 'approved' : 'rejected'} successfully'
+            : 'Failed to update offer status'),
+        backgroundColor: success
+            ? (newStatus == 'approved' ? Colors.green : Colors.orange)
+            : Colors.red,
+      ),
+    );
+    if (success) _fetchOffers();
   }
 
   Widget _buildStatusBadge(String status) {
@@ -265,6 +358,7 @@ class _OfferManagementScreenState extends State<OfferManagementScreen> {
 
     if (confirmed == true) {
       final success = await offerService.deleteOffer(offer.offerid, _userid);
+      if (!mounted) return;
       if (success) {
         _fetchOffers();
       } else {

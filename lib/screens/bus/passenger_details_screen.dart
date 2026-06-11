@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/booking_success_screen.dart';
 import '../../models/bus_model.dart';
+import '../../models/coupon_model.dart';
+import '../../models/offer_model.dart';
 import '../../services/bus_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/coupon_service.dart';
-import '../../models/coupon_model.dart';
+import '../../services/offer_service.dart';
 import '../../core/utils/validators.dart';
 import '../../widgets/coupon_selector.dart';
 
@@ -36,6 +38,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
   double _discountAmount = 0.0;
   CouponModel? _appliedCoupon;
+  OfferModel? _appliedOffer;
   CouponModel? _bestCoupon;
   bool _isApplyingCoupon = false;
 
@@ -135,6 +138,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     if (result != null && result['status'] == 'success') {
       setState(() {
         _appliedCoupon = CouponModel.fromJson(result['data']);
+        _appliedOffer = null; // Clear offer if coupon is applied
         _discountAmount =
             double.tryParse(result['data']['discount_amount'].toString()) ??
             0.0;
@@ -145,6 +149,44 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result?['message'] ?? 'Invalid coupon')),
+      );
+    }
+  }
+
+  Future<void> _applyOffer(OfferModel offer) async {
+    final user = authService.currentUser;
+    if (user == null || user.userid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to apply offer')),
+      );
+      return;
+    }
+
+    setState(() => _isApplyingCoupon = true);
+
+    final result = await offerService.applyOffer(
+      offerId: offer.offerid,
+      userId: int.parse(user.userid),
+      serviceType: 'bus',
+      serviceId: widget.bus.busid,
+      amount: _totalAmount,
+    );
+
+    setState(() => _isApplyingCoupon = false);
+
+    if (result != null && result['status'] == 'success') {
+      setState(() {
+        _appliedOffer = offer;
+        _appliedCoupon = null; // Clear coupon if offer is applied
+        _couponController.text = ''; // Clear coupon input
+        _discountAmount = double.tryParse(result['data']['discount_amount'].toString()) ?? 0.0;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Offer applied! You saved ₹$_discountAmount')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result?['message'] ?? 'Invalid offer')),
       );
     }
   }
@@ -631,9 +673,13 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                           serviceType: 'bus',
                           serviceId: widget.bus.busid,
                           amount: _totalAmount,
-                          onSelect: (c) {
-                            _couponController.text = c.couponcode;
-                            _applyCoupon();
+                          onSelect: (item) {
+                            if (item is CouponModel) {
+                              _couponController.text = item.couponcode;
+                              _applyCoupon();
+                            } else if (item is OfferModel) {
+                              _applyOffer(item);
+                            }
                           },
                         ),
                     icon: const Icon(Icons.local_offer_rounded, size: 18),
@@ -645,7 +691,49 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              if (_appliedOffer != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Offer Applied: ${_appliedOffer!.title}',
+                              style: GoogleFonts.poppins(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            Text(
+                              'Saved ₹$_discountAmount',
+                              style: GoogleFonts.poppins(color: Colors.green, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _appliedOffer = null;
+                            _discountAmount = 0.0;
+                          });
+                        },
+                        icon: const Icon(Icons.close, color: Colors.green, size: 20),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+              if (_appliedOffer != null) const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(

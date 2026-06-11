@@ -17,6 +17,7 @@ import 'admin_bookings_screen.dart';
 import 'admin_payments_screen.dart';
 import 'admin_coupons_screen.dart';
 import 'admin_flights_screen.dart';
+import 'offer_management_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -58,6 +59,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     {'title': 'Bookings', 'icon': Icons.confirmation_number_rounded},
     {'title': 'Payments', 'icon': Icons.payment_rounded},
     {'title': 'Coupons', 'icon': Icons.local_offer_rounded},
+    {'title': 'Offers', 'icon': Icons.discount_rounded},
   ];
 
   @override
@@ -252,6 +254,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return const AdminPaymentsScreen();
       case 9:
         return const AdminCouponsScreen();
+      case 10:
+        return OfferManagementScreen(roleView: 'admin');
       default:
         return Container();
     }

@@ -6,6 +6,8 @@ import '../../services/auth_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/coupon_service.dart';
 import '../../models/coupon_model.dart';
+import '../../services/offer_service.dart';
+import '../../models/offer_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/coupon_selector.dart';
 
@@ -36,6 +38,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
   
   double _discountAmount = 0.0;
   CouponModel? _appliedCoupon;
+  OfferModel? _appliedOffer;
   CouponModel? _bestCoupon;
   bool _isApplyingCoupon = false;
 
@@ -122,6 +125,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
       if (result != null && result['status'] == 'success') {
         setState(() {
           _appliedCoupon = CouponModel.fromJson(result['data']);
+          _appliedOffer = null;
           _discountAmount = double.tryParse(result['data']['discount_amount'].toString()) ?? 0.0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -130,6 +134,43 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result?['message'] ?? 'Invalid coupon')),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isApplyingCoupon = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _applyOffer(OfferModel offer) async {
+    setState(() => _isApplyingCoupon = true);
+    final user = authService.currentUser;
+    if (user == null) return;
+    
+    try {
+      final result = await offerService.applyOffer(
+        offerId: offer.offerid,
+        userId: int.tryParse(user.userid) ?? 0,
+        serviceType: 'hotel',
+        serviceId: int.tryParse(widget.hotelId) ?? 0,
+        amount: widget.room.price,
+      );
+
+      if (mounted) setState(() => _isApplyingCoupon = false);
+
+      if (result != null && result['status'] == 'success') {
+        setState(() {
+          _appliedOffer = offer;
+          _appliedCoupon = null;
+          _couponController.text = '';
+          _discountAmount = double.tryParse(result['data']['discount_amount'].toString()) ?? 0.0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Offer applied! You saved ₹$_discountAmount')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result?['message'] ?? 'Invalid offer')),
         );
       }
     } catch (e) {
@@ -283,7 +324,7 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Coupon Discount:', style: TextStyle(color: Colors.white70)),
+                Text(_appliedOffer != null ? 'Offer Discount:' : 'Coupon Discount:', style: const TextStyle(color: Colors.white70)),
                 Text('- ₹$_discountAmount', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
               ],
             ),
@@ -415,9 +456,13 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
                       serviceType: 'hotel',
                       serviceId: int.tryParse(widget.hotelId),
                       amount: widget.room.price,
-                      onSelect: (c) {
-                        _couponController.text = c.couponcode;
-                        _applyCoupon();
+                      onSelect: (item) {
+                        if (item is CouponModel) {
+                          _couponController.text = item.couponcode;
+                          _applyCoupon();
+                        } else if (item is OfferModel) {
+                          _applyOffer(item);
+                        }
                       },
                     ),
                     icon: const Icon(Icons.local_offer_rounded, size: 18),
@@ -488,6 +533,52 @@ class _GuestDetailsScreenState extends State<GuestDetailsScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => setState(() {
+                    _appliedCoupon = null;
+                    _discountAmount = 0.0;
+                    _couponController.clear();
+                  }),
+                  icon: const Icon(Icons.close, color: Colors.green, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (_appliedOffer != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.green.withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.withAlpha(50)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Offer "${_appliedOffer!.title}" applied! Saved ₹${_discountAmount.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => setState(() {
+                    _appliedOffer = null;
+                    _discountAmount = 0.0;
+                  }),
+                  icon: const Icon(Icons.close, color: Colors.green, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),

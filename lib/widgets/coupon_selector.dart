@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/coupon_model.dart';
+import '../models/offer_model.dart';
 import '../services/coupon_service.dart';
+import '../services/offer_service.dart';
 import '../services/auth_service.dart';
 
 class CouponSelector extends StatefulWidget {
   final String serviceType;
   final int? serviceId;
   final double amount;
-  final Function(CouponModel) onSelect;
+  final Function(dynamic) onSelect;
 
   const CouponSelector({
     super.key,
@@ -23,7 +25,7 @@ class CouponSelector extends StatefulWidget {
     required String serviceType,
     int? serviceId,
     required double amount,
-    required Function(CouponModel) onSelect,
+    required Function(dynamic) onSelect,
   }) async {
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
@@ -77,8 +79,8 @@ class CouponSelector extends StatefulWidget {
 }
 
 class _CouponSelectorState extends State<CouponSelector> {
-  List<CouponModel> _coupons = [];
-  List<CouponModel> _filteredCoupons = [];
+  List<dynamic> _items = [];
+  List<dynamic> _filteredItems = [];
   bool _isLoading = true;
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -93,7 +95,13 @@ class _CouponSelectorState extends State<CouponSelector> {
     final user = authService.currentUser;
     if (user == null) return;
 
-    final list = await couponService.getCoupons(
+    final couponsList = await couponService.getCoupons(
+      userId: int.parse(user.userid),
+      serviceType: widget.serviceType,
+      serviceId: widget.serviceId,
+    );
+
+    final offersList = await offerService.getOffers(
       userId: int.parse(user.userid),
       serviceType: widget.serviceType,
       serviceId: widget.serviceId,
@@ -101,8 +109,11 @@ class _CouponSelectorState extends State<CouponSelector> {
 
     if (mounted) {
       setState(() {
-        _coupons = list.where((c) => c.isValidFor(widget.amount, widget.serviceType, widget.serviceId)).toList();
-        _filteredCoupons = _coupons;
+        final validCoupons = couponsList.where((c) => c.isValidFor(widget.amount, widget.serviceType, widget.serviceId)).toList();
+        final validOffers = offersList.where((o) => o.isValidFor(widget.amount, widget.serviceType, widget.serviceId)).toList();
+        
+        _items = [...validCoupons, ...validOffers];
+        _filteredItems = _items;
         _isLoading = false;
       });
     }
@@ -111,10 +122,14 @@ class _CouponSelectorState extends State<CouponSelector> {
   void _filterCoupons() {
     final query = _searchCtrl.text.toLowerCase();
     setState(() {
-      _filteredCoupons = _coupons.where((c) => 
-        c.couponcode.toLowerCase().contains(query) || 
-        (c.title?.toLowerCase().contains(query) ?? false)
-      ).toList();
+      _filteredItems = _items.where((item) {
+        if (item is CouponModel) {
+          return item.couponcode.toLowerCase().contains(query) || (item.title?.toLowerCase().contains(query) ?? false);
+        } else if (item is OfferModel) {
+          return item.title.toLowerCase().contains(query);
+        }
+        return false;
+      }).toList();
     });
   }
 
@@ -149,7 +164,7 @@ class _CouponSelectorState extends State<CouponSelector> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Available Coupons',
+                'Available Offers & Coupons',
                 style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -157,7 +172,7 @@ class _CouponSelectorState extends State<CouponSelector> {
                 ),
               ),
               Text(
-                'Select a coupon to save on your booking',
+                'Select an offer or coupon to save on your booking',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   color: isDark ? Colors.white70 : const Color(0xFF64748B),
@@ -180,7 +195,7 @@ class _CouponSelectorState extends State<CouponSelector> {
       child: TextField(
         controller: _searchCtrl,
         decoration: InputDecoration(
-          hintText: 'Search coupon code...',
+          hintText: 'Search offers or coupons...',
           prefixIcon: const Icon(Icons.search_rounded),
           filled: true,
           fillColor: isDark ? Colors.white.withAlpha(10) : Colors.grey.shade100,
@@ -195,7 +210,7 @@ class _CouponSelectorState extends State<CouponSelector> {
   }
 
   Widget _buildList(bool isDark) {
-    if (_filteredCoupons.isEmpty) {
+    if (_filteredItems.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -203,7 +218,7 @@ class _CouponSelectorState extends State<CouponSelector> {
             Icon(Icons.local_offer_outlined, size: 64, color: Colors.grey.withAlpha(100)),
             const SizedBox(height: 16),
             Text(
-              'No coupons found',
+              'No offers or coupons found',
               style: GoogleFonts.poppins(color: Colors.grey),
             ),
           ],
@@ -213,11 +228,16 @@ class _CouponSelectorState extends State<CouponSelector> {
 
     return ListView.separated(
       padding: const EdgeInsets.all(24),
-      itemCount: _filteredCoupons.length,
+      itemCount: _filteredItems.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        final coupon = _filteredCoupons[index];
-        return _buildCouponCard(coupon, isDark);
+        final item = _filteredItems[index];
+        if (item is CouponModel) {
+          return _buildCouponCard(item, isDark);
+        } else if (item is OfferModel) {
+          return _buildOfferCard(item, isDark);
+        }
+        return const SizedBox();
       },
     );
   }
@@ -278,6 +298,99 @@ class _CouponSelectorState extends State<CouponSelector> {
                     const SizedBox(height: 4),
                     Text(
                       'Valid till: ${coupon.expirydate ?? 'Unlimited'}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'SAVE',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.green,
+                    ),
+                  ),
+                  Text(
+                    '₹${savings.toStringAsFixed(0)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfferCard(OfferModel offer, bool isDark) {
+    final savings = offer.calculateSavings(widget.amount);
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => widget.onSelect(offer),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.orange.withAlpha(isDark ? 50 : 30),
+              width: 2,
+            ),
+            gradient: LinearGradient(
+              colors: isDark 
+                ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                : [Colors.white, const Color(0xFFFFF7ED)],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withAlpha(20),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.discount_rounded, color: Colors.orange),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'PROMO OFFER',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: Colors.orange,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    Text(
+                      offer.title,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Valid till: ${offer.validTo ?? 'Unlimited'}',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: isDark ? Colors.white60 : const Color(0xFF64748B),

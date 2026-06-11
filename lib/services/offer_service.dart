@@ -96,6 +96,27 @@ class OfferService {
       return false;
     }
   }
+
+  Future<Map<String, dynamic>?> applyOffer({
+    required int offerId,
+    required int userId,
+    required String serviceType,
+    required int serviceId,
+    required double amount,
+  }) async {
+    try {
+      final url = '${ApiConfig.applyOffer}?offerid=$offerId&userid=$userId&amount=$amount&service_type=$serviceType&service_id=$serviceId';
+      final response = await http.get(Uri.parse(url));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes));
+      }
+      return null;
+    } catch (e) {
+      // print("Error applying offer: $e");
+      return null;
+    }
+  }
 }
 
 final offerService = OfferService();

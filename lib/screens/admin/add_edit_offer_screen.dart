@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -32,8 +31,12 @@ class _AddEditOfferScreenState extends State<AddEditOfferScreen> {
   late TextEditingController _fromController;
   late TextEditingController _toController;
   late TextEditingController _serviceIdController;
+  late TextEditingController _discountValueController;
+  late TextEditingController _minAmountController;
+  late TextEditingController _maxDiscountController;
 
   String _serviceType = 'global';
+  String _discountType = 'FLAT';
   String? _base64Image;
   final ImagePicker _picker = ImagePicker();
 
@@ -46,12 +49,18 @@ class _AddEditOfferScreenState extends State<AddEditOfferScreen> {
     _fromController = TextEditingController(text: widget.offer?.validFrom ?? '');
     _toController = TextEditingController(text: widget.offer?.validTo ?? '');
     _serviceIdController = TextEditingController(text: widget.offer?.serviceId?.toString() ?? '');
+    _discountValueController = TextEditingController(text: widget.offer?.discountValue.toString() ?? '0');
+    _minAmountController = TextEditingController(text: widget.offer?.minAmount.toString() ?? '0');
+    _maxDiscountController = TextEditingController(text: widget.offer?.maxDiscount?.toString() ?? '');
 
     _serviceType = widget.offer?.serviceType ?? 'global';
+    _discountType = widget.offer?.discountType ?? 'FLAT';
     _base64Image = widget.offer?.primaryImage;
 
     if (widget.roleView == 'owner') _serviceType = 'hotel';
-    if (widget.roleView == 'agent' && _serviceType == 'global') _serviceType = 'package';
+    if (widget.roleView == 'agent' && (_serviceType == 'global' || _serviceType == 'hotel')) {
+      _serviceType = 'package';
+    }
   }
 
   @override
@@ -61,6 +70,9 @@ class _AddEditOfferScreenState extends State<AddEditOfferScreen> {
     _fromController.dispose();
     _toController.dispose();
     _serviceIdController.dispose();
+    _discountValueController.dispose();
+    _minAmountController.dispose();
+    _maxDiscountController.dispose();
     super.dispose();
   }
 
@@ -91,33 +103,78 @@ class _AddEditOfferScreenState extends State<AddEditOfferScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Validate dates
+    if (_fromController.text.isEmpty || _toController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select both Valid From and Valid To dates'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
-    final Map<String, String> data = {
-      'userid': widget.userid.toString(),
-      'title': _titleController.text,
-      'description': _descController.text,
-      'valid_from': _fromController.text,
-      'valid_to': _toController.text,
-      'service_type': _serviceType,
-      'service_id': _serviceIdController.text,
-    };
+    try {
+      final Map<String, String> data = {
+        'userid': widget.userid.toString(),
+        'title': _titleController.text.trim(),
+        'description': _descController.text.trim(),
+        'valid_from': _fromController.text,
+        'valid_to': _toController.text,
+        'service_type': _serviceType,
+        'service_id': _serviceIdController.text.trim(),
+        'discount_type': _discountType,
+        'discount_value': _discountValueController.text.trim(),
+        'minamount': _minAmountController.text.trim(),
+        'maximum_discount': _maxDiscountController.text.trim(),
+      };
 
-    if (_base64Image != null) {
-      data['image'] = _base64Image!;
+      if (_base64Image != null) {
+        data['image'] = _base64Image!;
+      }
+
+      bool success;
+      if (_isEdit) {
+        data['offerid'] = widget.offer!.offerid.toString();
+        success = await offerService.updateOffer(data);
+      } else {
+        success = await offerService.createOffer(data);
+      }
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isEdit ? 'Offer updated successfully!' : 'Offer created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isEdit ? 'Failed to update offer. Please try again.' : 'Failed to create offer. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    if (_isEdit) {
-      data['offerid'] = widget.offer!.offerid.toString();
-      final success = await offerService.updateOffer(data);
-      if (success && mounted) Navigator.pop(context, true);
-    } else {
-      final success = await offerService.createOffer(data);
-      if (success && mounted) Navigator.pop(context, true);
-    }
-
-    if (mounted) setState(() => _isSaving = false);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +198,21 @@ class _AddEditOfferScreenState extends State<AddEditOfferScreen> {
               _buildTextField('Offer Title', _titleController, validator: (v) => v!.isEmpty ? 'Required' : null),
               const SizedBox(height: 16),
               _buildTextField('Description', _descController, maxLines: 3),
+              
+              const SizedBox(height: 32),
+              _buildSectionTitle('Discount Details'),
+              _buildDiscountTypeSelector(),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField('Discount Value', _discountValueController, keyboardType: TextInputType.number)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildTextField('Min Booking Amount', _minAmountController, keyboardType: TextInputType.number)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (_discountType == 'PERCENT')
+                _buildTextField('Max Discount (Optional)', _maxDiscountController, keyboardType: TextInputType.number),
               
               const SizedBox(height: 32),
               _buildSectionTitle('Validity Period'),
@@ -290,7 +362,27 @@ class _AddEditOfferScreenState extends State<AddEditOfferScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           items: options.map((e) => DropdownMenuItem(value: e, child: Text(e.toUpperCase()))).toList(),
-          onChanged: widget.roleView == 'admin' ? (v) => setState(() => _serviceType = v!) : null,
+          onChanged: options.length > 1 ? (v) => setState(() => _serviceType = v!) : null,
+        ),
+      ],
+    );
+  }
+  Widget _buildDiscountTypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Discount Type', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
+        DropdownButtonFormField<String>(
+          value: _discountType,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'FLAT', child: Text('FLAT')),
+            DropdownMenuItem(value: 'PERCENT', child: Text('PERCENTAGE')),
+          ],
+          onChanged: (v) => setState(() => _discountType = v!),
         ),
       ],
     );

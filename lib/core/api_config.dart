@@ -70,5 +70,6 @@ class ApiConfig {
   static String get deleteOffer => '${baseUrl}delete_offer.php';
   static String get getOffers => '${baseUrl}get_offers.php';
   static String get offerDetails => '${baseUrl}get_offer_details.php';
-  static String get approveOffer => '${baseUrl}admin/approve_offer.php';
+  static String get applyOffer => '${baseUrl}apply_offer.php';
+  static String get approveOffer => '${baseUrl}approve_offer.php';
 }
